@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.inicio
+package com.maraloedev.golfmaster.view.eventos
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,24 +14,24 @@ import androidx.compose.ui.unit.sp
 import com.maraloedev.golfmaster.R
 
 @Composable
-fun InicioScreen() {
+fun EventosScreen() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF5A9149)), // Verde
+            .background(Color(0xFF5A9149)),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Logo centrado
             Image(
                 painter = painterResource(id = R.drawable.logo_app),
                 contentDescription = "Logo GolfMaster",
                 modifier = Modifier.size(120.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "GolfMaster", fontSize = 32.sp)
+            Text(text = "Eventos", fontSize = 32.sp)
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Cada golpe es una nueva oportunidad para la grandeza.", fontSize = 16.sp)
+            Text(text = "Consulta y participa en eventos.", fontSize = 16.sp)
         }
     }
 }
+
