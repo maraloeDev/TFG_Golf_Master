@@ -57,7 +57,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.firebase.database.ktx)
 
     // Testing
     testImplementation(libs.junit)
@@ -72,6 +71,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
