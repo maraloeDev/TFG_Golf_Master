@@ -1,30 +1,14 @@
 package com.maraloedev.golfmaster.view.auth.login
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,30 +21,33 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maraloedev.golfmaster.R
-import com.google.firebase.auth.FirebaseAuth
-import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.maraloedev.golfmaster.view.auth.register.RegisterScreen
 
+/**
+ * Pantalla de Login para GolfMaster.
+ * - Valida email y contraseña.
+ * - Navega a inicio si el login es correcto.
+ * - Permite navegar a registro.
+ * - Muestra mensajes de error.
+ */
 @Composable
-fun LoginScreen(navController: NavController) { // Recibe NavController desde el padre
-    // Estado para los campos de texto
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+fun LoginScreen(
+    loginViewModel: LoginViewModel = viewModel(),
+    navController: NavController,
+    navigateToRegister: () -> Unit = { navController.navigate("registro") } // Navegación a registro
+) {
+    // Estado de la UI proveniente del ViewModel
+    val state by loginViewModel.uiState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
-    var loginMessage by remember { mutableStateOf("") } // Mensaje de error o éxito
-    val context = LocalContext.current
-    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current // Captura el contexto antes del callback
 
-    // Estado para habilitar el botón según la validación
-    val isLoginEnabled = email.contains("@") && password.length >= 6
-
-    // Fondo de pantalla (puedes cambiar el color o poner una imagen de fondo si lo deseas)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A2B1F)) // Verde oscuro, puedes ajustar el color
+            .background(Color(0xFF1A2B1F))
     ) {
         Column(
             modifier = Modifier
@@ -95,12 +82,8 @@ fun LoginScreen(navController: NavController) { // Recibe NavController desde el
                 modifier = Modifier.align(Alignment.Start)
             )
             OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    // Se actualiza el estado de validación automáticamente
-                },
-                placeholder = { Text("Introduce tu correo electrónico") },
+                value = state.email,
+                onValueChange = { loginViewModel.onEmailChange(it) },
                 singleLine = true,
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
@@ -129,18 +112,15 @@ fun LoginScreen(navController: NavController) { // Recibe NavController desde el
                 modifier = Modifier.align(Alignment.Start)
             )
             OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    // Se actualiza el estado de validación automáticamente
-                },
+                value = state.password,
+                onValueChange = { loginViewModel.onPasswordChange(it) },
                 placeholder = { Text("Introduce tu contraseña") },
                 singleLine = true,
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp) // Caja más pequeña
-                    .padding(vertical = 4.dp), // Menos padding
+                    .height(50.dp)
+                    .padding(vertical = 4.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.White,
                     unfocusedBorderColor = Color.White,
@@ -151,11 +131,12 @@ fun LoginScreen(navController: NavController) { // Recibe NavController desde el
                     unfocusedPlaceholderColor = Color(0xFFB0B0B0)
                 ),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                // Icono personalizado para mostrar/ocultar contraseña
                 trailingIcon = {
-                    val icon = if (passwordVisible) R.drawable.ic_ojo_abierto else R.drawable.ic_ojo_cerrado
                     Icon(
-                        painter = painterResource(id = icon),
+                        painter = painterResource(id = if (passwordVisible) R.drawable.ic_ojo_abierto else R.drawable.ic_ojo_cerrado),
                         contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
+                        tint = Color.White,
                         modifier = Modifier.clickable { passwordVisible = !passwordVisible }
                     )
                 },
@@ -168,35 +149,23 @@ fun LoginScreen(navController: NavController) { // Recibe NavController desde el
             // Botón de iniciar sesión
             Button(
                 onClick = {
-                    // Autenticación con Firebase
-                    if (email.isNotBlank() && password.isNotBlank()) {
-                        auth.signInWithEmailAndPassword(email, password)
-                            .addOnCompleteListener { task ->
-                                if (task.isSuccessful) {
-                                    val user = auth.currentUser
-                                    val userName = user?.displayName ?: user?.email ?: "Usuario"
-                                    loginMessage = "Inicio de sesión correcto"
-                                    Toast.makeText(context, loginMessage, Toast.LENGTH_SHORT).show()
-                                    // Navega a la pantalla de inicio y pasa el nombre de usuario
-                                    navController.navigate("inicio?userName=$userName") {
-                                        popUpTo("login") { inclusive = true } // Evita volver al login
-                                    } 
-                                } else {
-                                    loginMessage = "Error: " + (task.exception?.message ?: "Datos incorrectos")
-                                    Toast.makeText(context, loginMessage, Toast.LENGTH_SHORT).show()
-                                }
+                    loginViewModel.login(
+                        onSuccess = {
+                            navController.navigate("inicio") {
+                                popUpTo("login") { inclusive = true }
                             }
-                    } else {
-                        loginMessage = "Introduce correo y contraseña"
-                        Toast.makeText(context, loginMessage, Toast.LENGTH_SHORT).show()
-                    }
+                        },
+                        onError = { errorMsg ->
+                            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+                        }
+                    )
                 },
-                enabled = isLoginEnabled, // Solo se habilita si los campos son válidos
+                enabled = state.isLoginEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 16.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC40)) // Verde brillante
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2ECC40))
             ) {
                 Text("Iniciar Sesión", fontWeight = FontWeight.Bold, color = Color.Black)
             }
@@ -213,7 +182,9 @@ fun LoginScreen(navController: NavController) { // Recibe NavController desde el
                     color = Color(0xFF2ECC40),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { /* Acción de registro */ }
+                    modifier = Modifier.clickable {
+                        navController.navigate("registro") // Navega correctamente a la pantalla de registro
+                    }
                 )
             }
         }

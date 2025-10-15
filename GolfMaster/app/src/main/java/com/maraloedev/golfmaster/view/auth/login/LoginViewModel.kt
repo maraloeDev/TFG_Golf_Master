@@ -1,49 +1,67 @@
-package com.maraloedev.instadev.view.auth.login
+package com.maraloedev.golfmaster.view.auth.login
 
-import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import com.google.firebase.auth.FirebaseAuth
 
-class LoginViewModel() : ViewModel() {
-
-    private val _uiState = MutableStateFlow(LoginUiState())
-    val uiState: StateFlow<LoginUiState> = _uiState
-
-    fun onEmailChange(email: String) {
-        _uiState.update { state ->
-            state.copy(email = email) //el .copy devuelve el mismo objeto, pero con los cambios que digas
-        }
-        verifyLogin()
-    }
-
-    fun onPasswordChange(password: String) {
-        _uiState.update {
-            it.copy(password = password)
-        }
-        verifyLogin()
-    }
-
-    private fun verifyLogin() {
-
-        val enableLogin =
-            isEmailValid(_uiState.value.email) && isPasswordValid(_uiState.value.password)
-
-        _uiState.update {
-            it.copy(isLoginEnabled = enableLogin)
-        }
-    }
-}
-
-
-//Accedes a la funcion del sistema en la que verifica si el EMAil introducido es correcto
-private fun isEmailValid(email: String): Boolean = Patterns.EMAIL_ADDRESS.matcher(email).matches()
-private fun isPasswordValid(password: String): Boolean = password.length >= 6
-
+/**
+ * Estado de la pantalla de login.
+ * email: correo introducido
+ * password: contraseña introducida
+ * isLoginEnabled: si el botón de login está habilitado
+ */
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
-    val isLoading: Boolean = false,
     val isLoginEnabled: Boolean = false
 )
+
+/**
+ * ViewModel para la pantalla de login.
+ * Gestiona el estado y la autenticación con Firebase.
+ */
+class LoginViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+
+    // Actualiza el email y valida el estado
+    fun onEmailChange(email: String) {
+        _uiState.update { it.copy(email = email) }
+        validateFields()
+    }
+
+    // Actualiza la contraseña y valida el estado
+    fun onPasswordChange(password: String) {
+        _uiState.update { it.copy(password = password) }
+        validateFields()
+    }
+
+    // Valida los campos para habilitar el botón
+    private fun validateFields() {
+        val email = _uiState.value.email
+        val password = _uiState.value.password
+        val isValid = email.contains("@") && password.length >= 6
+        _uiState.update { it.copy(isLoginEnabled = isValid) }
+    }
+
+    /**
+     * Realiza el login con FirebaseAuth.
+     * Llama a onSuccess si es correcto, onError si hay error.
+     */
+    fun login(onSuccess: () -> Unit, onError: (String) -> Unit) {
+        val email = _uiState.value.email
+        val password = _uiState.value.password
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    onSuccess()
+                } else {
+                    onError(task.exception?.message ?: "Error desconocido")
+                }
+            }
+    }
+}
+

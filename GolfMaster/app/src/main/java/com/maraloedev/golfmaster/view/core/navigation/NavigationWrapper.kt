@@ -11,6 +11,7 @@ import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.view.alertas.AlertasScreen
 import com.maraloedev.golfmaster.view.amigos.AmigosScreen
 import com.maraloedev.golfmaster.view.auth.login.LoginScreen
+import com.maraloedev.golfmaster.view.auth.register.RegisterScreen
 import com.maraloedev.golfmaster.view.eventos.EventosScreen
 import com.maraloedev.golfmaster.view.inicio.InicioScreen
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
@@ -18,6 +19,7 @@ import com.maraloedev.golfmaster.view.reservas.ReservasScreen
 // Definición de las pantallas principales de la app y sus iconos
 sealed class Screen(val route: String, val icon: Int) {
     object Login : Screen(route = "login", icon = R.drawable.ic_login)
+    object Register : Screen(route = "registro", icon = R.drawable.ic_login)
     object Reservar : Screen(route = "reservar", icon = R.drawable.ic_reserva)
     object Eventos : Screen(route = "eventos", icon = R.drawable.ic_eventos)
     object Inicio : Screen(route = "inicio", icon = R.drawable.ic_inicio)
@@ -32,7 +34,8 @@ val screens = listOf(
     Screen.Inicio,
     Screen.Amigos,
     Screen.Alertas,
-    Screen.Login
+    Screen.Login,
+    Screen.Register
 )
 
 // Composable principal que envuelve la navegación de la app
@@ -52,5 +55,6 @@ fun NavigationWrapper() {
         composable(route = Screen.Inicio.route) { InicioScreen() }
         composable(route = Screen.Amigos.route) { AmigosScreen() }
         composable(route = Screen.Alertas.route) { AlertasScreen() }
+        composable(route = Screen.Register.route) { RegisterScreen(navController = navController) }
     }
 }
