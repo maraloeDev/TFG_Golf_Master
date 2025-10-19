@@ -62,7 +62,6 @@ fun SplashScreen(navController: NavController) {
             Icon(
                 painter = painterResource(id = R.drawable.logo_app),
                 contentDescription = null,
-                tint = Color(0xFF00FF77),
                 modifier = Modifier
                     .size(120.dp)
                     .scale(scale)

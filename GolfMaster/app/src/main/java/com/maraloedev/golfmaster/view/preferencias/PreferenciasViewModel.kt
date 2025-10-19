@@ -1,32 +1,52 @@
-package com.maraloedev.golfmaster.viewmodel
+package com.maraloedev.golfmaster.view.preferencias
 
 import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.maraloedev.golfmaster.model.Jugadores
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * ViewModel sin persistencia que mantiene las preferencias en memoria.
- */
 class PreferenciasViewModel : ViewModel() {
 
-    private val _notificaciones = MutableStateFlow(true)
-    val notificaciones: StateFlow<Boolean> = _notificaciones
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
-    private val _modoOscuro = MutableStateFlow(true)
-    val modoOscuro: StateFlow<Boolean> = _modoOscuro
+    private val _jugador = MutableStateFlow<Jugadores?>(null)
+    val jugador: StateFlow<Jugadores?> = _jugador
 
-    private val _privacidad = MutableStateFlow(false)
-    val privacidad: StateFlow<Boolean> = _privacidad
+    private val uid = auth.currentUser?.uid
 
-    fun setNotificaciones(enabled: Boolean) {
-        _notificaciones.value = enabled
+    init {
+        cargarPreferencias()
     }
 
-    fun setModoOscuro(enabled: Boolean) {
-        _modoOscuro.value = enabled
+    fun cargarPreferencias() {
+        uid ?: return
+        db.collection("jugadores").document(uid).get()
+            .addOnSuccessListener { doc ->
+                _jugador.value = doc.toObject(Jugadores::class.java)
+            }
     }
 
-    fun setPrivacidad(enabled: Boolean) {
-        _privacidad.value = enabled
+    fun guardarPreferencias(
+        idioma: String,
+        dias: List<String>,
+        intereses: List<String>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        uid ?: return onError("Usuario no autenticado")
+
+        db.collection("jugadores").document(uid)
+            .update(
+                mapOf(
+                    "idioma" to idioma,
+                    "dias_juego" to dias,
+                    "intereses" to intereses
+                )
+            )
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e -> onError(e.localizedMessage ?: "Error desconocido") }
     }
 }

@@ -1,166 +1,181 @@
 package com.maraloedev.golfmaster.view.perfil
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import com.maraloedev.golfmaster.viewmodel.AuthViewModel
+import com.maraloedev.golfmaster.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilScreen(navController: NavController? = null, vm: AuthViewModel = viewModel()) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var showDialog by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+fun PerfilScreen(vm: PerfilViewModel = viewModel()) {
+    val jugador by vm.jugador.collectAsState()
+    val context = LocalContext.current
+    var editMode by remember { mutableStateOf(false) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(error) {
-        error?.let {
-            snackbarHostState.showSnackbar(it)
-            error = null
+    if (jugador == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
+        return
     }
+
+    // Estados de los campos
+    var nombre by remember { mutableStateOf(jugador?.nombre_jugador ?: "") }
+    var apellido by remember { mutableStateOf(jugador?.apellido_jugador ?: "") }
+    var correo by remember { mutableStateOf(jugador?.correo_jugador ?: "") }
+    var telefono by remember { mutableStateOf(jugador?.telefono_jugador ?: "") }
+    var direccion by remember { mutableStateOf(jugador?.direccion_jugador ?: "") }
+    var codigoPostal by remember { mutableStateOf(jugador?.codigo_postal_jugador ?: "") }
+    var sexo by remember { mutableStateOf(jugador?.sexo_jugador ?: "Masculino") }
+    var handicap by remember { mutableStateOf(jugador?.handicap_jugador?.toString() ?: "") }
+    var socio by remember { mutableStateOf(jugador?.socio_jugador ?: false) }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFF0B3D2E)
-    ) { pv ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(pv)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                "Mi Perfil",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(Modifier.height(30.dp))
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Correo actual") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = textFieldColors()
-            )
-
-            Spacer(Modifier.height(10.dp))
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Contraseña actual") },
-                modifier = Modifier.fillMaxWidth(),
-                visualTransformation = PasswordVisualTransformation(),
-                colors = textFieldColors()
-            )
-
-            Spacer(Modifier.height(40.dp))
-
-            Button(
-                onClick = { showDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                enabled = email.isNotBlank() && password.isNotBlank() && !loading
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { editMode = !editMode },
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Text("Eliminar mi cuenta", color = Color.White)
-            }
-
-            Spacer(Modifier.height(16.dp))
-            TextButton(onClick = { navController?.navigate("home") }) {
-                Text("Volver al inicio", color = Color.White)
-            }
-
-            if (loading) {
-                Spacer(Modifier.height(16.dp))
-                CircularProgressIndicator(color = Color(0xFF00FF77))
+                Icon(Icons.Default.Edit, contentDescription = "Editar perfil", tint = Color.Black)
             }
         }
-    }
+    ) { pv ->
+        Column(
+            modifier = Modifier
+                .padding(pv)
+                .padding(horizontal = 16.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(Modifier.height(20.dp))
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDialog = false
-                    loading = true
-                    vm.eliminarCuenta(
-                        email,
-                        password,
-                        onSuccess = {
-                            loading = false
-                            navController?.navigate("login") {
-                                popUpTo("home") { inclusive = true }
-                            }
-                        },
-                        onError = {
-                            loading = false
-                            error = it
-                        }
-                    )
-                }) {
-                    Text("Sí, eliminar", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancelar", color = Color.White)
-                }
-            },
-            title = { Text("Confirmar eliminación", color = Color.White) },
-            text = {
-                Text(
-                    "Esta acción eliminará tu cuenta y tus datos permanentemente.",
-                    color = Color.LightGray
+            // 👤 Avatar del usuario (sin botón de editar)
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_conacto),
+                    contentDescription = "Avatar",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(80.dp)
                 )
-            },
-            containerColor = Color(0xFF1F4D3E)
-        )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "$nombre $apellido",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = correo,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            )
+
+            Spacer(Modifier.height(24.dp))
+            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            Spacer(Modifier.height(16.dp))
+
+            PerfilCampoEditable("Teléfono", telefono, editMode) { telefono = it }
+            PerfilCampoEditable("Dirección", direccion, editMode) { direccion = it }
+            PerfilCampoEditable("Código Postal", codigoPostal, editMode) { codigoPostal = it }
+            PerfilCampoEditable("Sexo", sexo, editMode) { sexo = it }
+            PerfilCampoEditable("Hándicap", handicap, editMode) { handicap = it }
+
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Checkbox(checked = socio, onCheckedChange = { socio = it }, enabled = editMode)
+                Text("¿Socio?", color = MaterialTheme.colorScheme.onBackground)
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            if (editMode) {
+                Button(
+                    onClick = {
+                        val newJugador = jugador!!.copy(
+                            telefono_jugador = telefono,
+                            direccion_jugador = direccion,
+                            codigo_postal_jugador = codigoPostal,
+                            sexo_jugador = sexo,
+                            socio_jugador = socio,
+                            handicap_jugador = handicap.toDoubleOrNull() ?: 0.0
+                        )
+
+                        vm.actualizarJugador(
+                            jugador = newJugador,
+                            onSuccess = {
+                                Toast.makeText(context, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
+                                editMode = false
+                            },
+                            onError = {
+                                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Guardar cambios", color = Color.Black)
+                }
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun textFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Color(0xFF00FF77),
-    unfocusedBorderColor = Color.White,
-    cursorColor = Color(0xFF00FF77),
-    focusedLabelColor = Color(0xFF00FF77),
-    unfocusedLabelColor = Color.White
-)
+fun PerfilCampoEditable(
+    label: String,
+    value: String,
+    editable: Boolean,
+    onChange: (String) -> Unit
+) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(label, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
+        if (editable) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    cursorColor = MaterialTheme.colorScheme.primary,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
+                )
+            )
+        } else {
+            Text(
+                value,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        }
+    }
+}

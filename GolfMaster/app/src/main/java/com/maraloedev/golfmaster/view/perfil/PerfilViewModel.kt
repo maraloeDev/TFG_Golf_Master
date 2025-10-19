@@ -1,67 +1,42 @@
-package com.maraloedev.golfmaster.viewmodel
+package com.maraloedev.golfmaster.view.perfil
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.maraloedev.golfmaster.model.FirebaseRepo
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.maraloedev.golfmaster.model.Jugadores
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
-/**
- * ViewModel para el perfil del jugador actual.
- * Obtiene y actualiza la información desde Firestore.
- */
-class PerfilViewModel(
-    private val repo: FirebaseRepo = FirebaseRepo()
-) : ViewModel() {
+class PerfilViewModel : ViewModel() {
 
-    data class UiState(
-        val loading: Boolean = false,
-        val jugador: Jugadores? = null,
-        val error: String? = null
-    )
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
-    private val _ui = MutableStateFlow(UiState(loading = true))
-    val ui: StateFlow<UiState> = _ui.asStateFlow()
+    private val _jugador = MutableStateFlow<Jugadores?>(null)
+    val jugador: StateFlow<Jugadores?> = _jugador
+
+    private val uid: String? = auth.currentUser?.uid
 
     init {
-        cargarPerfil()
+        cargarJugadorActual()
     }
 
-    /** Obtiene los datos del jugador actual. */
-    fun cargarPerfil() = viewModelScope.launch {
-        val uid = repo.currentUid ?: return@launch
-        _ui.update { it.copy(loading = true, error = null) }
-
-        runCatching {
-            repo.getJugador(uid)
-        }.onSuccess { jugador ->
-            _ui.update { it.copy(loading = false, jugador = jugador, error = null) }
-        }.onFailure { e ->
-            _ui.update { it.copy(loading = false, error = e.message ?: "Error al cargar el perfil") }
-        }
+    fun cargarJugadorActual() {
+        uid ?: return
+        db.collection("jugadores").document(uid).get()
+            .addOnSuccessListener { doc ->
+                _jugador.value = doc.toObject(Jugadores::class.java)
+            }
+            .addOnFailureListener {
+                _jugador.value = null
+            }
     }
 
-    /** Permite actualizar la información del jugador. */
-    fun actualizarPerfil(nombre: String, apellido: String, telefono: String?) = viewModelScope.launch {
-        val jugadorActual = _ui.value.jugador ?: return@launch
-        _ui.update { it.copy(loading = true) }
+    fun actualizarJugador(jugador: Jugadores, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        uid ?: return onError("Usuario no autenticado")
 
-        runCatching {
-            repo.createOrUpdateJugador(
-                jugadorActual.copy(
-                    nombre_jugador = nombre,
-                    apellido_jugador = apellido,
-                    telefono_jugador = telefono ?: jugadorActual.telefono_jugador
-                )
-            )
-        }.onSuccess {
-            cargarPerfil()
-        }.onFailure { e ->
-            _ui.update { it.copy(loading = false, error = e.message) }
-        }
+        db.collection("jugadores").document(uid).set(jugador)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { e -> onError(e.localizedMessage ?: "Error al actualizar") }
     }
 }
