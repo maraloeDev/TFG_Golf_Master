@@ -1,37 +1,31 @@
+// ui/amigos.kt
 package com.maraloedev.golfmaster.view.amigos
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.maraloedev.golfmaster.R
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.maraloedev.golfmaster.model.Jugadores
+import com.maraloedev.golfmaster.viewmodel.AmigosViewModel
+@Preview
 @Composable
-fun AmigosScreen() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF5A9149)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_app),
-                contentDescription = "Logo GolfMaster",
-                modifier = Modifier.size(120.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Amigos", fontSize = 32.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(text = "Conecta con otros golfistas.", fontSize = 16.sp)
+fun AmigosScreen(vm: AmigosViewModel = viewModel()) {
+    var q by remember { mutableStateOf("") }
+    Column {
+        OutlinedTextField(q, { q = it; vm.buscarJugadores(query = it) }, label = { Text("Buscar por nombre o apellido") },
+            modifier = Modifier.padding(12.dp))
+        val res by vm.resultados.collectAsState()
+        LazyColumn {
+            items(res) { j: Jugadores ->
+                ListItem(headlineContent = { Text("${j.nombre_jugador} ${j.apellido_jugador}") }, supportingContent = { Text(j.correo_jugador) })
+                Divider()
+            }
         }
     }
 }
-

@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.alertas
+package com.maraloedev.golfmaster.view.notificaciones
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,9 +15,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun AlertasScreen(vm: NotificacionesViewModel = viewModel()) {
+fun NotificacionesScreen(vm: NotificacionesViewModel = viewModel()) {
     val ui by vm.ui.collectAsState()
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()) }
+
+    // Si quieres recargar manualmente desde otra parte, expón vm.cargarNotificaciones()
 
     when {
         ui.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -29,41 +31,50 @@ fun AlertasScreen(vm: NotificacionesViewModel = viewModel()) {
         }
 
         ui.notificaciones.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No hay notificaciones disponibles.")
+            Text("No tienes notificaciones.")
         }
 
         else -> LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(16.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(ui.notificaciones) { notif ->
                 NotificacionCard(
                     titulo = notif.titulo,
                     mensaje = notif.mensaje,
-                    fecha = notif.fecha?.toDate()?.let { dateFormat.format(it) } ?: "Sin fecha"
+                    fechaFormateada = notif.fecha?.toDate()?.let(dateFormat::format) ?: "Sin fecha",
                 )
-                Spacer(Modifier.height(8.dp))
             }
         }
     }
 }
 
 @Composable
-fun NotificacionCard(titulo: String, mensaje: String, fecha: String) {
+private fun NotificacionCard(
+    titulo: String,
+    mensaje: String,
+    fechaFormateada: String,
+) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(titulo, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Text(mensaje)
+            Text(
+                titulo.ifBlank { "Notificación" },
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(Modifier.height(6.dp))
             Text(
-                fecha,
+                mensaje.ifBlank { "Sin contenido" },
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                fechaFormateada,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
