@@ -1,181 +1,227 @@
 package com.maraloedev.golfmaster.view.perfil
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.maraloedev.golfmaster.R
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilScreen(vm: PerfilViewModel = viewModel()) {
+fun PerfilScreen(navController: NavController = rememberNavController(), vm: PerfilViewModel = viewModel()) {
     val jugador by vm.jugador.collectAsState()
-    val context = LocalContext.current
-    var editMode by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var mostrarDialogo by remember { mutableStateOf(false) }
 
+    // Si aún no hay datos cargados
     if (jugador == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0B3D2E)),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Color(0xFF00FF77))
         }
         return
     }
 
-    // Estados de los campos
-    var nombre by remember { mutableStateOf(jugador?.nombre_jugador ?: "") }
-    var apellido by remember { mutableStateOf(jugador?.apellido_jugador ?: "") }
-    var correo by remember { mutableStateOf(jugador?.correo_jugador ?: "") }
-    var telefono by remember { mutableStateOf(jugador?.telefono_jugador ?: "") }
-    var direccion by remember { mutableStateOf(jugador?.direccion_jugador ?: "") }
-    var codigoPostal by remember { mutableStateOf(jugador?.codigo_postal_jugador ?: "") }
-    var sexo by remember { mutableStateOf(jugador?.sexo_jugador ?: "Masculino") }
-    var handicap by remember { mutableStateOf(jugador?.handicap_jugador?.toString() ?: "") }
-    var socio by remember { mutableStateOf(jugador?.socio_jugador ?: false) }
+    // Variables editables inicializadas una vez que el jugador ya está cargado
+    var nombre by remember { mutableStateOf(jugador!!.nombre_jugador) }
+    var correo by remember { mutableStateOf(jugador!!.correo_jugador) }
+    var telefono by remember { mutableStateOf(jugador!!.telefono_jugador) }
+    var sexo by remember { mutableStateOf(jugador!!.sexo_jugador) }
+    var pais by remember { mutableStateOf(jugador!!.pais_jugador) }
+    var codigoPostal by remember { mutableStateOf(jugador!!.codigo_postal_jugador) }
+    var licencia by remember { mutableStateOf(jugador!!.licencia_jugador) }
+    var handicap by remember { mutableStateOf(jugador!!.handicap_jugador) }
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { editMode = !editMode },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "Editar perfil", tint = Color.Black)
-            }
+        containerColor = Color(0xFF0B3D2E),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Mi Perfil", color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B3D2E))
+            )
         }
-    ) { pv ->
+    ) { padding ->
         Column(
             modifier = Modifier
-                .padding(pv)
-                .padding(horizontal = 16.dp)
+                .padding(padding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(20.dp))
-
-            // 👤 Avatar del usuario (sin botón de editar)
-            Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_conacto),
-                    contentDescription = "Avatar",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(80.dp)
-                )
+            // Avatar
+            Box(contentAlignment = Alignment.BottomEnd) {
+                Box(
+                    Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF1F4D3E)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(60.dp))
+                }
+                IconButton(
+                    onClick = {
+                        scope.launch { snackbarHostState.showSnackbar("Editar foto próximamente") }
+                    },
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color(0xFF00FF77))
+                        .size(28.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color(0xFF0B3D2E))
+                }
             }
 
             Spacer(Modifier.height(12.dp))
-            Text(
-                text = "$nombre $apellido",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = correo,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-            )
+            Text(nombre.ifBlank { "Jugador" }, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text("ID: ${jugador!!.id}", color = Color.Gray, fontSize = 13.sp)
 
             Spacer(Modifier.height(24.dp))
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-            Spacer(Modifier.height(16.dp))
 
-            PerfilCampoEditable("Teléfono", telefono, editMode) { telefono = it }
-            PerfilCampoEditable("Dirección", direccion, editMode) { direccion = it }
-            PerfilCampoEditable("Código Postal", codigoPostal, editMode) { codigoPostal = it }
-            PerfilCampoEditable("Sexo", sexo, editMode) { sexo = it }
-            PerfilCampoEditable("Hándicap", handicap, editMode) { handicap = it }
-
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Checkbox(checked = socio, onCheckedChange = { socio = it }, enabled = editMode)
-                Text("¿Socio?", color = MaterialTheme.colorScheme.onBackground)
+            // Género
+            Text("Sexo:", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                RadioButton(
+                    selected = sexo == "Hombre",
+                    onClick = { sexo = "Hombre" },
+                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF00FF77))
+                )
+                Text("Hombre", color = Color.White)
+                RadioButton(
+                    selected = sexo == "Mujer",
+                    onClick = { sexo = "Mujer" },
+                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF00FF77))
+                )
+                Text("Mujer", color = Color.White)
             }
 
+            Spacer(Modifier.height(12.dp))
+
+            // Campos editables
+            PerfilCampoEditable(label = "Nombre", value = nombre, onValueChange = { nombre = it })
+            PerfilCampoEditable(label = "Email", value = correo, readOnly = true)
+            PerfilCampoEditable(label = "Teléfono", value = telefono, onValueChange = { telefono = it })
+            PerfilCampoEditable(label = "País", value = pais, onValueChange = { pais = it })
+            PerfilCampoEditable(label = "Código postal", value = codigoPostal, onValueChange = { codigoPostal = it })
+            PerfilCampoEditable(label = "Licencia de golf", value = licencia, onValueChange = { licencia = it })
+            PerfilCampoEditable(label = "Handicap", value = handicap, onValueChange = { handicap = it })
+
             Spacer(Modifier.height(24.dp))
 
-            if (editMode) {
-                Button(
-                    onClick = {
-                        val newJugador = jugador!!.copy(
-                            telefono_jugador = telefono,
-                            direccion_jugador = direccion,
-                            codigo_postal_jugador = codigoPostal,
-                            sexo_jugador = sexo,
-                            socio_jugador = socio,
-                            handicap_jugador = handicap.toDoubleOrNull() ?: 0.0
-                        )
+            // Guardar
+            Button(
+                onClick = {
+                    val perfilActualizado = jugador!!.copy(
+                        nombre_jugador = nombre,
+                        telefono_jugador = telefono,
+                        sexo_jugador = sexo,
+                        pais_jugador = pais,
+                        codigo_postal_jugador = codigoPostal,
+                        licencia_jugador = licencia,
+                        handicap_jugador = handicap
+                    )
+                    vm.actualizarPerfil(
+                        perfil = perfilActualizado,
+                        onSuccess = { scope.launch { snackbarHostState.showSnackbar("Perfil actualizado ✅") } },
+                        onError = { e -> scope.launch { snackbarHostState.showSnackbar("Error: $e") } }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FF77))
+            ) {
+                Icon(Icons.Default.Save, contentDescription = null, tint = Color(0xFF0B3D2E))
+                Spacer(Modifier.width(8.dp))
+                Text("Guardar cambios", color = Color(0xFF0B3D2E), fontWeight = FontWeight.Bold)
+            }
 
-                        vm.actualizarJugador(
-                            jugador = newJugador,
-                            onSuccess = {
-                                Toast.makeText(context, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
-                                editMode = false
-                            },
-                            onError = {
-                                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-                            }
-                        )
+            Spacer(Modifier.height(16.dp))
+
+            // Eliminar cuenta
+            Button(
+                onClick = { mostrarDialogo = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.9f))
+            ) {
+                Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text("Eliminar cuenta", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+
+            if (mostrarDialogo) {
+                AlertDialog(
+                    onDismissRequest = { mostrarDialogo = false },
+                    title = { Text("Eliminar cuenta", fontWeight = FontWeight.Bold) },
+                    text = { Text("¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            mostrarDialogo = false
+                            vm.eliminarCuenta(
+                                onSuccess = {
+                                    scope.launch { snackbarHostState.showSnackbar("Cuenta eliminada 🗑️") }
+                                    navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                                },
+                                onError = { e -> scope.launch { snackbarHostState.showSnackbar("Error: $e") } }
+                            )
+                        }) {
+                            Text("Sí, eliminar", color = Color.Red)
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Guardar cambios", color = Color.Black)
-                }
+                    dismissButton = { TextButton(onClick = { mostrarDialogo = false }) { Text("Cancelar", color = Color.Gray) } },
+                    containerColor = Color(0xFF1F4D3E),
+                    titleContentColor = Color.White,
+                    textContentColor = Color.White
+                )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilCampoEditable(
+private fun PerfilCampoEditable(
     label: String,
     value: String,
-    editable: Boolean,
-    onChange: (String) -> Unit
+    onValueChange: (String) -> Unit = {},
+    readOnly: Boolean = false
 ) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(label, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
-        if (editable) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        } else {
-            Text(
-                value,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-        }
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Text(label, color = Color.Gray, fontSize = 13.sp)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            readOnly = readOnly,
+            modifier = Modifier.fillMaxWidth(),
+            textStyle = LocalTextStyle.current.copy(color = Color.White),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF00FF77),
+                unfocusedBorderColor = Color(0xFF1F4D3E),
+                focusedContainerColor = Color(0xFF173E34),
+                unfocusedContainerColor = Color(0xFF173E34)
+            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+        )
     }
 }

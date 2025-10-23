@@ -1,12 +1,9 @@
 package com.maraloedev.golfmaster.view.inicio
 
+import android.annotation.SuppressLint
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.EaseInOutQuad
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,8 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,16 +37,11 @@ import com.maraloedev.golfmaster.view.eventos.EventosScreen
 import com.maraloedev.golfmaster.view.perfil.PerfilScreen
 import com.maraloedev.golfmaster.view.preferencias.PreferenciasScreen
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
-import com.maraloedev.golfmaster.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
 
-/**
- * Pantalla principal con AppBar, Drawer lateral y BottomNavigation.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen( navController: NavController)
- {
+fun HomeScreen(navController: NavController) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var current by remember { mutableStateOf("Inicio") }
@@ -94,25 +86,15 @@ fun HomeScreen( navController: NavController)
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(
-                                Icons.Filled.Menu,
-                                contentDescription = "Menú",
-                                tint = Color.White
-                            )
+                            Icon(Icons.Filled.Menu, contentDescription = "Menú", tint = Color.White)
                         }
                     },
                     actions = {
                         IconButton(onClick = { current = "Mi Perfil" }) {
-                            Icon(
-                                Icons.Filled.AccountCircle,
-                                contentDescription = "Perfil",
-                                tint = Color(0xFFFFCBA4)
-                            )
+                            Icon(Icons.Filled.AccountCircle, contentDescription = "Perfil", tint = Color(0xFFFFCBA4))
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF0B3D2E)
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B3D2E))
                 )
             },
             bottomBar = {
@@ -120,17 +102,17 @@ fun HomeScreen( navController: NavController)
             }
         ) { innerPadding ->
             Box(
-                modifier = Modifier
+                Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
             ) {
                 when (current) {
-                    "Inicio" -> HomeLandingContent()
+                    "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                     "Reservas" -> ReservasScreen()
                     "Eventos" -> EventosScreen()
                     "Amigos" -> AmigosScreen()
                     "Alertas" -> AlertasScreen()
-                    "Mi Perfil" -> PerfilScreen()
+                    "Mi Perfil" -> PerfilScreen(navController = navController)
                     "Preferencias" -> PreferenciasScreen()
                 }
             }
@@ -138,9 +120,8 @@ fun HomeScreen( navController: NavController)
     }
 }
 
-/**
- * Contenido del menú lateral (drawer).
- */
+/* ---------------- Drawer ---------------- */
+
 @Composable
 private fun DrawerContent(
     jugadorNombre: String,
@@ -156,14 +137,16 @@ private fun DrawerContent(
             .background(Color(0xFF0B3D2E))
             .padding(16.dp)
     ) {
-        // Cabecera del usuario
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier
                     .size(80.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF1F4D3E))
-            )
+                    .background(Color(0xFF1F4D3E)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
+            }
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(jugadorNombre, color = Color.White, fontWeight = FontWeight.Bold)
@@ -173,7 +156,6 @@ private fun DrawerContent(
 
         Spacer(Modifier.height(24.dp))
 
-        // Menú lateral
         val menuItems = listOf(
             "Inicio" to Icons.Filled.Home,
             "Información" to Icons.Filled.Info,
@@ -204,7 +186,6 @@ private fun DrawerContent(
 
         Spacer(Modifier.weight(1f))
 
-        // Botón de cerrar sesión
         TextButton(
             onClick = onLogout,
             colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
@@ -216,9 +197,8 @@ private fun DrawerContent(
     }
 }
 
-/**
- * Barra de navegación inferior (BottomNav).
- */
+/* ---------------- Bottom Navigation ---------------- */
+
 @Composable
 private fun BottomNavBar(current: String, onItemSelected: (String) -> Unit) {
     NavigationBar(containerColor = Color(0xFF0B3D2E)) {
@@ -242,27 +222,27 @@ private fun BottomNavBar(current: String, onItemSelected: (String) -> Unit) {
     }
 }
 
-/**
- * Contenido central de la pantalla "Inicio".
- */
+/* ---------------- Pantalla de inicio ---------------- */
+
 @Composable
-private fun HomeLandingContent() {
+private fun HomeLandingContent(nombreJugador: String?) {
+    val nombreActual by rememberUpdatedState(nombreJugador?.takeIf { it.isNotBlank() } ?: "Jugador")
+    val painter = safePainterResource(R.drawable.logo_app)
+
     Box(Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(R.drawable.logo_app),
-            contentDescription = "Fondo Golf",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        painter?.let {
+            Image(
+                painter = it,
+                contentDescription = "Fondo Golf",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         Box(
             Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, Color(0xCC000000))
-                    )
-                )
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
         )
 
         Column(
@@ -275,12 +255,12 @@ private fun HomeLandingContent() {
             GlowingLogo()
             Spacer(Modifier.height(20.dp))
             Text(
-                text = "GolfMaster",
+                text = "Bienvenido, $nombreActual",
                 color = Color.White,
-                fontSize = 30.sp,
+                fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 text = "“Cada golpe es una nueva oportunidad para la grandeza.”",
                 color = Color.White.copy(alpha = 0.9f),
@@ -292,9 +272,20 @@ private fun HomeLandingContent() {
     }
 }
 
-/**
- * Logo animado con efecto de brillo.
- */
+/* ---------------- Función segura para recursos ---------------- */
+
+@SuppressLint("LocalContextResourcesRead")
+@Composable
+private fun safePainterResource(@DrawableRes id: Int): Painter? {
+    return remember(id) {
+        runCatching {
+            painterResource(id)
+        }.getOrNull()
+    }
+}
+
+/* ---------------- Logo animado ---------------- */
+
 @Composable
 private fun GlowingLogo() {
     val infiniteTransition = rememberInfiniteTransition(label = "")
@@ -304,7 +295,8 @@ private fun GlowingLogo() {
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = EaseInOutQuad),
             repeatMode = RepeatMode.Reverse
-        ), label = ""
+        ),
+        label = ""
     )
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.8f,
@@ -312,7 +304,8 @@ private fun GlowingLogo() {
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = EaseInOutQuad),
             repeatMode = RepeatMode.Reverse
-        ), label = ""
+        ),
+        label = ""
     )
 
     Box(

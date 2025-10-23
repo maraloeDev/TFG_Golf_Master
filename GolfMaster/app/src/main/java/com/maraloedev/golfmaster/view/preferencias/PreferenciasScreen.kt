@@ -1,6 +1,8 @@
 package com.maraloedev.golfmaster.view.preferencias
 
+import android.annotation.SuppressLint
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,11 +21,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
     val context = LocalContext.current
-    val jugador by vm.jugador.collectAsState()
+    val preferencias by vm.preferencias.collectAsState()
 
-    var idioma by remember { mutableStateOf(jugador?.idioma ?: "Español") }
-    var diasJuego by remember { mutableStateOf(jugador?.dias_juego ?: emptyList<String>()) }
-    var intereses by remember { mutableStateOf(jugador?.intereses ?: emptyList<String>()) }
+    var idioma by remember { mutableStateOf(preferencias.idioma) }
+    var diasJuego by remember { mutableStateOf(preferencias.dias_juego.toMutableList()) }
+    var intereses by remember { mutableStateOf(preferencias.intereses.toMutableList()) }
 
     val diasSemana = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado")
     val interesesList = listOf("Golf", "Torneos", "P&P", "Escuela de golf", "Escuela infantil", "Eventos")
@@ -66,7 +68,7 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                     Checkbox(
                         checked = dia in diasJuego,
                         onCheckedChange = {
-                            diasJuego = if (it) diasJuego + dia else diasJuego - dia
+                            diasJuego = (if (it) diasJuego + dia else diasJuego - dia) as MutableList<String>
                         },
                         colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00FF77))
                     )
@@ -114,7 +116,7 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                     Checkbox(
                         checked = interes in intereses,
                         onCheckedChange = {
-                            intereses = if (it) intereses + interes else intereses - interes
+                            intereses = (if (it) intereses + interes else intereses - interes) as MutableList<String>
                         },
                         colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00FF77))
                     )
