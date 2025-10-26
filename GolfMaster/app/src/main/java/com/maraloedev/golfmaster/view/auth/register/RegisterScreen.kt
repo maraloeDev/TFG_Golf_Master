@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,14 +29,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.model.Jugadores
-import com.maraloedev.golfmaster.viewmodel.AuthViewModel
+import com.maraloedev.golfmaster.view.core.navigation.NavRoutes
+import com.maraloedev.golfmaster.vm.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
+fun RegisterScreen(
+    navController: NavController,
+    vm: AuthViewModel = viewModel()
+) {
     val context = LocalContext.current
 
-    // Campos de entrada
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
@@ -45,22 +51,16 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var sexo by remember { mutableStateOf("Masculino") }
     var socio by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
-
-    // Estados adicionales
-    var loading by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
 
-    // Conversión segura a Double
     val handicap = handicapText.toDoubleOrNull() ?: -1.0
-
-    // Validaciones
     val telefonoValido = telefono.length == 9 && telefono.all { it.isDigit() }
     val handicapValido = handicap in 0.0..36.0
     val camposVacios = listOf(
         nombre, apellido, correo, password, codigoPostal, direccion, telefono, handicapText
     ).any { it.isBlank() }
 
-    // Fondo degradado
     val background = Brush.verticalGradient(listOf(Color(0xFF0B3D2E), Color(0xFF173E34)))
 
     Scaffold(containerColor = Color.Transparent) { pv ->
@@ -91,12 +91,10 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 )
                 Spacer(Modifier.height(24.dp))
 
-                // Campos de texto
                 AnimatedTextField("Nombre", nombre, onChange = { nombre = it })
                 AnimatedTextField("Apellidos", apellido, onChange = { apellido = it })
                 AnimatedTextField("Correo electrónico", correo, KeyboardType.Email, onChange = { correo = it })
 
-                // Contraseña con icono de ojo
                 AnimatedTextField(
                     label = "Contraseña",
                     value = password,
@@ -110,7 +108,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 AnimatedTextField("Código Postal", codigoPostal, KeyboardType.Number, onChange = { codigoPostal = it })
                 AnimatedTextField("Dirección", direccion, onChange = { direccion = it })
 
-                // Teléfono
                 AnimatedTextField(
                     label = "Teléfono",
                     value = telefono,
@@ -120,7 +117,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     errorText = "Debe contener 9 números."
                 )
 
-                // Handicap
                 AnimatedTextField(
                     label = "Handicap",
                     value = handicapText,
@@ -130,9 +126,11 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     errorText = "Debe ser un número entre 0 y 36."
                 )
 
-                // Selector de sexo
                 Spacer(Modifier.height(8.dp))
-                ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
                     OutlinedTextField(
                         value = sexo,
                         onValueChange = {},
@@ -142,7 +140,10 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                         colors = textFieldColors()
                     )
-                    ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
                         listOf("Masculino", "Femenino").forEach {
                             DropdownMenuItem(
                                 text = { Text(it) },
@@ -163,7 +164,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 
                 Spacer(Modifier.height(24.dp))
 
-                // 🔹 Botón de registrar
                 Button(
                     onClick = {
                         if (camposVacios || !telefonoValido || !handicapValido) {
@@ -184,15 +184,15 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             handicap_jugador = handicap
                         )
 
-                        vm.registerJugador(
+                        vm.reg(
                             email = correo,
                             password = password,
                             jugador = jugador,
                             onSuccess = {
                                 loading = false
                                 Toast.makeText(context, "Registrado correctamente", Toast.LENGTH_SHORT).show()
-                                navController.navigate("login") {
-                                    popUpTo("register") { inclusive = true }
+                                navController.navigate(NavRoutes.LOGIN) {
+                                    popUpTo(NavRoutes.REGISTRO) { inclusive = true }
                                 }
                             },
                             onError = {
@@ -217,11 +217,10 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 
                 Spacer(Modifier.height(20.dp))
 
-                // 🔹 Link para volver al login
                 Row {
                     Text("¿Ya tienes cuenta?", color = Color.White)
                     Spacer(Modifier.width(4.dp))
-                    TextButton(onClick = { navController.navigate("login") }) {
+                    TextButton(onClick = { navController.navigate(NavRoutes.LOGIN) }) {
                         Text("Inicia sesión", color = Color(0xFF00FF77))
                     }
                 }
@@ -230,9 +229,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     }
 }
 
-/**
- * Campo de texto con animación y validación visual
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimatedTextField(
@@ -267,11 +263,9 @@ fun AnimatedTextField(
             trailingIcon = {
                 if (isPassword && onTogglePassword != null) {
                     IconButton(onClick = onTogglePassword) {
-                        val iconRes =
-                            if (showPassword) R.drawable.ic_ojo_abierto else R.drawable.ic_ojo_cerrado
                         Icon(
-                            painter = painterResource(iconRes),
-                            contentDescription = "Mostrar contraseña",
+                            imageVector = if (showPassword) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (showPassword) "Ocultar" else "Mostrar",
                             tint = Color(0xFFBBA864)
                         )
                     }

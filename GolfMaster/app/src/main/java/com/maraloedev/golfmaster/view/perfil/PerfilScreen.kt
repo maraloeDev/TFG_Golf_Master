@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.maraloedev.golfmaster.view.core.navigation.NavRoutes
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,7 +183,7 @@ fun PerfilScreen(navController: NavController = rememberNavController(), vm: Per
                             vm.eliminarCuenta(
                                 onSuccess = {
                                     scope.launch { snackbarHostState.showSnackbar("Cuenta eliminada 🗑️") }
-                                    navController.navigate("login") { popUpTo("home") { inclusive = true } }
+                                    navController.navigate(NavRoutes.LOGIN) { popUpTo(NavRoutes.INICIO) { inclusive = true } }
                                 },
                                 onError = { e -> scope.launch { snackbarHostState.showSnackbar("Error: $e") } }
                             )

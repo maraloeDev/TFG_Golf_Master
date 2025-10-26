@@ -78,7 +78,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.view.alertas.AlertasScreen
 import com.maraloedev.golfmaster.view.amigos.AmigosScreen
@@ -87,6 +86,7 @@ import com.maraloedev.golfmaster.view.eventos.EventosScreen
 import com.maraloedev.golfmaster.view.perfil.PerfilScreen
 import com.maraloedev.golfmaster.view.preferencias.PreferenciasScreen
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
+import com.maraloedev.golfmaster.view.core.navigation.NavRoutes
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,9 +111,9 @@ fun HomeScreen(navController: NavController) {
                     scope.launch { drawerState.close() }
                 },
                 onLogout = {
-                    FirebaseAuth.getInstance().signOut()
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                    com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+                    navController.navigate(NavRoutes.LOGIN) {
+                        popUpTo(NavRoutes.INICIO) { inclusive = true }
                     }
                 }
             )
@@ -159,7 +159,7 @@ fun HomeScreen(navController: NavController) {
                     "Alertas" -> AlertasScreen()
                     "Mi Perfil" -> PerfilScreen(navController = navController)
                     "Preferencias" -> PreferenciasScreen()
-                    "Contacto" -> ContactoScreen() // 👈 Nuevo
+                    "Contacto" -> ContactoScreen()
                 }
             }
         }
