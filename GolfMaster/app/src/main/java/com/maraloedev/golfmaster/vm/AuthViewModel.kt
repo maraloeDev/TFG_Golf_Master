@@ -1,59 +1,106 @@
 package com.maraloedev.golfmaster.vm
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.maraloedev.golfmaster.model.Jugadores
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+data class AuthUiState(
+    val loading: Boolean = false,
+    val error: String? = null,
+    val success: Boolean = false
+)
 
 class AuthViewModel : ViewModel() {
 
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
-    fun login(
-        email: String,
-        password: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        viewModelScope.launch {
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onError(e.message ?: "Error al iniciar sesión") }
+    private val _ui = MutableStateFlow(AuthUiState())
+    val ui: StateFlow<AuthUiState> = _ui
+
+    /**
+     * Inicia sesión con email y contraseña
+     */
+    fun login(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        if (email.isBlank() || password.isBlank()) {
+            onError("Por favor, completa todos los campos.")
+            return
         }
+
+        _ui.value = _ui.value.copy(loading = true)
+
+        auth.signInWithEmailAndPassword(email.trim(), password.trim())
+            .addOnSuccessListener {
+                _ui.value = AuthUiState(success = true)
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                _ui.value = AuthUiState(loading = false, error = e.localizedMessage)
+                onError(e.localizedMessage ?: "Error al iniciar sesión.")
+            }
     }
 
-    fun reg(
+    /**
+     * Registra un nuevo usuario
+     */
+    fun register(
+        nombre: String,
         email: String,
         password: String,
-        jugador: Jugadores,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        viewModelScope.launch {
-            auth.createUserWithEmailAndPassword(email, password)
-                .addOnSuccessListener { result ->
-                    val uid = result.user?.uid
-                    if (uid == null) {
-                        onError("Error: UID nulo tras el registro")
-                        return@addOnSuccessListener
+        if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
+            onError("Debes completar todos los campos.")
+            return
+        }
+
+        _ui.value = _ui.value.copy(loading = true)
+
+        auth.createUserWithEmailAndPassword(email.trim(), password.trim())
+            .addOnSuccessListener { result ->
+                val uid = result.user?.uid ?: return@addOnSuccessListener
+
+                val jugador = hashMapOf(
+                    "id" to uid,
+                    "nombre_jugador" to nombre.trim(),
+                    "correo_jugador" to email.trim(),
+                    "telefono_jugador" to "",
+                    "sexo_jugador" to "Hombre",
+                    "pais_jugador" to "",
+                    "codigo_postal_jugador" to "",
+                    "licencia_jugador" to "",
+                    "handicap_jugador" to ""
+                )
+
+                db.collection("jugadores").document(uid)
+                    .set(jugador)
+                    .addOnSuccessListener {
+                        _ui.value = AuthUiState(success = true)
+                        onSuccess()
                     }
-                    db.collection("jugadores").document(uid)
-                        .set(jugador)
-                        .addOnSuccessListener { onSuccess() }
-                        .addOnFailureListener { e ->
-                            onError("Error al guardar en Firestore: ${e.message}")
-                        }
-                }
-                .addOnFailureListener { e ->
-                    onError("Error al registrar usuario: ${e.message}")
-                }
-        }
+                    .addOnFailureListener { e ->
+                        onError(e.localizedMessage ?: "Error al guardar el perfil.")
+                    }
+            }
+            .addOnFailureListener { e ->
+                _ui.value = AuthUiState(loading = false, error = e.localizedMessage)
+                onError(e.localizedMessage ?: "Error al registrarse.")
+            }
     }
 
-    fun logout() = auth.signOut()
-    fun getCurrentUserId(): String? = auth.currentUser?.uid
-    fun isUserLoggedIn(): Boolean = auth.currentUser != null
+    /**
+     * Cierra sesión
+     */
+    fun logout() {
+        auth.signOut()
+        _ui.value = AuthUiState()
+    }
+
+    /**
+     * Comprueba si hay sesión activa
+     */
+    fun haySesionActiva(): Boolean = auth.currentUser != null
 }

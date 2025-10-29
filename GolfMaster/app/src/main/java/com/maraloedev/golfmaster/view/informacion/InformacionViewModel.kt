@@ -1,83 +1,78 @@
 package com.maraloedev.golfmaster.view.informacion
 
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.maraloedev.golfmaster.view.core.navigation.NavRoutes
-import kotlinx.coroutines.launch
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Modelo de datos para la información general del club
+ */
+data class Informacion(
+    val nombreClub: String = "GolfMaster Club",
+    val descripcion: String = "Club dedicado a fomentar el golf con pasión y comunidad.",
+    val direccion: String = "Av. del Golf, 123 - Madrid, España",
+    val telefono: String = "+34 600 123 456",
+    val email: String = "contacto@golfmaster.com",
+    val web: String = "www.golfmaster.com",
+    val versionApp: String = "1.0.0",
+    val politicaPrivacidad: String = "Tus datos se usan exclusivamente para gestionar tu experiencia de golf y no se comparten con terceros."
+)
+
+/**
+ * Estado de la UI
+ */
+data class InformacionUiState(
+    val info: Informacion = Informacion(),
+    val loading: Boolean = false,
+    val error: String? = null
+)
 
 class InformacionViewModel : ViewModel() {
 
-    private val _state = mutableStateOf(InformacionState())
-    val state: State<InformacionState> = _state
+    private val db = FirebaseFirestore.getInstance()
+
+    private val _ui = MutableStateFlow(InformacionUiState(loading = true))
+    val ui: StateFlow<InformacionUiState> = _ui
 
     init {
-        cargar()
+        cargarInformacion()
     }
 
-    private fun cargar() = viewModelScope.launch {
-        _state.value = InformacionState(
-            sections = listOf(
-                InfoSectionData(
-                    header = "Reservas",
-                    entries = listOf(
-                        InfoEntry(
-                            iconName = "golf",
-                            title = "Reservas de Equipamiento",
-                            subtitle = "Reserva de buggies, palos y carros",
-                            route = NavRoutes.RESERVAS
-                        )
+    /**
+     * Carga la información desde Firestore o usa valores por defecto
+     */
+    fun cargarInformacion() {
+        _ui.value = _ui.value.copy(loading = true, error = null)
+
+        db.collection("informacion").document("club")
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val data = doc.data ?: emptyMap()
+                    val info = Informacion(
+                        nombreClub = data["nombreClub"] as? String ?: "GolfMaster Club",
+                        descripcion = data["descripcion"] as? String ?: "Club dedicado al golf.",
+                        direccion = data["direccion"] as? String ?: "",
+                        telefono = data["telefono"] as? String ?: "",
+                        email = data["email"] as? String ?: "",
+                        web = data["web"] as? String ?: "",
+                        versionApp = data["versionApp"] as? String ?: "1.0.0",
+                        politicaPrivacidad = data["politicaPrivacidad"] as? String
+                            ?: "Tus datos están protegidos según la normativa vigente."
                     )
-                ),
-                InfoSectionData(
-                    header = "Campos",
-                    entries = listOf(
-                        InfoEntry(
-                            iconName = "map",
-                            title = "Correspondencia de Campos",
-                            subtitle = "Información de contacto y ubicación",
-                            route = NavRoutes.CORRESPONDENCIA_CAMPOS
-                        ),
-                        InfoEntry(
-                            iconName = "flag",
-                            title = "Reglas Locales",
-                            subtitle = "Reglas locales de los campos de golf",
-                            route = NavRoutes.REGLAS_LOCALES
-                        )
-                    )
-                ),
-                InfoSectionData(
-                    header = "Torneos",
-                    entries = listOf(
-                        InfoEntry(
-                            iconName = "trophy",
-                            title = "Términos y Condiciones",
-                            subtitle = "Términos y condiciones de los torneos",
-                            route = NavRoutes.TERMINOS_CONDICIONES
-                        )
-                    )
+                    _ui.value = InformacionUiState(info = info, loading = false)
+                } else {
+                    // Documento no encontrado, usar valores por defecto
+                    _ui.value = InformacionUiState(info = Informacion(), loading = false)
+                }
+            }
+            .addOnFailureListener { e ->
+                _ui.value = InformacionUiState(
+                    info = Informacion(),
+                    loading = false,
+                    error = e.localizedMessage ?: "Error al cargar la información."
                 )
-            )
-        )
+            }
     }
 }
-
-/** Estado inmutable de la pantalla */
-data class InformacionState(
-    val sections: List<InfoSectionData> = emptyList()
-)
-
-/** Sección con cabecera + tarjetas */
-data class InfoSectionData(
-    val header: String,
-    val entries: List<InfoEntry>
-)
-
-/** Tarjeta individual */
-data class InfoEntry(
-    val iconName: String,           // "golf" | "map" | "flag" | "trophy"
-    val title: String,
-    val subtitle: String,
-    val route: String? = null
-)

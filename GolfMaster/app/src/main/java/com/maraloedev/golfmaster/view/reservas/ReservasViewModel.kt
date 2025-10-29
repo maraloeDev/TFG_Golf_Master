@@ -1,12 +1,10 @@
 package com.maraloedev.golfmaster.view.reservas
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Modelo de datos para las reservas
@@ -75,7 +73,7 @@ class ReservasViewModel : ViewModel() {
                             estado = data["estado"] as? String ?: "Pendiente"
                         )
                     } catch (e: Exception) {
-                        null // datos corruptos → ignora la reserva
+                        null
                     }
                 }
 
@@ -133,18 +131,16 @@ class ReservasViewModel : ViewModel() {
             estado = "Pendiente"
         )
 
-        viewModelScope.launch {
-            db.collection("reservas")
-                .add(nuevaReserva)
-                .addOnSuccessListener {
-                    onSuccess()
-                    cargarReservas()
-                    _ui.value = _ui.value.copy(successMessage = "Reserva creada correctamente ✅")
-                }
-                .addOnFailureListener { e ->
-                    onError(e.localizedMessage ?: "Error al crear la reserva.")
-                }
-        }
+        db.collection("reservas")
+            .add(nuevaReserva)
+            .addOnSuccessListener {
+                onSuccess()
+                cargarReservas()
+                _ui.value = _ui.value.copy(successMessage = "Reserva creada correctamente ✅")
+            }
+            .addOnFailureListener { e ->
+                onError(e.localizedMessage ?: "Error al crear la reserva.")
+            }
     }
 
     /**
@@ -156,17 +152,15 @@ class ReservasViewModel : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
-            db.collection("reservas").document(reservaId)
-                .update("estado", "Cancelada")
-                .addOnSuccessListener {
-                    onSuccess()
-                    cargarReservas()
-                }
-                .addOnFailureListener { e ->
-                    onError(e.localizedMessage ?: "Error al cancelar la reserva.")
-                }
-        }
+        db.collection("reservas").document(reservaId)
+            .update("estado", "Cancelada")
+            .addOnSuccessListener {
+                onSuccess()
+                cargarReservas()
+            }
+            .addOnFailureListener { e ->
+                onError(e.localizedMessage ?: "Error al cancelar la reserva.")
+            }
     }
 
     fun limpiarError() {

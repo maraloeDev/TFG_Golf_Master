@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Modelo de datos del perfil del jugador
+ */
 data class JugadorPerfil(
     val id: String = "",
     val nombre_jugador: String = "",
@@ -20,6 +23,9 @@ data class JugadorPerfil(
     val handicap_jugador: String = ""
 )
 
+/**
+ * Estado de la interfaz del perfil
+ */
 data class PerfilUiState(
     val jugador: JugadorPerfil? = null,
     val loading: Boolean = false,
@@ -27,6 +33,9 @@ data class PerfilUiState(
     val success: Boolean = false
 )
 
+/**
+ * ViewModel para manejar el perfil del usuario
+ */
 class PerfilViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
@@ -39,6 +48,9 @@ class PerfilViewModel : ViewModel() {
         cargarPerfil()
     }
 
+    /**
+     * Carga el perfil actual del usuario desde Firestore
+     */
     fun cargarPerfil() {
         val uid = auth.currentUser?.uid
         if (uid.isNullOrBlank()) {
@@ -52,7 +64,11 @@ class PerfilViewModel : ViewModel() {
             .get()
             .addOnSuccessListener { doc ->
                 if (!doc.exists()) {
-                    val nuevo = JugadorPerfil(id = uid, correo_jugador = auth.currentUser?.email ?: "")
+                    // Crear documento inicial si no existe
+                    val nuevo = JugadorPerfil(
+                        id = uid,
+                        correo_jugador = auth.currentUser?.email ?: ""
+                    )
                     db.collection("jugadores").document(uid).set(nuevo)
                     _ui.value = PerfilUiState(jugador = nuevo, loading = false)
                 } else {
@@ -76,18 +92,31 @@ class PerfilViewModel : ViewModel() {
                 }
             }
             .addOnFailureListener { e ->
-                _ui.value = PerfilUiState(error = e.localizedMessage ?: "Error al cargar perfil", loading = false)
+                _ui.value = PerfilUiState(
+                    error = e.localizedMessage ?: "Error al cargar el perfil.",
+                    loading = false
+                )
             }
     }
 
+    /**
+     * Actualiza los datos del perfil en Firestore
+     */
     fun actualizarPerfil(perfil: JugadorPerfil, onSuccess: () -> Unit, onError: (String) -> Unit) {
         val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) return onError("Usuario no autenticado")
+        if (uid.isNullOrBlank()) {
+            onError("Usuario no autenticado.")
+            return
+        }
 
+        // Validaciones de campos
         if (perfil.nombre_jugador.isBlank()) return onError("El nombre no puede estar vacío.")
         if (!perfil.correo_jugador.contains("@")) return onError("Correo electrónico no válido.")
+        if (perfil.codigo_postal_jugador.any { !it.isDigit() } && perfil.codigo_postal_jugador.isNotEmpty())
+            return onError("El código postal debe ser numérico.")
 
         _ui.value = _ui.value.copy(loading = true)
+
         viewModelScope.launch {
             db.collection("jugadores").document(uid)
                 .set(perfil)
@@ -102,17 +131,26 @@ class PerfilViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Elimina la cuenta del usuario (documentos + autenticación)
+     */
     fun eliminarCuenta(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val uid = auth.currentUser?.uid
         val user = auth.currentUser
 
-        if (uid.isNullOrBlank() || user == null) return onError("Usuario no autenticado")
+        if (uid.isNullOrBlank() || user == null) {
+            onError("Usuario no autenticado.")
+            return
+        }
 
         _ui.value = _ui.value.copy(loading = true)
 
         viewModelScope.launch {
+            // Borramos datos del usuario en Firestore
             db.collection("jugadores").document(uid).delete()
             db.collection("preferencias").document(uid).delete()
+
+            // Eliminamos la cuenta en FirebaseAuth
             user.delete()
                 .addOnSuccessListener {
                     _ui.value = PerfilUiState(jugador = null, loading = false)
@@ -120,7 +158,7 @@ class PerfilViewModel : ViewModel() {
                 }
                 .addOnFailureListener { e ->
                     _ui.value = _ui.value.copy(loading = false, error = e.localizedMessage)
-                    onError(e.localizedMessage ?: "Error al eliminar cuenta.")
+                    onError(e.localizedMessage ?: "Error al eliminar la cuenta.")
                 }
         }
     }
