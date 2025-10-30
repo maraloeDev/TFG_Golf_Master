@@ -1,103 +1,78 @@
 package com.maraloedev.golfmaster.view.preferencias
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.maraloedev.golfmaster.model.Preferencias
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
 
 /**
- * Modelo de datos de preferencias
+ * ViewModel que gestiona las preferencias del usuario autenticado
+ * directamente desde la colección `preferencias/{uid}`
  */
-data class Preferencias(
-    val temaOscuro: Boolean = true,
-    val notificaciones: Boolean = true,
-    val idioma: String = "Español",
-    val mostrarPerfilPublico: Boolean = true
-)
-
-/**
- * Estado de la UI
- */
-data class PreferenciasUiState(
-    val preferencias: Preferencias = Preferencias(),
-    val loading: Boolean = false,
-    val error: String? = null,
-    val mensaje: String? = null
-)
-
 class PreferenciasViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
+    private val uid get() = auth.currentUser?.uid
 
-    private val _ui = MutableStateFlow(PreferenciasUiState(loading = true))
-    val ui: StateFlow<PreferenciasUiState> = _ui
+    // Flujo de estado con las preferencias del usuario
+    private val _preferencias = MutableStateFlow(Preferencias())
+    val preferencias: StateFlow<Preferencias> = _preferencias
 
     init {
         cargarPreferencias()
     }
 
-    /**
-     * Carga las preferencias del usuario autenticado
-     */
     fun cargarPreferencias() {
-        val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) {
-            _ui.value = PreferenciasUiState(
-                loading = false,
-                error = "No hay sesión activa."
-            )
-            return
-        }
-
-        _ui.value = _ui.value.copy(loading = true)
-
-        db.collection("preferencias").document(uid)
+        val userId = uid ?: return
+        db.collection("preferencias").document(userId)
             .get()
             .addOnSuccessListener { doc ->
                 if (doc.exists()) {
-                    val data = doc.data ?: emptyMap()
-                    val prefs = Preferencias(
-                        temaOscuro = data["temaOscuro"] as? Boolean ?: true,
-                        notificaciones = data["notificaciones"] as? Boolean ?: true,
-                        idioma = data["idioma"] as? String ?: "Español",
-                        mostrarPerfilPublico = data["mostrarPerfilPublico"] as? Boolean ?: true
-                    )
-                    _ui.value = PreferenciasUiState(preferencias = prefs, loading = false)
+                    val prefs = doc.toObject(Preferencias::class.java)
+                    if (prefs != null) _preferencias.value = prefs
                 } else {
-                    // Crear preferencias por defecto
-                    val defaultPrefs = Preferencias()
-                    db.collection("preferencias").document(uid).set(defaultPrefs)
-                    _ui.value = PreferenciasUiState(preferencias = defaultPrefs, loading = false)
+                    // Si no existe, se crea documento por defecto
+                    val prefs = Preferencias()
+                    db.collection("preferencias").document(userId).set(prefs)
+                    _preferencias.value = prefs
                 }
             }
-            .addOnFailureListener { e ->
-                _ui.value = PreferenciasUiState(
-                    loading = false,
-                    error = e.localizedMessage ?: "Error al cargar preferencias."
-                )
+            .addOnFailureListener {
+                _preferencias.value = Preferencias() // fallback
             }
     }
 
-    /**
-     * Actualiza las preferencias del usuario
-     */
-    fun guardarPreferencias(prefs: Preferencias, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) {
-            onError("Usuario no autenticado.")
-            return
-        }
+    fun guardarPreferencias(
+        idioma: String,
+        dias: List<String>,
+        intereses: List<String>,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val userId = uid ?: return onError("Usuario no autenticado")
 
-        db.collection("preferencias").document(uid)
-            .set(prefs)
-            .addOnSuccessListener {
-                _ui.value = _ui.value.copy(preferencias = prefs, mensaje = "Preferencias guardadas ✅")
-                onSuccess()
-            }
-            .addOnFailureListener { e ->
-                onError(e.localizedMessage ?: "Error al guardar preferencias.")
-            }
+        val prefs = Preferencias(
+            idioma = idioma,
+            dias_juego = dias,
+            intereses = intereses
+        )
+
+        viewModelScope.launch {
+            db.collection("preferencias").document(userId)
+                .set(prefs)
+                .addOnSuccessListener {
+                    _preferencias.value = prefs
+                    onSuccess()
+                }
+                .addOnFailureListener { e ->
+                    onError(e.localizedMessage ?: "Error desconocido")
+                }
+        }
     }
 }

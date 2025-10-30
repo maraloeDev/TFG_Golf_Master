@@ -1,169 +1,54 @@
-package com.maraloedev.golfmaster.view.reservas
+package com.maraloedev.golfmaster.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.Timestamp
+import com.maraloedev.golfmaster.model.FirebaseRepo
+import com.maraloedev.golfmaster.model.Reservas
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
-/**
- * Modelo de datos para las reservas
- */
-data class Reserva(
-    val id: String = "",
-    val jugadorId: String = "",
-    val fecha: String = "",
-    val hora: String = "",
-    val campo: String = "",
-    val jugadores: Int = 1,
-    val estado: String = "Pendiente"
-)
+class ReservasViewModel(
+    private val repo: FirebaseRepo = FirebaseRepo()
+) : ViewModel() {
 
-/**
- * Estado de la interfaz
- */
-data class ReservasUiState(
-    val reservas: List<Reserva> = emptyList(),
-    val loading: Boolean = false,
-    val error: String? = null,
-    val successMessage: String? = null
-)
+    private val _reservas = MutableStateFlow<List<Reservas>>(emptyList())
+    val reservas: StateFlow<List<Reservas>> get() = _reservas
 
-class ReservasViewModel : ViewModel() {
+    private val _loading = MutableStateFlow(false)
+    val loading: StateFlow<Boolean> get() = _loading
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> get() = _error
 
-    private val _ui = MutableStateFlow(ReservasUiState(loading = true))
-    val ui: StateFlow<ReservasUiState> = _ui
-
-    init {
-        cargarReservas()
+    fun cargar() = viewModelScope.launch {
+        val uid = repo.currentUid ?: return@launch
+        _loading.value = true
+        _error.value = null
+        runCatching {
+            repo.getReservasPorJugador(uid)
+        }.onSuccess {
+            _reservas.value = it
+        }.onFailure {
+            _error.value = it.message
+        }
+        _loading.value = false
     }
 
-    /**
-     * Cargar las reservas del usuario autenticado
-     */
-    fun cargarReservas() {
-        val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) {
-            _ui.value = ReservasUiState(
-                loading = false,
-                error = "No hay sesión activa. Inicia sesión para ver tus reservas."
-            )
-            return
-        }
-
-        _ui.value = _ui.value.copy(loading = true)
-
-        db.collection("reservas")
-            .whereEqualTo("jugadorId", uid)
-            .get()
-            .addOnSuccessListener { result ->
-                val reservas = result.documents.mapNotNull { doc ->
-                    val data = doc.data ?: return@mapNotNull null
-                    try {
-                        Reserva(
-                            id = doc.id,
-                            jugadorId = data["jugadorId"] as? String ?: uid,
-                            fecha = data["fecha"] as? String ?: "",
-                            hora = data["hora"] as? String ?: "",
-                            campo = data["campo"] as? String ?: "",
-                            jugadores = (data["jugadores"] as? Number)?.toInt() ?: 1,
-                            estado = data["estado"] as? String ?: "Pendiente"
-                        )
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-
-                _ui.value = if (reservas.isEmpty()) {
-                    ReservasUiState(
-                        reservas = emptyList(),
-                        loading = false,
-                        error = "No tienes reservas registradas todavía."
-                    )
-                } else {
-                    ReservasUiState(reservas = reservas, loading = false)
-                }
-            }
-            .addOnFailureListener { e ->
-                _ui.value = ReservasUiState(
-                    reservas = emptyList(),
-                    loading = false,
-                    error = e.localizedMessage ?: "Error al cargar reservas."
+    fun crearReserva() = viewModelScope.launch {
+        val uid = repo.currentUid ?: return@launch
+        runCatching {
+            repo.crearReserva(
+                Reservas(
+                    id_jugador = uid,
+                    fecha_reserva = Timestamp.now(),
+                    hora_reserva = Timestamp.now(),
+                    recorrido_reserva = listOf("18 hoyos"),
+                    numero_de_jugadores = "4"
                 )
-            }
-    }
-
-    /**
-     * Crear una nueva reserva
-     */
-    fun crearReserva(
-        fecha: String,
-        hora: String,
-        campo: String,
-        jugadores: Int,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) {
-            onError("No hay sesión activa.")
-            return
-        }
-
-        if (fecha.isBlank() || hora.isBlank() || campo.isBlank()) {
-            onError("Debes completar todos los campos.")
-            return
-        }
-        if (jugadores <= 0) {
-            onError("El número de jugadores debe ser al menos 1.")
-            return
-        }
-
-        val nuevaReserva = Reserva(
-            jugadorId = uid,
-            fecha = fecha.trim(),
-            hora = hora.trim(),
-            campo = campo.trim(),
-            jugadores = jugadores,
-            estado = "Pendiente"
-        )
-
-        db.collection("reservas")
-            .add(nuevaReserva)
-            .addOnSuccessListener {
-                onSuccess()
-                cargarReservas()
-                _ui.value = _ui.value.copy(successMessage = "Reserva creada correctamente ✅")
-            }
-            .addOnFailureListener { e ->
-                onError(e.localizedMessage ?: "Error al crear la reserva.")
-            }
-    }
-
-    /**
-     * Cancelar una reserva existente
-     */
-    fun cancelarReserva(reservaId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        if (reservaId.isBlank()) {
-            onError("ID de reserva no válido.")
-            return
-        }
-
-        db.collection("reservas").document(reservaId)
-            .update("estado", "Cancelada")
-            .addOnSuccessListener {
-                onSuccess()
-                cargarReservas()
-            }
-            .addOnFailureListener { e ->
-                onError(e.localizedMessage ?: "Error al cancelar la reserva.")
-            }
-    }
-
-    fun limpiarError() {
-        _ui.value = _ui.value.copy(error = null, successMessage = null)
+            )
+        }.onSuccess { cargar() }
+            .onFailure { _error.value = it.message }
     }
 }

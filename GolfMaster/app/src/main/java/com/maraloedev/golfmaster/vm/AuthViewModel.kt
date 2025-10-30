@@ -1,106 +1,115 @@
-package com.maraloedev.golfmaster.vm
+package com.maraloedev.golfmaster.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-
-data class AuthUiState(
-    val loading: Boolean = false,
-    val error: String? = null,
-    val success: Boolean = false
-)
+import com.maraloedev.golfmaster.model.Jugadores
 
 class AuthViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    private val _ui = MutableStateFlow(AuthUiState())
-    val ui: StateFlow<AuthUiState> = _ui
-
     /**
-     * Inicia sesión con email y contraseña
+     * 🔹 Iniciar sesión
      */
-    fun login(email: String, password: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        if (email.isBlank() || password.isBlank()) {
-            onError("Por favor, completa todos los campos.")
-            return
-        }
-
-        _ui.value = _ui.value.copy(loading = true)
-
-        auth.signInWithEmailAndPassword(email.trim(), password.trim())
-            .addOnSuccessListener {
-                _ui.value = AuthUiState(success = true)
-                onSuccess()
-            }
-            .addOnFailureListener { e ->
-                _ui.value = AuthUiState(loading = false, error = e.localizedMessage)
-                onError(e.localizedMessage ?: "Error al iniciar sesión.")
-            }
-    }
-
-    /**
-     * Registra un nuevo usuario
-     */
-    fun register(
-        nombre: String,
+    fun login(
         email: String,
         password: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        if (nombre.isBlank() || email.isBlank() || password.isBlank()) {
-            onError("Debes completar todos los campos.")
-            return
-        }
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { onError(it.message ?: "Error al iniciar sesión") }
+    }
 
-        _ui.value = _ui.value.copy(loading = true)
-
-        auth.createUserWithEmailAndPassword(email.trim(), password.trim())
+    /**
+     * 🔹 Registrar nuevo jugador y almacenarlo en Firestore
+     * Incluye la contraseña (solo para uso interno)
+     */
+    fun registerJugador(
+        email: String,
+        password: String,
+        jugador: Jugadores,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
                 val uid = result.user?.uid ?: return@addOnSuccessListener
-
-                val jugador = hashMapOf(
-                    "id" to uid,
-                    "nombre_jugador" to nombre.trim(),
-                    "correo_jugador" to email.trim(),
-                    "telefono_jugador" to "",
-                    "sexo_jugador" to "Hombre",
-                    "pais_jugador" to "",
-                    "codigo_postal_jugador" to "",
-                    "licencia_jugador" to "",
-                    "handicap_jugador" to ""
+                val jugadorConId = jugador.copy(
+                    id = uid,
+                    password_jugador = password // ⚠️ Solo si se necesita almacenar
                 )
 
-                db.collection("jugadores").document(uid)
-                    .set(jugador)
-                    .addOnSuccessListener {
-                        _ui.value = AuthUiState(success = true)
-                        onSuccess()
-                    }
+                db.collection("jugadores")
+                    .document(uid)
+                    .set(jugadorConId)
+                    .addOnSuccessListener { onSuccess() }
                     .addOnFailureListener { e ->
-                        onError(e.localizedMessage ?: "Error al guardar el perfil.")
+                        onError(e.message ?: "Error al guardar jugador en Firestore")
                     }
             }
             .addOnFailureListener { e ->
-                _ui.value = AuthUiState(loading = false, error = e.localizedMessage)
-                onError(e.localizedMessage ?: "Error al registrarse.")
+                onError(e.message ?: "Error al registrar usuario en Firebase")
             }
     }
 
     /**
-     * Cierra sesión
+     * 🔹 Cerrar sesión actual
      */
     fun logout() {
         auth.signOut()
-        _ui.value = AuthUiState()
     }
 
     /**
-     * Comprueba si hay sesión activa
+     * 🔹 Eliminar cuenta del usuario autenticado
+     * - Verifica si hay sesión activa
+     * - Reautentica con email y contraseña antes de borrar
+     * - Elimina datos del jugador en Firestore
      */
-    fun haySesionActiva(): Boolean = auth.currentUser != null
+    fun eliminarCuenta(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val user = auth.currentUser
+
+        if (user == null) {
+            onError("No hay sesión activa. Inicia sesión antes de eliminar la cuenta.")
+            return
+        }
+
+        val credential = EmailAuthProvider.getCredential(email, password)
+
+        // Reautenticamos antes de eliminar (Firebase requiere sesión reciente)
+        user.reauthenticate(credential)
+            .addOnSuccessListener {
+                val uid = user.uid
+
+                // Primero eliminamos los datos del jugador en Firestore
+                db.collection("jugadores").document(uid)
+                    .delete()
+                    .addOnSuccessListener {
+                        // Luego eliminamos la cuenta del Auth
+                        user.delete()
+                            .addOnSuccessListener {
+                                auth.signOut()
+                                onSuccess()
+                            }
+                            .addOnFailureListener { e ->
+                                onError(e.message ?: "Error al eliminar usuario de Auth")
+                            }
+                    }
+                    .addOnFailureListener { e ->
+                        onError(e.message ?: "Error al eliminar datos del jugador en Firestore")
+                    }
+            }
+            .addOnFailureListener { e ->
+                onError("Credenciales incorrectas o sesión expirada. Inicia sesión de nuevo.\n${e.message}")
+            }
+    }
 }

@@ -1,183 +1,65 @@
-package com.maraloedev.golfmaster.view.amigos
+package com.maraloedev.golfmaster.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.viewModelScope
+import com.maraloedev.golfmaster.model.FirebaseRepo
+import com.maraloedev.golfmaster.model.Jugadores
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
- * Modelo de datos para un amigo o solicitud
+ * AmigosViewModel
+ * ----------------
+ * Gestiona la búsqueda y gestión de amigos (jugadores)
+ * en la base de datos Firebase.
+ *
+ * Usa FirebaseRepo para interactuar con Firestore.
  */
-data class Amigo(
-    val id: String = "",
-    val nombre: String = "",
-    val correo: String = "",
-    val estado: String = "Pendiente" // "Pendiente", "Aceptado"
-)
+class AmigosViewModel(
+    private val repo: FirebaseRepo = FirebaseRepo()
+) : ViewModel() {
 
-/**
- * Estado de la interfaz
- */
-data class AmigosUiState(
-    val amigos: List<Amigo> = emptyList(),
-    val solicitudesPendientes: List<Amigo> = emptyList(),
-    val loading: Boolean = false,
-    val error: String? = null,
-    val successMessage: String? = null
-)
+    // Lista observable de resultados de búsqueda
+    private val _resultados = MutableStateFlow<List<Jugadores>>(emptyList())
+    val resultados: StateFlow<List<Jugadores>> get() = _resultados
 
-class AmigosViewModel : ViewModel() {
+    // Estado de carga y posibles errores
+    private val _loading = MutableStateFlow(false)
+    val loading: StateFlow<Boolean> get() = _loading
 
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> get() = _error
 
-    private val _ui = MutableStateFlow(AmigosUiState(loading = true))
-    val ui: StateFlow<AmigosUiState> = _ui
+    /**
+     * Busca jugadores en Firestore cuyo nombre o apellido coincida
+     * con el texto introducido en el campo de búsqueda.
+     */
+    fun buscarJugadores(query: String) = viewModelScope.launch {
+        if (query.isBlank()) {
+            _resultados.value = emptyList()
+            return@launch
+        }
 
-    init {
-        cargarAmigos()
+        _loading.value = true
+        _error.value = null
+
+        runCatching {
+            repo.buscarJugadoresPorNombre(query)
+        }.onSuccess {
+            _resultados.value = it
+        }.onFailure {
+            _error.value = it.message
+        }
+
+        _loading.value = false
     }
 
     /**
-     * Cargar la lista de amigos y solicitudes del usuario actual
+     * Limpia los resultados actuales (útil al salir de la pantalla)
      */
-    fun cargarAmigos() {
-        val uid = auth.currentUser?.uid
-        if (uid.isNullOrBlank()) {
-            _ui.value = AmigosUiState(
-                loading = false,
-                error = "No hay sesión activa. Inicia sesión."
-            )
-            return
-        }
-
-        _ui.value = _ui.value.copy(loading = true)
-
-        db.collection("amigos")
-            .whereArrayContains("usuarios", uid)
-            .get()
-            .addOnSuccessListener { result ->
-                val amigos = mutableListOf<Amigo>()
-                val pendientes = mutableListOf<Amigo>()
-
-                for (doc in result.documents) {
-                    val data = doc.data ?: continue
-                    val estado = data["estado"] as? String ?: "Pendiente"
-                    val usuarios = (data["usuarios"] as? List<*>)?.filterIsInstance<String>() ?: continue
-                    val otroUsuario = usuarios.firstOrNull { it != uid } ?: continue
-
-                    val nombre = data["nombre_$otroUsuario"] as? String ?: "Desconocido"
-                    val correo = data["correo_$otroUsuario"] as? String ?: ""
-
-                    val amigo = Amigo(
-                        id = doc.id,
-                        nombre = nombre,
-                        correo = correo,
-                        estado = estado
-                    )
-
-                    if (estado == "Pendiente") pendientes.add(amigo)
-                    else amigos.add(amigo)
-                }
-
-                _ui.value = AmigosUiState(
-                    amigos = amigos,
-                    solicitudesPendientes = pendientes,
-                    loading = false
-                )
-            }
-            .addOnFailureListener { e ->
-                _ui.value = AmigosUiState(
-                    loading = false,
-                    error = e.localizedMessage ?: "Error al cargar amigos."
-                )
-            }
-    }
-
-    /**
-     * Enviar una solicitud de amistad por correo
-     */
-    fun enviarSolicitud(correoDestino: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        val uid = auth.currentUser?.uid
-        val correoOrigen = auth.currentUser?.email
-
-        if (uid.isNullOrBlank() || correoOrigen.isNullOrBlank()) {
-            onError("Usuario no autenticado.")
-            return
-        }
-        if (correoDestino.isBlank()) {
-            onError("Debes introducir un correo.")
-            return
-        }
-        if (correoDestino == correoOrigen) {
-            onError("No puedes enviarte una solicitud a ti mismo.")
-            return
-        }
-
-        db.collection("jugadores")
-            .whereEqualTo("correo_jugador", correoDestino)
-            .get()
-            .addOnSuccessListener { result ->
-                if (result.isEmpty) {
-                    onError("No existe ningún usuario con ese correo.")
-                    return@addOnSuccessListener
-                }
-
-                val otroUsuario = result.documents.first().id
-
-                val datos = hashMapOf(
-                    "usuarios" to listOf(uid, otroUsuario),
-                    "estado" to "Pendiente",
-                    "nombre_$uid" to auth.currentUser?.displayName.orEmpty(),
-                    "correo_$uid" to correoOrigen,
-                    "nombre_$otroUsuario" to (result.documents.first().getString("nombre_jugador") ?: "Jugador"),
-                    "correo_$otroUsuario" to correoDestino
-                )
-
-                db.collection("amigos")
-                    .add(datos)
-                    .addOnSuccessListener {
-                        onSuccess()
-                        cargarAmigos()
-                        _ui.value = _ui.value.copy(successMessage = "Solicitud enviada ✅")
-                    }
-                    .addOnFailureListener { e ->
-                        onError(e.localizedMessage ?: "Error al enviar solicitud.")
-                    }
-            }
-            .addOnFailureListener { e ->
-                onError(e.localizedMessage ?: "Error al buscar jugador.")
-            }
-    }
-
-    /**
-     * Aceptar una solicitud pendiente
-     */
-    fun aceptarSolicitud(amigoId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        db.collection("amigos").document(amigoId)
-            .update("estado", "Aceptado")
-            .addOnSuccessListener {
-                onSuccess()
-                cargarAmigos()
-            }
-            .addOnFailureListener { e ->
-                onError(e.localizedMessage ?: "Error al aceptar solicitud.")
-            }
-    }
-
-    /**
-     * Eliminar un amigo o rechazar una solicitud
-     */
-    fun eliminarAmigo(amigoId: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
-        db.collection("amigos").document(amigoId)
-            .delete()
-            .addOnSuccessListener {
-                onSuccess()
-                cargarAmigos()
-            }
-            .addOnFailureListener { e ->
-                onError(e.localizedMessage ?: "Error al eliminar amigo.")
-            }
+    fun limpiarResultados() {
+        _resultados.value = emptyList()
+        _error.value = null
     }
 }

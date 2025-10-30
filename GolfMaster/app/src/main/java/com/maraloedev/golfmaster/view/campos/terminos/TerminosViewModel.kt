@@ -7,10 +7,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-data class Termino(val titulo: String = "", val descripcion: String = "")
+data class TerminoTorneo(val titulo: String = "", val descripcion: String = "")
 
 data class TerminosState(
-    val terminos: List<Termino> = emptyList(),
+    val terminos: List<TerminoTorneo> = emptyList(),
     val cargando: Boolean = false,
     val error: String? = null
 )
@@ -31,7 +31,7 @@ class TerminosViewModel : ViewModel() {
                 .get()
                 .addOnSuccessListener { result ->
                     val lista = result.map {
-                        Termino(
+                        TerminoTorneo(
                             titulo = it.getString("titulo") ?: "",
                             descripcion = it.getString("descripcion") ?: ""
                         )
@@ -48,10 +48,10 @@ class TerminosViewModel : ViewModel() {
     }
 
     private fun mockTerminos() = listOf(
-        Termino("Inscripción y pagos", "La inscripción se realiza por la app y debe abonarse antes del cierre."),
-        Termino("Handicap", "El comité validará hándicaps y categorías según la normativa vigente."),
-        Termino("Cancelaciones", "Menos de 24h antes del torneo pueden implicar pérdida de la cuota."),
-        Termino("Protección de datos", "Tus datos se tratarán conforme al RGPD."),
-        Termino("Aceptación", "La inscripción implica aceptar todos los términos del torneo.")
+        TerminoTorneo("Inscripción y pagos", "La inscripción se realiza por la app y debe abonarse antes del cierre."),
+        TerminoTorneo("Handicap", "El comité validará hándicaps y categorías según la normativa vigente."),
+        TerminoTorneo("Cancelaciones", "Menos de 24h antes del torneo pueden implicar pérdida de la cuota."),
+        TerminoTorneo("Protección de datos", "Tus datos se tratarán conforme al RGPD."),
+        TerminoTorneo("Aceptación", "La inscripción implica aceptar todos los términos del torneo.")
     )
 }

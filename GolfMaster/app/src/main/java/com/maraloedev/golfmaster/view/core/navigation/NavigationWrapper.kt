@@ -1,62 +1,50 @@
 package com.maraloedev.golfmaster.view.core.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.maraloedev.golfmaster.view.perfil.PerfilScreen
-import com.maraloedev.golfmaster.view.reservas.ReservasScreen
-import com.maraloedev.golfmaster.view.amigos.AmigosScreen
-import com.maraloedev.golfmaster.view.alertas.AlertasScreen
 import com.maraloedev.golfmaster.view.auth.login.LoginScreen
 import com.maraloedev.golfmaster.view.auth.register.RegisterScreen
-import com.maraloedev.golfmaster.view.preferencias.PreferenciasScreen
+import com.maraloedev.golfmaster.view.campos.correspondencias.CorrespondenciaCamposScreen
+import com.maraloedev.golfmaster.view.campos.reglasLocales.ReglasLocalesScreen
+import com.maraloedev.golfmaster.view.campos.terminos.TerminosScreen
+import com.maraloedev.golfmaster.view.eventos.EventosScreen
 import com.maraloedev.golfmaster.view.informacion.InformacionScreen
 import com.maraloedev.golfmaster.view.inicio.HomeScreen
+import com.maraloedev.golfmaster.view.perfil.PerfilScreen
+import com.maraloedev.golfmaster.view.reservas.ReservasScreen
+import com.maraloedev.golfmaster.view.splash.SplashScreen
 
 @Composable
-fun NavigationWrapper(
-    navController: NavHostController,
-    startDestination: String = NavRoutes.LOGIN,
-    modifier: Modifier = Modifier
-) {
+fun NavigationWrapper(navController: NavHostController) {
+    val fondo = Color(0xFF0A1A0E)
+
     NavHost(
         navController = navController,
-        startDestination = startDestination,
-        modifier = modifier
+        startDestination = NavRoutes.SPLASH,
+        modifier = Modifier.background(fondo)
     ) {
-        // 🔹 Autenticación
-        composable(NavRoutes.LOGIN) {
-            LoginScreen(navController)
+        // 🟢 AUTH
+        composable(route = NavRoutes.SPLASH) {
+            SplashScreen(navController = navController)
         }
-        composable(NavRoutes.REGISTER) {
-            RegisterScreen(navController)
+        composable(route = NavRoutes.LOGIN) {
+            LoginScreen(navController = navController)
         }
-
-        // 🔹 Pantalla principal con Drawer
-        composable(NavRoutes.INICIO) {
-            HomeScreen(navController)
+        composable(route = NavRoutes.REGISTRO) {
+            RegisterScreen(navController = navController)
         }
 
-        // 🔹 Módulos de usuario
-        composable(NavRoutes.PERFIL) {
-            PerfilScreen(navController)
+        // 🟢 HOME PRINCIPAL
+        composable(route = NavRoutes.INICIO) {
+            HomeScreen(rootNavController = navController)
         }
-        composable(NavRoutes.RESERVAS) {
-            ReservasScreen()
-        }
-        composable(NavRoutes.AMIGOS) {
-            AmigosScreen()
-        }
-        composable(NavRoutes.ALERTAS) {
-            AlertasScreen()
-        }
-        composable(NavRoutes.PREFERENCIAS) {
-            PreferenciasScreen()
-        }
-        composable(NavRoutes.INFORMACION) {
-            InformacionScreen()
-        }
+
+        // (no incluir las pantallas internas aquí: están dentro del HomeScreen)
     }
 }
