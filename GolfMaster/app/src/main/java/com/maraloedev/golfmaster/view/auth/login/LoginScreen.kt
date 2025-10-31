@@ -30,14 +30,15 @@ import com.maraloedev.golfmaster.viewmodel.AuthViewModel
 fun LoginScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
     val context = LocalContext.current
 
+    // Campos
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
 
-    // 🔹 Validaciones dinámicas
-    val emailValido = email.contains("@") && email.contains(".")
-    val passwordValido = password.length >= 6
+    // Validaciones
+    val emailError = email.isNotBlank() && !email.contains("@")
+    val passwordError = password.isNotBlank() && password.length < 6
 
     val background = Brush.verticalGradient(listOf(Color(0xFF0B3D2E), Color(0xFF173E34)))
 
@@ -70,13 +71,13 @@ fun LoginScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
 
                 Spacer(Modifier.height(32.dp))
 
-                // 📨 Correo electrónico
+                // 📨 Email
                 AnimatedTextField(
                     label = "Correo electrónico",
                     value = email,
                     type = KeyboardType.Email,
                     onChange = { email = it },
-                    isError = email.isNotEmpty() && !emailValido,
+                    isError = emailError,
                     errorText = "Correo inválido."
                 )
 
@@ -89,7 +90,7 @@ fun LoginScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
                     isPassword = true,
                     showPassword = showPassword,
                     onTogglePassword = { showPassword = !showPassword },
-                    isError = password.isNotEmpty() && !passwordValido,
+                    isError = passwordError,
                     errorText = "Mínimo 6 caracteres."
                 )
 
@@ -97,7 +98,7 @@ fun LoginScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
 
                 Button(
                     onClick = {
-                        if (!emailValido || !passwordValido) {
+                        if (email.isBlank() || password.isBlank() || emailError || passwordError) {
                             Toast.makeText(context, "Revisa los campos con error.", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
@@ -128,7 +129,13 @@ fun LoginScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
                     Text("Iniciar Sesión", color = Color.Black, fontSize = 17.sp)
                 }
 
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = { /* TODO: Implementar recuperación */ }) {
+                    Text("Olvidé mi contraseña", color = Color.LightGray)
+                }
+
                 Spacer(Modifier.height(20.dp))
+
                 Row {
                     Text("¿Aún no tienes cuenta?", color = Color.White)
                     Spacer(Modifier.width(4.dp))
@@ -147,7 +154,7 @@ fun LoginScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
 }
 
 /**
- * Campo animado con validación visual (sin íconos de check/error)
+ * Campo animado con borde dorado y validación visual
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,7 +180,6 @@ fun AnimatedTextField(
             onValueChange = onChange,
             label = { Text(label, color = Color.White) },
             singleLine = true,
-            maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),

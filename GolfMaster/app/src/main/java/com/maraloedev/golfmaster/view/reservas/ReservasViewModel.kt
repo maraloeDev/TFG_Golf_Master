@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.reservas
+package com.maraloedev.golfmaster.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

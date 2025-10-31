@@ -33,6 +33,7 @@ import com.maraloedev.golfmaster.viewmodel.AuthViewModel
 fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
     val context = LocalContext.current
 
+    // Campos de entrada
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
@@ -44,19 +45,22 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var sexo by remember { mutableStateOf("Masculino") }
     var socio by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) }
+
+    // Estados adicionales
     var loading by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
-    // 🔹 Validaciones
-    val telefonoValido = telefono.matches(Regex("^\\d{9}$"))
-    val cpValido = codigoPostal.matches(Regex("^\\d{5}$"))
+    // Conversión segura a Double
     val handicap = handicapText.toDoubleOrNull() ?: -1.0
-    val handicapValido = handicap in 0.0..36.0
 
+    // Validaciones
+    val telefonoValido = telefono.length == 9 && telefono.all { it.isDigit() }
+    val handicapValido = handicap in 0.0..36.0
     val camposVacios = listOf(
         nombre, apellido, correo, password, codigoPostal, direccion, telefono, handicapText
     ).any { it.isBlank() }
 
+    // Fondo degradado
     val background = Brush.verticalGradient(listOf(Color(0xFF0B3D2E), Color(0xFF173E34)))
 
     Scaffold(containerColor = Color.Transparent) { pv ->
@@ -87,18 +91,12 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 )
                 Spacer(Modifier.height(24.dp))
 
-                // 🔹 Campos de entrada
+                // Campos de texto
                 AnimatedTextField("Nombre", nombre, onChange = { nombre = it })
                 AnimatedTextField("Apellidos", apellido, onChange = { apellido = it })
-                AnimatedTextField(
-                    label = "Correo electrónico",
-                    value = correo,
-                    type = KeyboardType.Email,
-                    onChange = { correo = it },
-                    isError = correo.isNotEmpty() && !correo.contains("@"),
-                    errorText = "Correo inválido."
-                )
+                AnimatedTextField("Correo electrónico", correo, KeyboardType.Email, onChange = { correo = it })
 
+                // Contraseña con icono de ojo
                 AnimatedTextField(
                     label = "Contraseña",
                     value = password,
@@ -106,31 +104,23 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     onChange = { password = it },
                     isPassword = true,
                     showPassword = showPassword,
-                    onTogglePassword = { showPassword = !showPassword },
-                    isError = password.isNotEmpty() && password.length < 6,
-                    errorText = "Mínimo 6 caracteres."
+                    onTogglePassword = { showPassword = !showPassword }
                 )
 
-                AnimatedTextField(
-                    label = "Código Postal",
-                    value = codigoPostal,
-                    type = KeyboardType.Number,
-                    onChange = { codigoPostal = it },
-                    isError = codigoPostal.isNotEmpty() && !cpValido,
-                    errorText = "Debe tener 5 dígitos numéricos."
-                )
-
+                AnimatedTextField("Código Postal", codigoPostal, KeyboardType.Number, onChange = { codigoPostal = it })
                 AnimatedTextField("Dirección", direccion, onChange = { direccion = it })
 
+                // Teléfono
                 AnimatedTextField(
                     label = "Teléfono",
                     value = telefono,
                     type = KeyboardType.Phone,
                     onChange = { telefono = it },
                     isError = telefono.isNotEmpty() && !telefonoValido,
-                    errorText = "Debe tener 9 dígitos numéricos."
+                    errorText = "Debe contener 9 números."
                 )
 
+                // Handicap
                 AnimatedTextField(
                     label = "Handicap",
                     value = handicapText,
@@ -140,8 +130,8 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     errorText = "Debe ser un número entre 0 y 36."
                 )
 
+                // Selector de sexo
                 Spacer(Modifier.height(8.dp))
-                // 🔹 Selector de sexo
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
                         value = sexo,
@@ -150,8 +140,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        colors = textFieldColors(),
-                        maxLines = 1
+                        colors = textFieldColors()
                     )
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         listOf("Masculino", "Femenino").forEach {
@@ -174,10 +163,10 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 
                 Spacer(Modifier.height(24.dp))
 
-                // 🔹 Botón registrar
+                // 🔹 Botón de registrar
                 Button(
                     onClick = {
-                        if (camposVacios || !telefonoValido || !cpValido || !handicapValido) {
+                        if (camposVacios || !telefonoValido || !handicapValido) {
                             Toast.makeText(context, "Revisa los campos con error.", Toast.LENGTH_SHORT).show()
                             return@Button
                         }
@@ -227,6 +216,8 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 }
 
                 Spacer(Modifier.height(20.dp))
+
+                // 🔹 Link para volver al login
                 Row {
                     Text("¿Ya tienes cuenta?", color = Color.White)
                     Spacer(Modifier.width(4.dp))
@@ -240,7 +231,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 }
 
 /**
- * Campo de texto animado con validaciones visuales y maxLines = 1
+ * Campo de texto con animación y validación visual
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -266,7 +257,6 @@ fun AnimatedTextField(
             onValueChange = onChange,
             label = { Text(label, color = Color.White) },
             singleLine = true,
-            maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),

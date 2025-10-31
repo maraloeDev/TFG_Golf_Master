@@ -11,9 +11,6 @@ class AuthViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    /**
-     * 🔹 Iniciar sesión
-     */
     fun login(
         email: String,
         password: String,
@@ -25,10 +22,6 @@ class AuthViewModel : ViewModel() {
             .addOnFailureListener { onError(it.message ?: "Error al iniciar sesión") }
     }
 
-    /**
-     * 🔹 Registrar nuevo jugador y almacenarlo en Firestore
-     * Incluye la contraseña (solo para uso interno)
-     */
     fun registerJugador(
         email: String,
         password: String,
@@ -39,11 +32,7 @@ class AuthViewModel : ViewModel() {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener { result ->
                 val uid = result.user?.uid ?: return@addOnSuccessListener
-                val jugadorConId = jugador.copy(
-                    id = uid,
-                    password_jugador = password // ⚠️ Solo si se necesita almacenar
-                )
-
+                val jugadorConId = jugador.copy(id = uid)
                 db.collection("jugadores")
                     .document(uid)
                     .set(jugadorConId)
@@ -53,23 +42,14 @@ class AuthViewModel : ViewModel() {
                     }
             }
             .addOnFailureListener { e ->
-                onError(e.message ?: "Error al registrar usuario en Firebase")
+                onError(e.message ?: "Error al registrar usuario")
             }
     }
 
-    /**
-     * 🔹 Cerrar sesión actual
-     */
     fun logout() {
         auth.signOut()
     }
 
-    /**
-     * 🔹 Eliminar cuenta del usuario autenticado
-     * - Verifica si hay sesión activa
-     * - Reautentica con email y contraseña antes de borrar
-     * - Elimina datos del jugador en Firestore
-     */
     fun eliminarCuenta(
         email: String,
         password: String,
@@ -77,24 +57,14 @@ class AuthViewModel : ViewModel() {
         onError: (String) -> Unit
     ) {
         val user = auth.currentUser
-
-        if (user == null) {
-            onError("No hay sesión activa. Inicia sesión antes de eliminar la cuenta.")
-            return
-        }
+        val uid = user?.uid ?: return onError("Usuario no autenticado")
 
         val credential = EmailAuthProvider.getCredential(email, password)
-
-        // Reautenticamos antes de eliminar (Firebase requiere sesión reciente)
         user.reauthenticate(credential)
             .addOnSuccessListener {
-                val uid = user.uid
-
-                // Primero eliminamos los datos del jugador en Firestore
                 db.collection("jugadores").document(uid)
                     .delete()
                     .addOnSuccessListener {
-                        // Luego eliminamos la cuenta del Auth
                         user.delete()
                             .addOnSuccessListener {
                                 auth.signOut()
@@ -105,11 +75,11 @@ class AuthViewModel : ViewModel() {
                             }
                     }
                     .addOnFailureListener { e ->
-                        onError(e.message ?: "Error al eliminar datos del jugador en Firestore")
+                        onError(e.message ?: "Error al eliminar jugador en Firestore")
                     }
             }
             .addOnFailureListener { e ->
-                onError("Credenciales incorrectas o sesión expirada. Inicia sesión de nuevo.\n${e.message}")
+                onError("Debes iniciar sesión de nuevo: ${e.message}")
             }
     }
 }
