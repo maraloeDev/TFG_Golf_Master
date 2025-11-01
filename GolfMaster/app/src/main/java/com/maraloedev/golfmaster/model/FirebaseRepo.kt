@@ -67,13 +67,13 @@ class FirebaseRepo(
     }
 
     // --- 📅 RESERVAS ---
-    suspend fun getReservasPorJugador(uid: String): List<Reservas> =
+    suspend fun getReservasPorJugador(uid: String): List<Reserva> =
         db.collection("reservas")
             .whereEqualTo("id_jugador", uid)
             .get().await()
-            .toObjects(Reservas::class.java)
+            .toObjects(Reserva::class.java)
 
-    suspend fun crearReserva(r: Reservas) {
+    suspend fun crearReserva(r: Reserva) {
         val ref = db.collection("reservas").document()
         ref.set(r.copy(id = ref.id)).await()
     }

@@ -10,5 +10,7 @@ data class Jugadores(
     val nombre_jugador: String = "",
     val sexo_jugador: String = "",
     val socio_jugador: Boolean = false,
-    val telefono_jugador: String = ""
+    val telefono_jugador: String = "",
+    val provincia_jugador: String = "",
+    val password_jugador: String = "" // 🔹 Nuevo campo
 )

@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.viewmodel
+package com.maraloedev.golfmaster.vm
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.EmailAuthProvider
@@ -82,4 +82,5 @@ class AuthViewModel : ViewModel() {
                 onError("Debes iniciar sesión de nuevo: ${e.message}")
             }
     }
+
 }

@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maraloedev.golfmaster.R
-import com.maraloedev.golfmaster.viewmodel.AuthViewModel
+import com.maraloedev.golfmaster.vm.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
