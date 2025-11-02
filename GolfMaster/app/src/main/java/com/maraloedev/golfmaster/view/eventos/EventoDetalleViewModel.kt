@@ -28,4 +28,5 @@ class EventoDetalleViewModel(
             .onFailure { _error.value = it.message }
         _loading.value = false
     }
+
 }

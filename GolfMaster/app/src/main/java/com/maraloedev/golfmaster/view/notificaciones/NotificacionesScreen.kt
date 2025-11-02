@@ -1,8 +1,11 @@
 package com.maraloedev.golfmaster.view.notificaciones
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,91 +14,101 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.maraloedev.golfmaster.model.Notificacion
+import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificacionesScreen(vm: NotificacionesViewModel = viewModel()) {
-    val notificaciones by vm.notificaciones.collectAsState()
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()) }
-
-    when {
-        notificaciones.isEmpty() -> Box(
-            Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("No tienes notificaciones.", color = Color.Gray)
-        }
-        else -> LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(notificaciones) { notif ->
-                val fechaFormateada = remember(notif.fecha) {
-                    notif.fecha?.toDate()?.let { dateFormat.format(it) } ?: "Sin fecha"
-                }
-                NotificacionCard(notif = notif, vm = vm, fechaFormateada = fechaFormateada)
-            }
-        }
-    }
-}
-
-@Composable
-private fun NotificacionCard(
-    notif: Notificacion,
-    vm: NotificacionesViewModel,
-    fechaFormateada: String
+fun NotificacionesScreen(
+    vm: NotificacionesViewModel = viewModel(),
+    onBack: (() -> Unit)? = null
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF0F4A3B))
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                notif.tituloOrDefault(),
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                notif.mensaje.ifBlank { "Sin contenido" },
-                color = Color.White
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                fechaFormateada,
-                color = Color(0xFFBBA864),
-                fontSize = MaterialTheme.typography.labelSmall.fontSize
-            )
-            Spacer(Modifier.height(12.dp))
+    val notificaciones by vm.notificaciones.collectAsState()
+    val loading by vm.loading.collectAsState()
+    val error by vm.error.collectAsState()
 
-            when (notif.estado.lowercase(Locale.ROOT)) {
-                "pendiente" -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { vm.aceptarReserva(notif) },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FF77))
-                    ) {
-                        Text("Aceptar", color = Color.Black)
+    LaunchedEffect(Unit) { vm.cargarNotificaciones() }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Notificaciones del Club", color = Color.White) },
+                navigationIcon = {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                        }
                     }
-                    OutlinedButton(
-                        onClick = { vm.rechazarReserva(notif) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
-                    ) {
-                        Text("Rechazar", color = Color.Red)
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0C1A12))
+            )
+        },
+        containerColor = Color(0xFF00281F)
+    ) { padding ->
+        Box(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .background(Color(0xFF00281F))
+        ) {
+            when {
+                loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF00FF77))
+                }
+
+                error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error: $error", color = Color.Red)
+                }
+
+                notificaciones.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No hay notificaciones disponibles", color = Color.White.copy(alpha = 0.7f))
+                }
+
+                else -> LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(notificaciones) { notif ->
+                        NotificacionCard(notif)
                     }
                 }
-                "aceptada" -> Text("✅ Aceptada", color = Color(0xFF00FF77))
-                "rechazada" -> Text("❌ Rechazada", color = Color.Red)
-                else -> Text("ℹ️ ${notif.estado}", color = Color(0xFFBBA864))
             }
         }
     }
 }
 
-/** 🔹 Extensión para manejar título */
-private fun Notificacion.tituloOrDefault(): String {
-    return if (mensaje.contains("invitado", ignoreCase = true)) "Invitación de partida" else "Notificación"
+/* ---------------- CARD ---------------- */
+@Composable
+private fun NotificacionCard(notif: Notificacion) {
+    val formato = remember { SimpleDateFormat("d MMM", Locale("es", "ES")) }
+    val fecha = notif.fecha?.toDate()?.let { formato.format(it) } ?: ""
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(6.dp)
+                            .background(Color(0xFF00FF77), shape = MaterialTheme.shapes.small)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(notif.titulo, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Text(fecha, color = Color.White.copy(alpha = 0.6f), fontSize = MaterialTheme.typography.bodySmall.fontSize)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(notif.descripcion, color = Color.White.copy(alpha = 0.9f))
+        }
+    }
 }

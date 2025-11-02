@@ -2,98 +2,73 @@ package com.maraloedev.golfmaster.view.reservas
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldColors
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.model.Reserva
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReservasScreen(vm: ReservasViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
-    val openSheet = remember { mutableStateOf(false) }
-    var selectedTab by remember { mutableStateOf("Próximas") }
-
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
     val reservas by vm.reservas.collectAsState()
     val loading by vm.loading.collectAsState()
+    var showForm by remember { mutableStateOf(false) }
+    var showEdit by remember { mutableStateOf<Reserva?>(null) }
 
-    // Cargar reservas al iniciar
-    LaunchedEffect(userId) {
-        if (userId.isNotBlank()) vm.cargarReservas(userId)
-    }
-
+    val snackbarHostState = remember { SnackbarHostState() }
     val ahora = Timestamp.now()
+
     val proximas = reservas.filter { it.fecha?.seconds ?: 0 > ahora.seconds }
     val pasadas = reservas.filter { it.fecha?.seconds ?: 0 <= ahora.seconds }
+    var selectedTab by remember { mutableStateOf("Próximas") }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { openSheet.value = true },
+                onClick = { showForm = true },
                 containerColor = Color(0xFF00FF77)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Nueva reserva", tint = Color.Black)
             }
         },
-        containerColor = Color(0xFF00281F)
-    ) { padding ->
+        containerColor = Color(0xFF00281F),
+        topBar = {
+            TopAppBar(
+                title = { Text("Reservas", color = Color.White) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0C1A12))
+            )
+        }
+    ) { pad ->
         Column(
             Modifier
-                .padding(padding)
+                .padding(pad)
                 .fillMaxSize()
                 .background(Color(0xFF00281F))
         ) {
-            SegmentedSelectorReservas(
+            SegmentedSelector(
                 options = listOf("Próximas", "Pasadas"),
                 selectedOption = selectedTab,
                 onOptionSelected = { selectedTab = it }
@@ -104,23 +79,18 @@ fun ReservasScreen(vm: ReservasViewModel = androidx.lifecycle.viewmodel.compose.
                     CircularProgressIndicator(color = Color(0xFF00FF77))
                 }
             } else {
-                val listaMostrar = if (selectedTab == "Próximas") proximas else pasadas
-
-                if (listaMostrar.isEmpty()) {
+                val lista = if (selectedTab == "Próximas") proximas else pasadas
+                if (lista.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "No hay reservas ${selectedTab.lowercase()}",
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
+                        Text("No hay reservas ${selectedTab.lowercase()}", color = Color.White.copy(alpha = 0.7f))
                     }
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
+                        Modifier.fillMaxSize().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(listaMostrar) { reserva ->
-                            ReservaCard(reserva)
+                        items(lista) { reserva ->
+                            ReservaCard(reserva) { showEdit = reserva }
                         }
                     }
                 }
@@ -128,217 +98,37 @@ fun ReservasScreen(vm: ReservasViewModel = androidx.lifecycle.viewmodel.compose.
         }
     }
 
-    if (openSheet.value) {
+    // Modal nueva reserva
+    if (showForm) {
         ModalBottomSheet(
-            onDismissRequest = { openSheet.value = false },
-            containerColor = Color(0xFF0D1B12)
+            onDismissRequest = { showForm = false },
+            containerColor = Color(0xFF00281F)
         ) {
-            BottomSheetNuevaReserva(
-                vm = vm,
-                creando = true,
-                onClose = { openSheet.value = false }
-            )
+            NuevaReservaSheet(vm, snackbarHostState)
+        }
+    }
+
+    // Modal editar reserva
+    showEdit?.let { reserva ->
+        ModalBottomSheet(
+            onDismissRequest = { showEdit = null },
+            containerColor = Color(0xFF00281F)
+        ) {
+            EditarReservaSheet(vm, reserva, snackbarHostState) { showEdit = null }
         }
     }
 }
 
-/* ------------------------------ CARD RESERVA ------------------------------ */
+/* ----------------------------- COMPONENTES ----------------------------- */
 
 @Composable
-private fun ReservaCard(reserva: Reserva) {
-    val sdf = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
-    val fechaTexto = reserva.fecha?.toDate()?.let { sdf.format(it) } ?: "Sin fecha"
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            Text(
-                "Reserva en curso",
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-            Text("📅 Fecha: $fechaTexto", color = Color(0xFF6BF47F))
-            Text("⏰ Hora: ${reserva.hora}", color = Color.White.copy(alpha = 0.8f))
-            Text("🏌️‍♂️ Hoyos: ${reserva.hoyos}", color = Color.White.copy(alpha = 0.8f))
-            Text("👥 Jugadores: ${reserva.numJugadores}", color = Color.White.copy(alpha = 0.8f))
-        }
-    }
-}
-
-/* ------------------------------ BottomSheet ------------------------------ */
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BottomSheetNuevaReserva(
-    vm: ReservasViewModel,
-    creando: Boolean,
-    onClose: () -> Unit
-) {
-    val ctx = LocalContext.current
-    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-
-    var fecha by remember { mutableStateOf("") }
-    var hora by remember { mutableStateOf("") }
-    var hoyos by remember { mutableStateOf(9) }
-    var numJugadores by remember { mutableStateOf(1) }
-
-    var errorFecha by remember { mutableStateOf(false) }
-    var errorHora by remember { mutableStateOf(false) }
-
-    val cal = Calendar.getInstance()
-
-    val datePicker = DatePickerDialog(
-        ctx,
-        { _, y, m, d ->
-            val mm = (m + 1).toString().padStart(2, '0')
-            val dd = d.toString().padStart(2, '0')
-            fecha = "$y-$mm-$dd"
-            errorFecha = false
-        },
-        cal.get(Calendar.YEAR),
-        cal.get(Calendar.MONTH),
-        cal.get(Calendar.DAY_OF_MONTH)
-    )
-
-    val timePicker = TimePickerDialog(
-        ctx,
-        { _, hh, mm ->
-            hora = "${hh.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}"
-            errorHora = false
-        },
-        9, 0, true
-    )
-
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF0D1B12))
-            .padding(16.dp)
-    ) {
-        Text(
-            text = if (creando) "Nueva reserva" else "Editar reserva",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = fecha,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Fecha", color = if (errorFecha) Color.Red else Color.White) },
-            trailingIcon = { TextButton(onClick = { datePicker.show() }) { Text("Elegir") } },
-            colors = reservasTextFieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = hora,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Hora", color = if (errorHora) Color.Red else Color.White) },
-            trailingIcon = { TextButton(onClick = { timePicker.show() }) { Text("Elegir") } },
-            colors = reservasTextFieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Text("Hoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            SegmentOpcion("9", hoyos == 9) { hoyos = 9 }
-            SegmentOpcion("18", hoyos == 18) { hoyos = 18 }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        Text("Número de jugadores", color = Color.White, fontWeight = FontWeight.SemiBold)
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            (1..4).forEach { n ->
-                SegmentOpcion(n.toString(), numJugadores == n) { numJugadores = n }
-            }
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        Button(
-            onClick = {
-                errorFecha = fecha.isBlank()
-                errorHora = hora.isBlank()
-
-                if (errorFecha || errorHora) {
-                    Toast.makeText(ctx, "Completa todos los campos.", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
-
-                val reserva = Reserva(
-                    id_jugador = userId,
-                    fecha = Timestamp.now(),
-                    hora = hora,
-                    hoyos = hoyos,
-                    numJugadores = numJugadores
-                )
-
-                vm.crearReservaConInvitados(
-                    base = reserva,
-                    invitadosIds = emptyList(),
-                    onSuccess = {
-                        Toast.makeText(ctx, "Reserva creada correctamente", Toast.LENGTH_SHORT)
-                            .show()
-                        onClose()
-                    },
-                    onError = { msg -> Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show() }
-                )
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FF77)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(30.dp)
-        ) {
-            Text("Guardar", color = Color.Black, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-/* ------------------------------ Componentes auxiliares ------------------------------ */
-
-
-
-
-/* --- Selector superior de Próximas / Pasadas --- */
-@Composable
-fun SegmentedSelectorReservas(
+private fun SegmentedSelector(
     options: List<String>,
     selectedOption: String,
     onOptionSelected: (String) -> Unit
 ) {
     Row(
-        Modifier
-            .fillMaxWidth()
+        Modifier.fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 10.dp)
             .background(Color(0xFF0D1B12), RoundedCornerShape(50))
             .padding(6.dp),
@@ -348,39 +138,286 @@ fun SegmentedSelectorReservas(
             val selected = option == selectedOption
             val bg = if (selected) Color(0xFF00FF77) else Color.Transparent
             val fg = if (selected) Color.Black else Color.White
-
             OutlinedButton(
                 onClick = { onOptionSelected(option) },
                 shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = bg,
-                    contentColor = fg
-                ),
-                // ✅ También BorderStroke aquí
-                border = if (selected)
-                    BorderStroke(1.dp, Color(0xFF00FF77))
-                else
-                    BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                modifier = Modifier.height(44.dp)
-            ) {
-                Text(option, fontWeight = FontWeight.Bold)
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = bg, contentColor = fg),
+                border = null,
+                modifier = Modifier.height(42.dp)
+            ) { Text(option, fontWeight = FontWeight.Bold) }
+        }
+    }
+}
+
+@Composable
+private fun ReservaCard(r: Reserva, onClick: () -> Unit) {
+    val df = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text("📅 ${r.fecha?.toDate()?.let(df::format) ?: "--"}", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("🏌️ ${r.recorrido ?: "Sin recorrido"}", color = Color.White.copy(alpha = 0.8f))
+            Text("👥 ${r.jugadores ?: "0"} jugadores", color = Color.White.copy(alpha = 0.8f))
+        }
+    }
+}
+
+/* ======================= NUEVA RESERVA ======================= */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NuevaReservaSheet(vm: ReservasViewModel, snackbarHostState: SnackbarHostState) {
+    var fecha by remember { mutableStateOf<Timestamp?>(null) }
+    var hora by remember { mutableStateOf<Timestamp?>(null) }
+    var recorrido by remember { mutableStateOf<String?>(null) }
+    var numHoyos by remember { mutableStateOf<String?>(null) }
+    var numJugadores by remember { mutableStateOf<String?>(null) }
+
+    val scope = rememberCoroutineScope()
+    val botonActivo = fecha != null && hora != null && recorrido != null && numJugadores != null
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            "Nueva Reserva",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = MaterialTheme.typography.titleLarge.fontSize
+        )
+
+        Spacer(Modifier.height(14.dp))
+
+        ComboBoxFecha("Fecha del juego", fecha) { fecha = it }
+        ComboBoxHora("Hora del juego", hora) { hora = it }
+        ComboBox("Recorrido", listOf("Campo Norte", "Campo Sur"), recorrido) { recorrido = it }
+        ComboBox("Número de hoyos", listOf("9", "18"), numHoyos) { numHoyos = it }
+        ComboBox("Número de jugadores", listOf("1", "2", "3", "4"), numJugadores) { numJugadores = it }
+
+        Spacer(Modifier.height(20.dp))
+
+        Button(
+            onClick = {
+                scope.launch {
+                    vm.crearReserva(fecha, hora, recorrido, numHoyos, numJugadores)
+                    snackbarHostState.showSnackbar("✅ Reserva creada con éxito")
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (botonActivo) Color(0xFF00FF77) else Color.Gray
+            ),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = botonActivo
+        ) {
+            Text(
+                "Bloquear",
+                color = if (botonActivo) Color.Black else Color.White,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+/* ======================= EDITAR RESERVA ======================= */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditarReservaSheet(
+    vm: ReservasViewModel,
+    reserva: Reserva,
+    snackbarHostState: SnackbarHostState,
+    onClose: () -> Unit
+) {
+    var fecha by remember { mutableStateOf(reserva.fecha) }
+    var hora by remember { mutableStateOf(reserva.hora) }
+    var recorrido by remember { mutableStateOf(reserva.recorrido) }
+    var numHoyos by remember { mutableStateOf(reserva.hoyos) }
+    var numJugadores by remember { mutableStateOf(reserva.jugadores) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    val botonActivo = fecha != null && hora != null && !recorrido.isNullOrBlank() && !numJugadores.isNullOrBlank()
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text("Editar Reserva", color = Color.White, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(14.dp))
+
+        ComboBoxFecha("Fecha", fecha) { fecha = it }
+        ComboBoxHora("Hora", hora) { hora = it }
+        ComboBox("Recorrido", listOf("Campo Norte", "Campo Sur"), recorrido) { recorrido = it }
+        ComboBox("Número de hoyos", listOf("9", "18"), numHoyos) { numHoyos = it }
+        ComboBox("Número de jugadores", listOf("1", "2", "3", "4"), numJugadores) { numJugadores = it }
+
+        Spacer(Modifier.height(12.dp))
+
+        Button(
+            onClick = {
+                scope.launch {
+                    vm.actualizarReserva(
+                        id = reserva.id,
+                        fecha = fecha,
+                        hora = hora,
+                        recorrido = recorrido,
+                        hoyos = numHoyos,
+                        jugadores = numJugadores
+                    )
+                    snackbarHostState.showSnackbar("✅ Reserva actualizada")
+                    onClose()
+                }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (botonActivo) Color(0xFF00FF77) else Color.Gray
+            ),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = botonActivo
+        ) {
+            Icon(Icons.Filled.Edit, contentDescription = null, tint = Color.Black)
+            Spacer(Modifier.width(6.dp))
+            Text("Actualizar", color = if (botonActivo) Color.Black else Color.White)
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = { showConfirmDialog = true },
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Filled.Delete, contentDescription = null, tint = Color.Red)
+            Spacer(Modifier.width(6.dp))
+            Text("Eliminar", color = Color.Red)
+        }
+    }
+
+    /* ---- Confirmación al eliminar ---- */
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        vm.eliminarReserva(reserva.id)
+                        snackbarHostState.showSnackbar("🗑️ Reserva eliminada")
+                        onClose()
+                    }
+                    showConfirmDialog = false
+                }) {
+                    Text("Sí", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("No", color = Color.White)
+                }
+            },
+            title = { Text("Eliminar reserva", color = Color.White) },
+            text = { Text("¿Seguro que quieres eliminar esta reserva?", color = Color.White) },
+            containerColor = Color(0xFF0C1A12)
+        )
+    }
+}
+
+/* ===================== COMPONENTES AUXILIARES ===================== */
+
+@Composable
+private fun ComboBoxFecha(label: String, value: Timestamp?, onPicked: (Timestamp) -> Unit) {
+    val ctx = LocalContext.current
+    val df = remember { SimpleDateFormat("dd/MM/yyyy", Locale("es", "ES")) }
+    val cal = Calendar.getInstance()
+
+    ComboBoxBase(label, value?.toDate()?.let(df::format) ?: "") {
+        DatePickerDialog(
+            ctx,
+            { _, y, m, d ->
+                cal.set(y, m, d, 0, 0, 0)
+                onPicked(Timestamp(cal.time))
+            },
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH),
+            cal.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+}
+
+@Composable
+private fun ComboBoxHora(label: String, value: Timestamp?, onPicked: (Timestamp) -> Unit) {
+    val ctx = LocalContext.current
+    val cal = Calendar.getInstance()
+
+    ComboBoxBase(label, value?.toDate()?.let { SimpleDateFormat("HH:mm", Locale("es", "ES")).format(it) } ?: "") {
+        TimePickerDialog(
+            ctx,
+            { _, h, m ->
+                cal.set(Calendar.HOUR_OF_DAY, h)
+                cal.set(Calendar.MINUTE, m)
+                onPicked(Timestamp(cal.time))
+            },
+            cal.get(Calendar.HOUR_OF_DAY),
+            cal.get(Calendar.MINUTE),
+            true
+        ).show()
+    }
+}
+
+@Composable
+private fun ComboBoxBase(label: String, value: String, onClick: () -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = {},
+        label = { Text(label, color = Color.White) },
+        readOnly = true,
+        textStyle = LocalTextStyle.current.copy(color = Color.White),
+
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    )
+}
+
+@Composable
+private fun ComboBox(label: String, opciones: List<String>, seleccion: String?, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        OutlinedTextField(
+            value = seleccion ?: "",
+            onValueChange = {},
+            label = { Text(label, color = Color.White) },
+            readOnly = true,
+            textStyle = LocalTextStyle.current.copy(color = Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color(0xFF0D1B12))
+        ) {
+            opciones.forEach {
+                DropdownMenuItem(
+                    text = { Text(it, color = Color.White) },
+                    onClick = {
+                        onSelect(it)
+                        expanded = false
+                    }
+                )
             }
         }
     }
 }
 
 
-/* --- Colores de los campos (Material 3 actual) --- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun reservasTextFieldColors(): TextFieldColors = TextFieldDefaults.colors(
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedLabelColor = Color(0xFF00FF77),
-    unfocusedLabelColor = Color.White,
-    focusedIndicatorColor = Color(0xFF00FF77),
-    unfocusedIndicatorColor = Color.White.copy(alpha = 0.5f),
-    focusedContainerColor = Color.Transparent,
-    unfocusedContainerColor = Color.Transparent,
-    cursorColor = Color(0xFF00FF77)
-)
