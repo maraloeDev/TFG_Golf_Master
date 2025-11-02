@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "302788303259",
+    "firebase_url": "https://golfmaster-d0a5c-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "golfmaster-d0a5c",
+    "storage_bucket": "golfmaster-d0a5c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302788303259:android:0c2b1b6d5d58fc9bb4693e",
+        "android_client_info": {
+          "package_name": "com.maraloedev.golfmaster"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJRz3aEJ8Y0MzhFqJAVaRazq3vFbHs8S4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
