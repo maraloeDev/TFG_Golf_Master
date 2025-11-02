@@ -1,65 +1,73 @@
-package com.maraloedev.golfmaster.viewmodel
+package com.maraloedev.golfmaster.view.amigos
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.maraloedev.golfmaster.model.FirebaseRepo
-import com.maraloedev.golfmaster.model.Jugadores
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.asStateFlow
 
-/**
- * AmigosViewModel
- * ----------------
- * Gestiona la búsqueda y gestión de amigos (jugadores)
- * en la base de datos Firebase.
- *
- * Usa FirebaseRepo para interactuar con Firestore.
- */
-class AmigosViewModel(
-    private val repo: FirebaseRepo = FirebaseRepo()
-) : ViewModel() {
+class AmigosViewModel : ViewModel() {
 
-    // Lista observable de resultados de búsqueda
-    private val _resultados = MutableStateFlow<List<Jugadores>>(emptyList())
-    val resultados: StateFlow<List<Jugadores>> get() = _resultados
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
-    // Estado de carga y posibles errores
-    private val _loading = MutableStateFlow(false)
-    val loading: StateFlow<Boolean> get() = _loading
+    private val _amigos = MutableStateFlow<List<String>>(emptyList())
+    val amigos: StateFlow<List<String>> = _amigos.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> get() = _error
+    private val _loading = MutableStateFlow(true)
+    val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
-    /**
-     * Busca jugadores en Firestore cuyo nombre o apellido coincida
-     * con el texto introducido en el campo de búsqueda.
-     */
-    fun buscarJugadores(query: String) = viewModelScope.launch {
-        if (query.isBlank()) {
-            _resultados.value = emptyList()
-            return@launch
-        }
+    private val _resultados = MutableStateFlow<List<Pair<String, String>>>(emptyList())
+    val resultados: StateFlow<List<Pair<String, String>>> = _resultados.asStateFlow()
 
-        _loading.value = true
-        _error.value = null
+    private val _buscando = MutableStateFlow(false)
+    val buscando: StateFlow<Boolean> = _buscando.asStateFlow()
 
-        runCatching {
-            repo.buscarJugadoresPorNombre(query)
-        }.onSuccess {
-            _resultados.value = it
-        }.onFailure {
-            _error.value = it.message
-        }
-
-        _loading.value = false
+    init {
+        suscribeAmigos()
     }
 
-    /**
-     * Limpia los resultados actuales (útil al salir de la pantalla)
-     */
-    fun limpiarResultados() {
-        _resultados.value = emptyList()
-        _error.value = null
+    private fun suscribeAmigos() {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection("usuarios").document(uid)
+            .collection("amigos")
+            .addSnapshotListener { snapshot, _ ->
+                _amigos.value = snapshot?.documents?.mapNotNull { it.getString("nombre") } ?: emptyList()
+                _loading.value = false
+            }
+    }
+
+    fun buscarPorNombre(nombre: String) {
+        if (nombre.isBlank()) {
+            _resultados.value = emptyList()
+            return
+        }
+        _buscando.value = true
+        val uidActual = auth.currentUser?.uid
+        db.collection("usuarios")
+            .whereEqualTo("nombre", nombre)
+            .get()
+            .addOnSuccessListener { docs ->
+                _resultados.value = docs.documents.mapNotNull { d ->
+                    val id = d.id
+                    val nom = d.getString("nombre")
+                    if (id != uidActual && nom != null) id to nom else null
+                }
+                _buscando.value = false
+            }
+            .addOnFailureListener {
+                _buscando.value = false
+            }
+    }
+
+    fun addAmigo(id: String, nombre: String, onDone: () -> Unit) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection("usuarios")
+            .document(uid)
+            .collection("amigos")
+            .document(id)
+            .set(mapOf("nombre" to nombre))
+            .addOnSuccessListener { onDone() }
     }
 }

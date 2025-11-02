@@ -22,13 +22,13 @@ fun EventoDetalleScreen(
     navController: NavController? = null
 ) {
     val df = remember { SimpleDateFormat("dd MMM yyyy", Locale("es", "ES")) }
-    val inicio = torneo.fecha_inicial_torneo?.toDate()?.let(df::format) ?: "Sin fecha"
-    val fin = torneo.fecha_final_torneo?.toDate()?.let(df::format) ?: "Sin fecha"
+    val inicio = torneo.fechaInicio?.toDate()?.let(df::format) ?: "Sin fecha"
+    val fin = torneo.fechaFin?.toDate()?.let(df::format) ?: "Sin fecha"
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(torneo.nombre_torneo, color = Color.White) },
+                title = { Text(torneo.nombre, color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = { navController?.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
@@ -46,13 +46,13 @@ fun EventoDetalleScreen(
                 .background(Color(0xFF0D1B12))
                 .padding(16.dp)
         ) {
-            Text("Tipo: ${torneo.tipo_torneo}", color = Color.White)
-            Text("Lugar: ${torneo.lugar_torneo}", color = Color.White)
-            Text("Formato: ${torneo.formato_torneo}", color = Color.White)
+            Text("Tipo: ${torneo.tipo}", color = Color.White)
+            Text("Lugar: ${torneo.lugar}", color = Color.White)
+            Text("Formato: ${torneo.formato}", color = Color.White)
             Spacer(Modifier.height(8.dp))
             Text("Del $inicio al $fin", color = Color(0xFF6BF47F))
             Spacer(Modifier.height(16.dp))
-            Text("Premio: ${torneo.premio_torneo.ifBlank { "No especificado" }}", color = Color.LightGray)
+            Text("Premio: ${torneo.premio.ifBlank { "No especificado" }}", color = Color.LightGray)
         }
     }
 }

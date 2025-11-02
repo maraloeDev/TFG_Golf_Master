@@ -54,9 +54,9 @@ fun EventosTabs(vm: EventosViewModel, onTorneoClick: (Torneos) -> Unit) {
             )
             else -> {
                 val lista = if (selectedTab == 0)
-                    torneos.filter { it.fecha_final_torneo?.toDate()?.after(ahora) == true }
+                    torneos.filter { it.fechaInicio?.toDate()?.after(ahora) == true }
                 else
-                    torneos.filter { it.fecha_final_torneo?.toDate()?.before(ahora) == true }
+                    torneos.filter { it.fechaFin?.toDate()?.before(ahora) == true }
 
                 LazyColumn(
                     Modifier.fillMaxSize(),
@@ -96,8 +96,8 @@ private fun EventoCard(t: Torneos, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text(t.nombre_torneo, color = Color.White, fontWeight = FontWeight.Bold)
-            Text(t.lugar_torneo, color = Color.Gray)
+            Text(t.nombre, color = Color.White, fontWeight = FontWeight.Bold)
+            Text(t.lugar, color = Color.Gray)
         }
     }
 }

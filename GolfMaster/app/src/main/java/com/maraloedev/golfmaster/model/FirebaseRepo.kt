@@ -1,28 +1,22 @@
 package com.maraloedev.golfmaster.model
 
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
  * FirebaseRepo
-<<<<<<< HEAD
  * ----------------------------------------------------
  * Repositorio central para operaciones con Firebase:
  *  - Autenticación
  *  - Jugadores
  *  - Torneos
  *  - Inscripciones y Solicitudes
- *  - (Reservas y Notificaciones opcionalmente)
-=======
- *
- * Repositorio central de todas las operaciones con Firebase:
- * - Autenticación (Auth)
- * - Gestión de jugadores, torneos, reservas y notificaciones.
- *
- * Adaptado para estructura PLANA (colecciones raíz):
- * jugadores, torneos, reservas, notificacion, etc.
->>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
+ *  - Reservas
  */
 class FirebaseRepo(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -31,7 +25,9 @@ class FirebaseRepo(
 
     val currentUid get() = auth.currentUser?.uid
 
-    // --- 🔐 AUTENTICACIÓN ---
+    // ============================================================
+    // 🔐 AUTENTICACIÓN
+    // ============================================================
     suspend fun register(email: String, pass: String): String {
         val res = auth.createUserWithEmailAndPassword(email, pass).await()
         return res.user?.uid ?: throw Exception("Error al registrar usuario.")
@@ -43,12 +39,9 @@ class FirebaseRepo(
 
     fun logout() = auth.signOut()
 
-    // --- 🧍 JUGADORES ---
-    suspend fun createOrUpdateJugador(j: Jugadores) {
-        db.collection("jugadores").document(j.id).set(j).await()
-    }
-
-<<<<<<< HEAD
+    // ============================================================
+    // 🧍 JUGADORES
+    // ============================================================
     suspend fun createOrUpdateJugadorPorNombreYLicencia(
         nombre: String,
         licencia: String
@@ -56,7 +49,6 @@ class FirebaseRepo(
         if (nombre.isBlank()) throw Exception("El nombre no puede estar vacío.")
         if (licencia.isBlank()) throw Exception("El número de licencia no puede estar vacío.")
 
-        // Buscar si ya existe un jugador con esa licencia
         val existente = db.collection("jugadores")
             .whereEqualTo("numero_licencia_jugador", licencia)
             .limit(1)
@@ -75,13 +67,6 @@ class FirebaseRepo(
 
         db.collection("jugadores").document(idDoc).set(jugador).await()
         return jugador
-=======
-    suspend fun getJugadorByCorreo(correo: String): Jugadores? {
-        val snapshot = db.collection("jugadores")
-            .whereEqualTo("correo_jugador", correo)
-            .get().await()
-        return snapshot.documents.firstOrNull()?.toObject(Jugadores::class.java)
->>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
     }
 
     suspend fun getJugador(uid: String): Jugadores? {
@@ -97,7 +82,10 @@ class FirebaseRepo(
             .get().await()
             .toObjects(Jugadores::class.java)
 
-    // --- 🏆 TORNEOS ---
+    // ============================================================
+    // 🏆 TORNEOS
+    // ============================================================
+
     suspend fun getTorneos(): List<Torneos> =
         db.collection("torneos").get().await().toObjects(Torneos::class.java)
 
@@ -108,10 +96,17 @@ class FirebaseRepo(
         return torneoConId
     }
 
-<<<<<<< HEAD
+    /** 🔎 Obtener un torneo por ID (usado por EventoDetalleViewModel) */
+    suspend fun getTorneoById(id: String): Torneos? {
+        if (id.isBlank()) throw Exception("ID de torneo no válido.")
+        val snapshot = db.collection("torneos").document(id).get().await()
+        return snapshot.toObject(Torneos::class.java)
+    }
+
     // ============================================================
-    // ✅ INSCRIPCIÓN DIRECTA EN TORNEO
+    // ✅ INSCRIPCIONES
     // ============================================================
+
     suspend fun inscribirseEnTorneo(t: Torneos, usuarioId: String) {
         if (t.id.isBlank()) throw Exception("El torneo no tiene ID válido.")
         if (usuarioId.isBlank()) throw Exception("El usuario no es válido.")
@@ -119,28 +114,27 @@ class FirebaseRepo(
         val yaInscrito = db.collection("inscripciones")
             .whereEqualTo("torneoId", t.id)
             .whereEqualTo("usuarioId", usuarioId)
-=======
-    // --- 📅 RESERVAS ---
-    suspend fun getReservasPorJugador(uid: String): List<Reserva> =
-        db.collection("reservas")
-            .whereEqualTo("id_jugador", uid)
->>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
             .get().await()
-            .toObjects(Reserva::class.java)
 
-    suspend fun crearReserva(r: Reserva) {
-        val ref = db.collection("reservas").document()
-        ref.set(r.copy(id = ref.id)).await()
+        if (yaInscrito.isEmpty) {
+            val ref = db.collection("inscripciones").document()
+            val inscripcion = mapOf(
+                "id" to ref.id,
+                "torneoId" to t.id,
+                "usuarioId" to usuarioId,
+                "fecha" to Timestamp.now()
+            )
+            ref.set(inscripcion).await()
+        }
     }
 
-<<<<<<< HEAD
     // ============================================================
     // 📬 SOLICITUDES DE INSCRIPCIÓN
     // ============================================================
+
     suspend fun enviarSolicitudInscripcion(torneoId: String, usuarioId: String) {
         if (torneoId.isBlank() || usuarioId.isBlank()) throw Exception("Datos inválidos.")
 
-        // Evitar solicitudes duplicadas
         val existente = db.collection("solicitudes_inscripcion")
             .whereEqualTo("torneoId", torneoId)
             .whereEqualTo("usuarioId", usuarioId)
@@ -163,6 +157,7 @@ class FirebaseRepo(
     // ============================================================
     // 🔄 ESCUCHAS EN TIEMPO REAL DE TORNEOS
     // ============================================================
+
     fun listenTorneos(): Flow<List<Torneos>> = callbackFlow {
         val listener = db.collection("torneos")
             .addSnapshotListener { snapshot, e ->
@@ -177,35 +172,25 @@ class FirebaseRepo(
     }
 
     // ============================================================
-// 📅 RESERVAS
-// ============================================================
+    // 📅 RESERVAS
+    // ============================================================
 
-    /** Obtener todas las reservas de un jugador */
     suspend fun getReservasPorJugador(uid: String): List<Reserva> {
         if (uid.isBlank()) throw Exception("UID inválido.")
         val snapshot = db.collection("reservas")
             .whereEqualTo("id_jugador", uid)
-            .get()
-            .await()
+            .get().await()
         return snapshot.toObjects(Reserva::class.java)
     }
 
-    /** Crear nueva reserva */
     suspend fun crearReserva(r: Reserva) {
         val ref = db.collection("reservas").document()
         val reservaFinal = r.copy(id = ref.id)
         ref.set(reservaFinal).await()
     }
 
-    /** Actualizar reserva existente */
     suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
-        if (id.isBlank()) throw Exception("ID de reserva no válido")
+        if (id.isBlank()) throw Exception("ID de reserva no válido.")
         db.collection("reservas").document(id).update(nuevosDatos).await()
     }
-=======
-    // --- 🔔 NOTIFICACIONES ---
-    suspend fun getNotificaciones(): List<Notificacion> =
-        db.collection("notificacion").get().await().toObjects(Notificacion::class.java)
->>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
 }
-

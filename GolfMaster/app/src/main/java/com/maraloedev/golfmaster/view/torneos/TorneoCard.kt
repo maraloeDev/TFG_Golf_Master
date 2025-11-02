@@ -58,7 +58,7 @@ fun TorneoCard(
                     .padding(16.dp)
             ) {
                 Text(
-                    text = torneo.nombre_torneo.ifBlank { "Torneo sin nombre" },
+                    text = torneo.nombre.ifBlank { "Torneo sin nombre" },
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -69,7 +69,7 @@ fun TorneoCard(
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = torneo.lugar_torneo.ifBlank { "Lugar no especificado" },
+                    text = torneo.lugar.ifBlank { "Lugar no especificado" },
                     color = Color(0xFFB0B0B0),
                     fontSize = 14.sp,
                     maxLines = 1,
@@ -78,8 +78,8 @@ fun TorneoCard(
 
                 Spacer(Modifier.height(6.dp))
 
-                val fechaInicio = torneo.fecha_inicial_torneo?.toDate()?.let { formatoFecha.format(it) }
-                val fechaFin = torneo.fecha_final_torneo?.toDate()?.let { formatoFecha.format(it) }
+                val fechaInicio = torneo.fechaInicio?.toDate()?.let { formatoFecha.format(it) }
+                val fechaFin = torneo.fechaFin?.toDate()?.let { formatoFecha.format(it) }
 
                 if (fechaInicio != null && fechaFin != null) {
                     Text(
@@ -90,10 +90,10 @@ fun TorneoCard(
                     )
                 }
 
-                if (!torneo.premio_torneo.isNullOrBlank()) {
+                if (!torneo.premio.isNullOrBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "🏆 ${torneo.premio_torneo}",
+                        text = "🏆 ${torneo.premio}",
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium

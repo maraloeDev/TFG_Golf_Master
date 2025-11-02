@@ -4,21 +4,24 @@ import com.google.firebase.Timestamp
 
 data class Torneos(
     val id: String = "",
-    val fecha_final_torneo: Timestamp? = null,
-    val fecha_inicial_torneo: Timestamp? = null,
-    val nombre_torneo: String = "",
-<<<<<<< HEAD
-    val tipo_torneo: String = "",
-    val premio_torneo: String = "",
-    val fecha_inicial_torneo: Timestamp? = null,
-    val fecha_final_torneo: Timestamp? = null,
-    val lugar_torneo: String = "",
-    val formato_torneo: String = "",
-=======
->>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
-    val plazas: Int? = null,
-    val precioNoSocio: Double? = null,
-    val precioSocio: Double? = null,
-    val premio_torneo: String = "",
-    val tipo_torneo: String = ""
-)
+    val nombre: String = "",
+    val tipo: String = "",
+    val premio: String = "",
+    val lugar: String = "",
+    val formato: String = "",
+    val fechaInicio: Timestamp? = null,
+    val fechaFin: Timestamp? = null,
+    val creadorId: String = ""
+) {
+    fun toMap(): Map<String, Any?> = mapOf(
+        "id" to id,
+        "nombre" to nombre,
+        "tipo" to tipo,
+        "premio" to premio,
+        "lugar" to lugar,
+        "formato" to formato,
+        "fechaInicio" to fechaInicio,
+        "fechaFin" to fechaFin,
+        "creadorId" to creadorId
+    )
+}

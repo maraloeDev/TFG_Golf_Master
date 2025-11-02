@@ -35,7 +35,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.view.alertas.AlertasScreen
 import com.maraloedev.golfmaster.view.amigos.AmigosScreen
-import com.maraloedev.golfmaster.view.contacto.ContactoScreen
+import com.maraloedev.golfmaster.view.contactos.ContactoScreen
 import com.maraloedev.golfmaster.view.eventos.EventosScreen
 import com.maraloedev.golfmaster.view.perfil.PerfilScreen
 import com.maraloedev.golfmaster.view.preferencias.PreferenciasScreen
@@ -107,9 +107,8 @@ fun HomeScreen(navController: NavController) {
                 when (current) {
                     "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                     "Reservas" -> ReservasScreen()
-<<<<<<< HEAD
                     "Eventos" -> EventosScreen(
-                        torneoRecienCreado = null,                // se refresca desde NavGraph
+                        torneoRecienCreado = null,
                         onTorneoClick = { torneo ->
                             navController.navigate("eventoDetalle/${torneo.id}")
                         },
@@ -117,11 +116,8 @@ fun HomeScreen(navController: NavController) {
                             navController.navigate("torneosCrear")
                         }
                     )
+
                     "Amigos" -> AmigosScreen(navController = navController)
-=======
-                    "Eventos" -> EventosScreen()
-                    "Amigos" -> AmigosScreen()
->>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
                     "Alertas" -> AlertasScreen()
                     "Mi Perfil" -> PerfilScreen(navController = navController)
                     "Preferencias" -> PreferenciasScreen()

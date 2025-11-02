@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.contacto
+package com.maraloedev.golfmaster.view.contactos
 
 import android.content.Intent
 import android.net.Uri
@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.maraloedev.golfmaster.view.contactos.ContactoViewModel
 import kotlinx.coroutines.launch
 
 private const val CONTACT_PHONE = "609 048 714"
@@ -207,7 +207,7 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
 
 @Composable
 private fun ContactInfoItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String,
     onClick: () -> Unit
 ) {
