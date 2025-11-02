@@ -27,7 +27,6 @@ fun NotificacionesScreen(vm: NotificacionesViewModel = viewModel()) {
         ) {
             Text("No tienes notificaciones.", color = Color.Gray)
         }
-
         else -> LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -35,7 +34,9 @@ fun NotificacionesScreen(vm: NotificacionesViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(notificaciones) { notif ->
-                val fechaFormateada = dateFormat.format(Date(notif.fecha))
+                val fechaFormateada = remember(notif.fecha) {
+                    notif.fecha?.toDate()?.let { dateFormat.format(it) } ?: "Sin fecha"
+                }
                 NotificacionCard(notif = notif, vm = vm, fechaFormateada = fechaFormateada)
             }
         }
@@ -71,7 +72,7 @@ private fun NotificacionCard(
             )
             Spacer(Modifier.height(12.dp))
 
-            when (notif.estado) {
+            when (notif.estado.lowercase(Locale.ROOT)) {
                 "pendiente" -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { vm.aceptarReserva(notif) },
@@ -79,7 +80,6 @@ private fun NotificacionCard(
                     ) {
                         Text("Aceptar", color = Color.Black)
                     }
-
                     OutlinedButton(
                         onClick = { vm.rechazarReserva(notif) },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
@@ -87,7 +87,6 @@ private fun NotificacionCard(
                         Text("Rechazar", color = Color.Red)
                     }
                 }
-
                 "aceptada" -> Text("✅ Aceptada", color = Color(0xFF00FF77))
                 "rechazada" -> Text("❌ Rechazada", color = Color.Red)
                 else -> Text("ℹ️ ${notif.estado}", color = Color(0xFFBBA864))
@@ -98,8 +97,5 @@ private fun NotificacionCard(
 
 /** 🔹 Extensión para manejar título */
 private fun Notificacion.tituloOrDefault(): String {
-    return when {
-        mensaje.contains("invitado", ignoreCase = true) -> "Invitación de partida"
-        else -> "Notificación"
-    }
+    return if (mensaje.contains("invitado", ignoreCase = true)) "Invitación de partida" else "Notificación"
 }

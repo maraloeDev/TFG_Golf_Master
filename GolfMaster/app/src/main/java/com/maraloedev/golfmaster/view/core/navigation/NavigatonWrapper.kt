@@ -4,10 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +17,7 @@ import com.maraloedev.golfmaster.view.amigos.AmigosScreen
 import com.maraloedev.golfmaster.view.auth.login.LoginScreen
 import com.maraloedev.golfmaster.view.auth.register.RegisterScreen
 import com.maraloedev.golfmaster.view.eventos.EventoDetalleScreen
+import com.maraloedev.golfmaster.view.eventos.EventoDetalleViewModel
 import com.maraloedev.golfmaster.view.eventos.EventosScreen
 import com.maraloedev.golfmaster.view.inicio.HomeScreen
 import com.maraloedev.golfmaster.view.perfil.PerfilScreen
@@ -27,16 +25,6 @@ import com.maraloedev.golfmaster.view.preferencias.PreferenciasScreen
 import com.maraloedev.golfmaster.view.splash.SplashScreen
 import com.maraloedev.golfmaster.view.torneos.TorneosScreen
 
-/**
- * Controlador central de navegación de toda la app.
- *
- * Define todas las rutas de pantallas principales y secundarias:
- * - Autenticación
- * - Inicio (Home + Drawer + BottomBar)
- * - Eventos y Torneos
- * - Amigos
- * - Perfil / Preferencias
- */
 @Composable
 fun NavigationWrapper(navController: NavHostController) {
 
@@ -44,70 +32,50 @@ fun NavigationWrapper(navController: NavHostController) {
         navController = navController,
         startDestination = "splash"
     ) {
-        // ===============================
-        // 🚀 PANTALLAS DE AUTENTICACIÓN
-        // ===============================
+        // ------------------ Auth ------------------
         composable("splash") { SplashScreen(navController) }
         composable("login") { LoginScreen(navController) }
         composable("register") { RegisterScreen(navController) }
 
-        // ===============================
-        // 🏠 HOME (con Drawer + BottomBar)
-        // ===============================
+        // ------------------ Home ------------------
         composable("home") { HomeScreen(navController) }
 
-        // ===============================
-        // 👤 PERFIL Y PREFERENCIAS
-        // ===============================
+        // ----------- Perfil / Preferencias --------
         composable("perfil") { PerfilScreen(navController) }
         composable("preferencias") { PreferenciasScreen() }
 
-        // ===============================
-        // 🏌️ EVENTOS / TORNEOS
-        // ===============================
+        // ------------------ Eventos ----------------
         composable("eventos") { backStackEntry ->
             val torneoRecienCreado =
                 backStackEntry.savedStateHandle.get<Torneos>("torneoRecienCreado")
 
             EventosScreen(
+                torneoRecienCreado = torneoRecienCreado,
                 onTorneoClick = { torneo ->
-                    // Navegar al detalle del torneo
                     navController.navigate("eventoDetalle/${torneo.id}")
                 },
                 onCrearTorneo = {
-                    // Navegar al formulario de creación
                     navController.navigate("torneosCrear")
-                },
-                torneoRecienCreado = torneoRecienCreado
+                }
             )
         }
 
         composable("torneosCrear") {
             TorneosScreen(
                 onFinish = { nuevoTorneo ->
-                    // Guardar el torneo recién creado en la ruta anterior
+                    // Devolver el torneo creado a la pantalla anterior (eventos)
                     navController.previousBackStackEntry
                         ?.savedStateHandle
                         ?.set("torneoRecienCreado", nuevoTorneo)
+
                     navController.popBackStack()
                 }
             )
         }
 
-        // ===============================
-        // 🧑‍🤝‍🧑 AMIGOS
-        // ===============================
-        composable("amigos") {
-            AmigosScreen(navController = navController)
-        }
-        composable("amigosAgregar") {
-            AgregarAmigoScreen(onFinish = { navController.popBackStack() })
-        }
-
         composable("eventoDetalle/{id}") { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id") ?: ""
-            val vm: com.maraloedev.golfmaster.view.eventos.EventoDetalleViewModel =
-                androidx.lifecycle.viewmodel.compose.viewModel()
+            val id = backStackEntry.arguments?.getString("id").orEmpty()
+            val vm: EventoDetalleViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 
             LaunchedEffect(id) {
                 if (id.isNotBlank()) vm.cargarTorneo(id)
@@ -117,22 +85,26 @@ fun NavigationWrapper(navController: NavHostController) {
             val loading by vm.loading.collectAsState()
             val error by vm.error.collectAsState()
 
-            if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when {
+                loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF6BF47F))
                 }
-            } else if (error != null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Error: $error", color = Color.Red)
                 }
-            } else if (torneo != null) {
-                EventoDetalleScreen(torneo = torneo!!)
-            } else {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                torneo != null -> EventoDetalleScreen(torneo = torneo!!, navController = navController)
+                else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No se encontró el evento", color = Color.White)
                 }
             }
         }
 
+        // ------------------ Amigos -----------------
+        composable("amigos") {
+            AmigosScreen(navController = navController)
+        }
+        composable("amigosAgregar") {
+            AgregarAmigoScreen(onFinish = { navController.popBackStack() })
+        }
     }
 }

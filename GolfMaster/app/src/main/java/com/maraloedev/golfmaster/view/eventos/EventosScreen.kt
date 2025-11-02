@@ -1,6 +1,8 @@
 package com.maraloedev.golfmaster.view.eventos
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,109 +13,82 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.maraloedev.golfmaster.model.Torneos
-import com.maraloedev.golfmaster.viewmodel.EventosViewModel
-import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
+import com.google.firebase.Timestamp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventosScreen(
-    vm: EventosViewModel = viewModel(),
-    onTorneoClick: (Torneos) -> Unit,
-    onCrearTorneo: (() -> Unit)? = null,
+    vm: EventosViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    onTorneoClick: (Torneos) -> Unit = {},
+    onCrearTorneo: () -> Unit = {},
     torneoRecienCreado: Torneos? = null
 ) {
-    val torneos by vm.proximos.collectAsState()
-    val error by vm.error.collectAsState()
+    val openSheet = remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf("Próximos") }
+
+    val torneos by vm.torneos.collectAsState()
     val loading by vm.loading.collectAsState()
-    var selectedTab by remember { mutableStateOf(0) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) { vm.cargar() }
-
-    // SnackBar tras crear evento
-    LaunchedEffect(torneoRecienCreado) {
-        torneoRecienCreado?.let {
-            scope.launch {
-                val res = snackbarHostState.showSnackbar(
-                    message = "✅ Evento creado correctamente",
-                    actionLabel = "Ver evento"
-                )
-                if (res == SnackbarResult.ActionPerformed) onTorneoClick(it)
-            }
-            vm.cargar()
-        }
+    // Cargar torneos al iniciar
+    LaunchedEffect(Unit) {
+        vm.cargarTorneos()
     }
 
+    val ahora = Timestamp.now()
+    val proximos = torneos.filter { it.fecha_inicial_torneo?.seconds ?: 0 > ahora.seconds }
+    val pasados = torneos.filter { it.fecha_inicial_torneo?.seconds ?: 0 <= ahora.seconds }
+
     Scaffold(
-        containerColor = Color(0xFF0D1B12),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { onCrearTorneo?.invoke() },
-                containerColor = Color(0xFF00C853)
-            ) { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White) }
-        }
+                onClick = onCrearTorneo,
+                containerColor = Color(0xFF00FF77)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Nuevo torneo", tint = Color.Black)
+            }
+        },
+        containerColor = Color(0xFF00281F)
     ) { padding ->
         Column(
             Modifier
-                .fillMaxSize()
                 .padding(padding)
+                .fillMaxSize()
+                .background(Color(0xFF00281F))
         ) {
-            // Tabs
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color(0xFF0D1B12),
-                contentColor = Color(0xFF6BF47F),
-                indicator = {}
-            ) {
-                listOf("Próximas", "Pasadas").forEachIndexed { index, titulo ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = {
-                            Text(
-                                titulo,
-                                color = if (selectedTab == index) Color(0xFF6BF47F) else Color.Gray
-                            )
-                        }
-                    )
+            // --- Tabs (Próximos / Pasados) ---
+            SegmentedSelectorEventos(
+                options = listOf("Próximos", "Pasados"),
+                selectedOption = selectedTab,
+                onOptionSelected = { selectedTab = it }
+            )
+
+            if (loading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF00FF77))
                 }
-            }
+            } else {
+                val listaMostrar = if (selectedTab == "Próximos") proximos else pasados
 
-            // Contenido
-            when {
-                loading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF6BF47F))
-                }
-
-                error != null -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Text("Error: $error", color = Color.Red)
-                }
-
-                torneos.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
-                    Text("No hay eventos disponibles", color = Color.White)
-                }
-
-                else -> {
-                    val ahora = Date()
-                    val lista = if (selectedTab == 0)
-                        torneos.filter { it.fecha_final_torneo?.toDate()?.after(ahora) == true }
-                    else
-                        torneos.filter { it.fecha_final_torneo?.toDate()?.before(ahora) == true }
-
-                    LazyColumn(Modifier.background(Color(0xFF0D1B12))) {
-                        items(lista) { torneo ->
-                            TorneoCard(torneo) { onTorneoClick(torneo) }
+                if (listaMostrar.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "No hay torneos ${selectedTab.lowercase()}",
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                    ) {
+                        items(listaMostrar) { torneo ->
+                            TorneoCard(torneo = torneo, onClick = { onTorneoClick(torneo) })
                         }
                     }
                 }
@@ -122,29 +97,94 @@ fun EventosScreen(
     }
 }
 
+/* ------------------------------ CARD TORNEO ------------------------------ */
 @Composable
-fun TorneoCard(t: Torneos, onClick: () -> Unit) {
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale("es", "ES"))
-
-    ElevatedCard(
-        onClick = onClick,
+private fun TorneoCard(torneo: Torneos, onClick: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(containerColor = Color(0xFF16361E))
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(t.nombre_torneo, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                if (t.lugar_torneo.isNotBlank())
-                    Text(t.lugar_torneo, color = Color.LightGray, fontSize = 14.sp)
-                Text(
-                    text = t.fecha_inicial_torneo?.toDate()?.let { dateFormat.format(it) } ?: "",
-                    color = Color(0xFF6BF47F),
-                    fontSize = 13.sp
-                )
+        Column(Modifier.padding(16.dp)) {
+            Text(torneo.nombre_torneo, color = Color.White, fontWeight = FontWeight.Bold)
+            Text("📍 Lugar: ${torneo.lugar_torneo}", color = Color.White.copy(alpha = 0.8f))
+            Text("🏁 Tipo: ${torneo.tipo_torneo}", color = Color.White.copy(alpha = 0.8f))
+            Text(
+                "📅 Fecha: ${
+                    torneo.fecha_inicial_torneo?.toDate()?.toString()?.substring(0, 10)
+                        ?: "Sin fecha"
+                }",
+                color = Color(0xFF6BF47F)
+            )
+        }
+    }
+}
+
+/* ------------------------------ COMPONENTES AUXILIARES ------------------------------ */
+
+@Composable
+private fun SegmentOpcion(
+    text: String,
+    activo: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (activo) Color(0xFF00FF77) else Color.Transparent
+    val fg = if (activo) Color.Black else Color.White
+
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = bg,
+            contentColor = fg
+        ),
+        border = if (activo)
+            BorderStroke(1.dp, Color(0xFF00FF77))
+        else
+            BorderStroke(1.dp, Color.White.copy(alpha = 0.25f))
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/* --- Selector superior de Próximos / Pasados --- */
+@Composable
+fun SegmentedSelectorEventos(
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .background(Color(0xFF0D1B12), RoundedCornerShape(50))
+            .padding(6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        options.forEach { option ->
+            val selected = option == selectedOption
+            val bg = if (selected) Color(0xFF00FF77) else Color.Transparent
+            val fg = if (selected) Color.Black else Color.White
+
+            OutlinedButton(
+                onClick = { onOptionSelected(option) },
+                shape = RoundedCornerShape(50),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = bg,
+                    contentColor = fg
+                ),
+                border = if (selected)
+                    BorderStroke(1.dp, Color(0xFF00FF77))
+                else
+                    BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
+                modifier = Modifier.height(44.dp)
+            ) {
+                Text(option, fontWeight = FontWeight.Bold)
             }
         }
     }

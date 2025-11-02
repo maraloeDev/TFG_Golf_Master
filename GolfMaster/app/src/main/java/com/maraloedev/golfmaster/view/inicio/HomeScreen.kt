@@ -3,65 +3,18 @@ package com.maraloedev.golfmaster.view.inicio
 import android.annotation.SuppressLint
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.EaseInOutQuad
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -155,20 +108,20 @@ fun HomeScreen(navController: NavController) {
                     "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                     "Reservas" -> ReservasScreen()
                     "Eventos" -> EventosScreen(
+                        torneoRecienCreado = null,                // se refresca desde NavGraph
                         onTorneoClick = { torneo ->
                             navController.navigate("eventoDetalle/${torneo.id}")
                         },
                         onCrearTorneo = {
                             navController.navigate("torneosCrear")
-                        },
-                        torneoRecienCreado = null // si aún no se usa navegación con retorno
+                        }
                     )
-
                     "Amigos" -> AmigosScreen(navController = navController)
                     "Alertas" -> AlertasScreen()
                     "Mi Perfil" -> PerfilScreen(navController = navController)
                     "Preferencias" -> PreferenciasScreen()
-                    "Contacto" -> ContactoScreen() // 👈 Nuevo
+                    "Contacto" -> ContactoScreen()
+                    else -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                 }
             }
         }
@@ -176,7 +129,6 @@ fun HomeScreen(navController: NavController) {
 }
 
 /* ---------------- Drawer ---------------- */
-
 @Composable
 private fun DrawerContent(
     jugadorNombre: String,
@@ -219,7 +171,7 @@ private fun DrawerContent(
         val menuItems = listOf(
             "Inicio" to Icons.Filled.Home,
             "Información" to Icons.Filled.Info,
-            "Contacto" to Icons.Filled.Email, // 👈 NUEVO ITEM
+            "Contacto" to Icons.Filled.Email,
             "Mi Perfil" to Icons.Filled.Person,
             "Preferencias" to Icons.Filled.Settings
         )
@@ -258,7 +210,6 @@ private fun DrawerContent(
 }
 
 /* ---------------- Bottom Navigation ---------------- */
-
 @Composable
 private fun BottomNavBar(current: String, onItemSelected: (String) -> Unit) {
     NavigationBar(containerColor = Color(0xFF0B3D2E)) {
@@ -283,7 +234,6 @@ private fun BottomNavBar(current: String, onItemSelected: (String) -> Unit) {
 }
 
 /* ---------------- Pantalla de inicio ---------------- */
-
 @Composable
 private fun HomeLandingContent(nombreJugador: String?) {
     val nombreActual by rememberUpdatedState(nombreJugador?.takeIf { it.isNotBlank() } ?: "Jugador")
@@ -333,24 +283,20 @@ private fun HomeLandingContent(nombreJugador: String?) {
 }
 
 /* ---------------- Función segura para recursos ---------------- */
-
 @SuppressLint("LocalContextResourcesRead")
 @Composable
 private fun safePainterResource(@DrawableRes id: Int): Painter? {
     val context = LocalContext.current
     val exists = remember(id) {
         runCatching {
-            // Intentar obtener el nombre del recurso; si falla, el recurso no existe
             context.resources.getResourceName(id)
             true
         }.getOrElse { false }
     }
-    if (!exists) return null
-    return painterResource(id)
+    return if (exists) painterResource(id) else null
 }
 
 /* ---------------- Logo animado ---------------- */
-
 @Composable
 private fun GlowingLogo() {
     val infiniteTransition = rememberInfiniteTransition(label = "")

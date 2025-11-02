@@ -1,124 +1,146 @@
 package com.maraloedev.golfmaster.view.torneos
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
-import com.maraloedev.golfmaster.viewmodel.EventosViewModel
+import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TorneosScreen(
-    vm: EventosViewModel = viewModel(),
-    onFinish: (nuevoTorneo: com.maraloedev.golfmaster.model.Torneos) -> Unit
+    vm: TorneosViewModel = viewModel(),
+    onFinish: (com.maraloedev.golfmaster.model.Torneos) -> Unit
 ) {
     var nombre by remember { mutableStateOf(TextFieldValue("")) }
     var tipo by remember { mutableStateOf(TextFieldValue("")) }
     var premio by remember { mutableStateOf(TextFieldValue("")) }
     var lugar by remember { mutableStateOf(TextFieldValue("")) }
     var formato by remember { mutableStateOf(TextFieldValue("")) }
+    var inicio: Timestamp? by remember { mutableStateOf(null) }
+    var fin: Timestamp? by remember { mutableStateOf(null) }
 
-    val loading by vm.loading.collectAsState()
-    val error by vm.error.collectAsState()
+    var errorNombre by remember { mutableStateOf(false) }
+    var errorTipo by remember { mutableStateOf(false) }
+    var errorPremio by remember { mutableStateOf(false) }
+    var errorLugar by remember { mutableStateOf(false) }
+    var errorFormato by remember { mutableStateOf(false) }
+    var errorFecha by remember { mutableStateOf(false) }
+
+    val ctx = LocalContext.current
+    val df = remember { SimpleDateFormat("dd/MM/yyyy", Locale("es", "ES")) }
+
+    fun pickDate(onPicked: (Timestamp) -> Unit) {
+        val cal = Calendar.getInstance()
+        DatePickerDialog(
+            ctx,
+            { _, y, m, d ->
+                cal.set(y, m, d, 0, 0, 0)
+                onPicked(Timestamp(cal.time))
+            },
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH),
+            cal.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    @Composable
+    fun Campo(label: String, value: TextFieldValue, onChange: (TextFieldValue) -> Unit, isError: Boolean) {
+        Column {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onChange,
+                label = { Text(label, color = if (isError) Color.Red else Color(0xFF6BF47F)) },
+                singleLine = true,
+                textStyle = LocalTextStyle.current.copy(color = Color.White),
+                isError = isError,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = if (isError) Color.Red else Color(0xFF6BF47F),
+                    unfocusedBorderColor = if (isError) Color.Red else Color.Gray,
+                    focusedLabelColor = if (isError) Color.Red else Color(0xFF6BF47F),
+                    unfocusedLabelColor = if (isError) Color.Red else Color.Gray
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (isError) Text("Campo obligatorio", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+        }
+    }
 
     Scaffold(
         containerColor = Color(0xFF0D1B12),
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    if (
-                        nombre.text.isNotBlank() &&
-                        tipo.text.isNotBlank() &&
-                        premio.text.isNotBlank() &&
-                        lugar.text.isNotBlank() &&
-                        formato.text.isNotBlank()
-                    ) {
-                        val torneo = com.maraloedev.golfmaster.model.Torneos(
-                            nombre_torneo = nombre.text.trim(),
-                            tipo_torneo = tipo.text.trim(),
-                            premio_torneo = premio.text.trim(),
-                            lugar_torneo = lugar.text.trim(),
-                            formato_torneo = formato.text.trim(),
-                            fecha_inicial_torneo = Timestamp(Date()),
-                            fecha_final_torneo = Timestamp(Date())
-                        )
-                        vm.crearTorneo(
-                            nombre = torneo.nombre_torneo,
-                            tipo = torneo.tipo_torneo,
-                            premio = torneo.premio_torneo,
-                            fechaInicio = torneo.fecha_inicial_torneo!!,
-                            fechaFinal = torneo.fecha_final_torneo!!,
-                            lugar = torneo.lugar_torneo,
-                            formato = torneo.formato_torneo,
-                            imagenUrl = torneo.imagen_url
-                        )
-                        onFinish(torneo)
+                    errorNombre = nombre.text.isBlank()
+                    errorTipo = tipo.text.isBlank()
+                    errorPremio = premio.text.isBlank()
+                    errorLugar = lugar.text.isBlank()
+                    errorFormato = formato.text.isBlank()
+                    errorFecha = (inicio == null || fin == null)
+
+                    if (!errorNombre && !errorTipo && !errorPremio && !errorLugar && !errorFormato && !errorFecha) {
+                        vm.crearTorneoCompleto(
+                            nombre = nombre.text,
+                            tipo = tipo.text,
+                            premio = premio.text,
+                            lugar = lugar.text,
+                            formato = formato.text,
+                            inicio = inicio!!,
+                            fin = fin!!
+                        ) { creado ->
+                            onFinish(creado)
+                        }
                     }
                 },
                 containerColor = Color(0xFF00C853)
             ) {
-                Icon(Icons.Default.Check, contentDescription = "Crear", tint = Color.White)
+                Icon(Icons.Default.Check, contentDescription = "Guardar", tint = Color.White)
             }
         }
-    ) { padding ->
-
+    ) { pad ->
         Column(
             Modifier
+                .padding(pad)
                 .fillMaxSize()
-                .padding(padding)
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                "Crear nuevo evento",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall
-            )
+            Text("Crear torneo", color = Color.White, style = MaterialTheme.typography.titleLarge)
+            Campo("Nombre", nombre, { nombre = it }, errorNombre)
+            Campo("Tipo", tipo, { tipo = it }, errorTipo)
+            Campo("Premio", premio, { premio = it }, errorPremio)
+            Campo("Lugar", lugar, { lugar = it }, errorLugar)
+            Campo("Formato", formato, { formato = it }, errorFormato)
 
-            // --- Campos con estilo unificado ---
-            @Composable
-            fun campo(label: String, value: TextFieldValue, onChange: (TextFieldValue) -> Unit) {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = onChange,
-                    label = { Text(label, color = Color(0xFF6BF47F)) },
-                    singleLine = true,
-                    maxLines = 1,
-                    textStyle = LocalTextStyle.current.copy(color = Color.White),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedBorderColor = Color(0xFF6BF47F),
-                        unfocusedBorderColor = Color.Gray,
-                        focusedLabelColor = Color(0xFF6BF47F),
-                        unfocusedLabelColor = Color.Gray
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = { pickDate { inicio = it } }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))) {
+                    Text(inicio?.toDate()?.let(df::format) ?: "Fecha inicio", color = Color.Black)
+                }
+                Button(onClick = { pickDate { fin = it } }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))) {
+                    Text(fin?.toDate()?.let(df::format) ?: "Fecha fin", color = Color.Black)
+                }
             }
 
-            campo("Nombre del evento", nombre) { nombre = it }
-            campo("Tipo de evento", tipo) { tipo = it }
-            campo("Premio", premio) { premio = it }
-            campo("Lugar", lugar) { lugar = it }
-            campo("Formato", formato) { formato = it }
-
-            if (loading)
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF6BF47F)
-                )
-
-            if (error != null)
-                Text("⚠️ ${error ?: ""}", color = Color.Red)
+            if (errorFecha) {
+                Text("Selecciona ambas fechas", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

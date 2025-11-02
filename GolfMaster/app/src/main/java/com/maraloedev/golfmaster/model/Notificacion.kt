@@ -1,10 +1,13 @@
 package com.maraloedev.golfmaster.model
+
+import com.google.firebase.Timestamp
+
 data class Notificacion(
     val id: String = "",
-    val receptorId: String = "",
-    val emisorId: String = "",
-    val reservaId: String = "",
+    val reservaId: String = "",          // 🔹 ID de la reserva asociada
+    val receptorId: String = "",         // 🔹 UID del usuario que recibe la notificación
+    val emisorId: String = "",           // 🔹 UID del usuario que la envía (opcional)
     val mensaje: String = "",
-    val estado: String = "pendiente",
-    val fecha: Long = System.currentTimeMillis()
+    val fecha: Timestamp? = null,
+    val estado: String = "pendiente"     // 🔹 "pendiente", "aceptada", "rechazada"
 )

@@ -16,9 +16,8 @@ import kotlinx.coroutines.tasks.await
  *  - Autenticación
  *  - Jugadores
  *  - Torneos
- *  - Reservas
- *  - Notificaciones
  *  - Inscripciones y Solicitudes
+ *  - (Reservas y Notificaciones opcionalmente)
  */
 class FirebaseRepo(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -49,17 +48,23 @@ class FirebaseRepo(
         db.collection("jugadores").document(j.id).set(j).await()
     }
 
-    suspend fun createOrUpdateJugadorPorNombreYLicencia(nombre: String, licencia: String): Jugadores {
+    suspend fun createOrUpdateJugadorPorNombreYLicencia(
+        nombre: String,
+        licencia: String
+    ): Jugadores {
         if (nombre.isBlank()) throw Exception("El nombre no puede estar vacío.")
         if (licencia.isBlank()) throw Exception("El número de licencia no puede estar vacío.")
 
+        // Buscar si ya existe un jugador con esa licencia
         val existente = db.collection("jugadores")
             .whereEqualTo("numero_licencia_jugador", licencia)
             .limit(1)
             .get().await()
 
-        val idDoc = if (existente.isEmpty) db.collection("jugadores").document().id
-        else existente.documents.first().id
+        val idDoc = if (existente.isEmpty)
+            db.collection("jugadores").document().id
+        else
+            existente.documents.first().id
 
         val jugador = Jugadores(
             id = idDoc,
@@ -72,6 +77,7 @@ class FirebaseRepo(
     }
 
     suspend fun getJugador(uid: String): Jugadores? {
+        if (uid.isBlank()) return null
         val doc = db.collection("jugadores").document(uid).get().await()
         return doc.toObject(Jugadores::class.java)
     }
@@ -133,13 +139,15 @@ class FirebaseRepo(
         return if (doc.exists()) doc.toObject(Torneos::class.java)?.copy(id = doc.id) else null
     }
 
-    suspend fun crearTorneo(t: Torneos) {
+    suspend fun crearTorneo(t: Torneos): Torneos {
         val ref = db.collection("torneos").document()
-        ref.set(t.copy(id = ref.id)).await()
+        val torneoConId = t.copy(id = ref.id)
+        ref.set(torneoConId).await()
+        return torneoConId
     }
 
     // ============================================================
-    // ✅ INSCRIPCIÓN DIRECTA
+    // ✅ INSCRIPCIÓN DIRECTA EN TORNEO
     // ============================================================
     suspend fun inscribirseEnTorneo(t: Torneos, usuarioId: String) {
         if (t.id.isBlank()) throw Exception("El torneo no tiene ID válido.")
@@ -168,6 +176,15 @@ class FirebaseRepo(
     suspend fun enviarSolicitudInscripcion(torneoId: String, usuarioId: String) {
         if (torneoId.isBlank() || usuarioId.isBlank()) throw Exception("Datos inválidos.")
 
+        // Evitar solicitudes duplicadas
+        val existente = db.collection("solicitudes_inscripcion")
+            .whereEqualTo("torneoId", torneoId)
+            .whereEqualTo("usuarioId", usuarioId)
+            .limit(1)
+            .get().await()
+
+        if (!existente.isEmpty) throw Exception("Ya enviaste una solicitud para este torneo.")
+
         val ref = db.collection("solicitudes_inscripcion").document()
         val data = mapOf(
             "id" to ref.id,
@@ -178,4 +195,48 @@ class FirebaseRepo(
         )
         ref.set(data).await()
     }
+
+    // ============================================================
+    // 🔄 ESCUCHAS EN TIEMPO REAL DE TORNEOS
+    // ============================================================
+    fun listenTorneos(): Flow<List<Torneos>> = callbackFlow {
+        val listener = db.collection("torneos")
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    close(e)
+                    return@addSnapshotListener
+                }
+                val lista = snapshot?.toObjects(Torneos::class.java) ?: emptyList()
+                trySend(lista)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    // ============================================================
+// 📅 RESERVAS
+// ============================================================
+
+    /** Obtener todas las reservas de un jugador */
+    suspend fun getReservasPorJugador(uid: String): List<Reserva> {
+        if (uid.isBlank()) throw Exception("UID inválido.")
+        val snapshot = db.collection("reservas")
+            .whereEqualTo("id_jugador", uid)
+            .get()
+            .await()
+        return snapshot.toObjects(Reserva::class.java)
+    }
+
+    /** Crear nueva reserva */
+    suspend fun crearReserva(r: Reserva) {
+        val ref = db.collection("reservas").document()
+        val reservaFinal = r.copy(id = ref.id)
+        ref.set(reservaFinal).await()
+    }
+
+    /** Actualizar reserva existente */
+    suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
+        if (id.isBlank()) throw Exception("ID de reserva no válido")
+        db.collection("reservas").document(id).update(nuevosDatos).await()
+    }
 }
+

@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.viewmodel
+package com.maraloedev.golfmaster.view.eventos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,8 +13,8 @@ class EventosViewModel(
     private val repo: FirebaseRepo = FirebaseRepo()
 ) : ViewModel() {
 
-    private val _proximos = MutableStateFlow<List<Torneos>>(emptyList())
-    val proximos = _proximos.asStateFlow()
+    private val _torneos = MutableStateFlow<List<Torneos>>(emptyList())
+    val torneos = _torneos.asStateFlow()
 
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
@@ -22,10 +22,10 @@ class EventosViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    fun cargar() = viewModelScope.launch {
+    fun cargarTorneos() = viewModelScope.launch {
         _loading.value = true
         runCatching { repo.getTorneos() }
-            .onSuccess { lista -> _proximos.value = lista.sortedBy { it.fecha_inicial_torneo?.toDate() } }
+            .onSuccess { lista -> _torneos.value = lista.sortedBy { it.fecha_inicial_torneo?.toDate() } }
             .onFailure { e -> _error.value = e.message }
         _loading.value = false
     }
@@ -40,20 +40,24 @@ class EventosViewModel(
         formato: String,
         imagenUrl: String? = null
     ) = viewModelScope.launch {
+        if (nombre.isBlank() || tipo.isBlank() || lugar.isBlank() || formato.isBlank()) {
+            _error.value = "Todos los campos obligatorios deben completarse"
+            return@launch
+        }
+
         _loading.value = true
         runCatching {
             val torneo = Torneos(
-                nombre_torneo = nombre,
-                tipo_torneo = tipo,
-                premio_torneo = premio,
+                nombre_torneo = nombre.trim(),
+                tipo_torneo = tipo.trim(),
+                premio_torneo = premio.trim(),
                 fecha_inicial_torneo = fechaInicio,
                 fecha_final_torneo = fechaFinal,
-                lugar_torneo = lugar,
-                formato_torneo = formato,
-                imagen_url = imagenUrl
+                lugar_torneo = lugar.trim(),
+                formato_torneo = formato.trim(),
             )
             repo.crearTorneo(torneo)
-        }.onSuccess { cargar() }
+        }.onSuccess { cargarTorneos() }
             .onFailure { _error.value = it.message }
         _loading.value = false
     }
