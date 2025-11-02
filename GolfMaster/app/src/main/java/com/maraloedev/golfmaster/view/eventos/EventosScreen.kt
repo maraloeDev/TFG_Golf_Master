@@ -1,27 +1,41 @@
 package com.maraloedev.golfmaster.view.eventos
 
+<<<<<<< HEAD
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+=======
+import androidx.compose.foundation.layout.padding
+>>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+<<<<<<< HEAD
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.maraloedev.golfmaster.model.Torneos
 import com.google.firebase.Timestamp
+=======
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.maraloedev.golfmaster.model.Torneos
+import com.maraloedev.golfmaster.viewmodel.EventosViewModel
+import java.text.SimpleDateFormat
+import java.util.Locale
+>>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+<<<<<<< HEAD
 fun EventosScreen(
     vm: EventosViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     onTorneoClick: (Torneos) -> Unit = {},
@@ -92,6 +106,20 @@ fun EventosScreen(
                         }
                     }
                 }
+=======
+fun EventosScreen(vm: EventosViewModel = viewModel()) {
+    val torneos by vm.proximos.collectAsState()
+    val error by vm.error.collectAsState()
+
+    LaunchedEffect(Unit) { vm.cargar() }
+
+    when {
+        error != null -> Text("Error: ${error ?: "Desconocido"}")
+        torneos.isEmpty() -> Text("No hay torneos próximos")
+        else -> LazyColumn {
+            items(torneos) { torneo ->
+                TorneoCard(torneo)
+>>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
             }
         }
     }
@@ -99,6 +127,7 @@ fun EventosScreen(
 
 /* ------------------------------ CARD TORNEO ------------------------------ */
 @Composable
+<<<<<<< HEAD
 private fun TorneoCard(torneo: Torneos, onClick: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
@@ -185,7 +214,25 @@ fun SegmentedSelectorEventos(
                 modifier = Modifier.height(44.dp)
             ) {
                 Text(option, fontWeight = FontWeight.Bold)
+=======
+fun TorneoCard(t: Torneos) {
+    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    ElevatedCard(Modifier.padding(8.dp)) {
+        ListItem(
+            headlineContent = { Text(t.nombre_torneo) },
+            supportingContent = {
+                Text(
+                    "Tipo: ${t.tipo_torneo}\n" +
+                            "Premio: ${t.premio_torneo}\n" +
+                            "Desde: ${
+                                t.fecha_inicial_torneo?.toDate()?.let { dateFormat.format(it) }
+                            } " +
+                            "hasta: ${
+                                t.fecha_final_torneo?.toDate()?.let { dateFormat.format(it) }
+                            }"
+                )
+>>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
             }
-        }
+        )
     }
 }

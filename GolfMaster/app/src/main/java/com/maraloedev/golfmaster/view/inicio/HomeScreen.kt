@@ -107,6 +107,7 @@ fun HomeScreen(navController: NavController) {
                 when (current) {
                     "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                     "Reservas" -> ReservasScreen()
+<<<<<<< HEAD
                     "Eventos" -> EventosScreen(
                         torneoRecienCreado = null,                // se refresca desde NavGraph
                         onTorneoClick = { torneo ->
@@ -117,6 +118,10 @@ fun HomeScreen(navController: NavController) {
                         }
                     )
                     "Amigos" -> AmigosScreen(navController = navController)
+=======
+                    "Eventos" -> EventosScreen()
+                    "Amigos" -> AmigosScreen()
+>>>>>>> parent of ff2be93 (EventosScreen + Amigos Screen Success)
                     "Alertas" -> AlertasScreen()
                     "Mi Perfil" -> PerfilScreen(navController = navController)
                     "Preferencias" -> PreferenciasScreen()
