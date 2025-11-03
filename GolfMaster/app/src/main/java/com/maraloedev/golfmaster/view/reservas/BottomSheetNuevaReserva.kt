@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.ExposedDropdownMenuDefaults.textFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,7 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.model.Reserva
-import com.maraloedev.golfmaster.view.auth.register.textFieldColors
+
 import java.util.Calendar
 
 @Composable

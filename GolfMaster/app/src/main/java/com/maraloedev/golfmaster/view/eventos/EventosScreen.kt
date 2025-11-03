@@ -1,6 +1,8 @@
 package com.maraloedev.golfmaster.view.eventos
 
-import androidx.compose.foundation.BorderStroke
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,86 +10,100 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.maraloedev.golfmaster.model.Torneos
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
+import com.maraloedev.golfmaster.model.Evento
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
+/* ============================================================
+   🎨 COLORES GLOBALES
+   ============================================================ */
+private val PillSelected = Color(0xFF1F4D3E)
+private val PillUnselected = Color(0xFF00FF77)
+private val ScreenBg = Color(0xFF00281F)
+private val CardBg = Color(0xFF0D1B12)
+
+/* ============================================================
+   🏆 EVENTOS SCREEN
+   ============================================================ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EventosScreen(
-    vm: EventosViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    onTorneoClick: (Torneos) -> Unit = {},
-    onCrearTorneo: () -> Unit = {},
-    torneoRecienCreado: Torneos? = null
-) {
-    val torneos by vm.torneos.collectAsState()
+fun EventosScreen(vm: EventosViewModel = viewModel()) {
+    val eventos by vm.eventos.collectAsState()
     val loading by vm.loading.collectAsState()
-    val error by vm.error.collectAsState()
+    val snackbarHost = remember { SnackbarHostState() }
+
+    var showForm by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf("Próximos") }
 
-    LaunchedEffect(Unit) { vm.cargarTorneos() }
-    torneoRecienCreado?.let { vm.cargarTorneos() }
+    val ahora = remember { Timestamp.now() }
 
-    val ahora = Timestamp.now()
-    val proximos = torneos.filter { it.fechaInicio?.seconds ?: 0 > ahora.seconds }
-    val pasados = torneos.filter { it.fechaInicio?.seconds ?: 0 <= ahora.seconds }
+    val (proximos, finalizados) = remember(eventos) {
+        val prox = eventos.filter { (it.fechaFin?.seconds ?: 0) > ahora.seconds }
+        val fin = eventos.filter { (it.fechaFin?.seconds ?: 0) <= ahora.seconds }
+        prox to fin
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onCrearTorneo,
-                containerColor = Color(0xFF00FF77)
+                onClick = { showForm = true },
+                containerColor = PillUnselected
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nuevo torneo", tint = Color.Black)
+                Icon(Icons.Default.Add, contentDescription = "Nuevo evento", tint = Color.Black)
             }
         },
-        containerColor = Color(0xFF00281F)
-    ) { padding ->
+        containerColor = ScreenBg
+    ) { pad ->
         Column(
             Modifier
-                .padding(padding)
+                .padding(pad)
                 .fillMaxSize()
-                .background(Color(0xFF00281F))
+                .background(ScreenBg)
         ) {
-            SegmentedSelectorEventos(
-                options = listOf("Próximos", "Pasados"),
-                selectedOption = selectedTab,
-                onOptionSelected = { selectedTab = it }
+            BigPillsEventos(
+                left = "Próximos",
+                right = "Finalizados",
+                selected = selectedTab,
+                onSelect = { selectedTab = it }
             )
 
-            when {
-                loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF00FF77))
+            if (loading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = PillUnselected)
                 }
-
-                error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Error: $error", color = Color.Red)
-                }
-
-                else -> {
-                    val lista = if (selectedTab == "Próximos") proximos else pasados
+            } else {
+                Crossfade(targetState = selectedTab, label = "eventosCrossfade") { tab ->
+                    val lista = if (tab == "Próximos") proximos else finalizados
                     if (lista.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                "No hay torneos ${selectedTab.lowercase()}",
-                                color = Color.White.copy(alpha = 0.6f)
+                                "No hay eventos ${tab.lowercase()}",
+                                color = Color.White.copy(alpha = .7f)
                             )
                         }
                     } else {
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(lista) { torneo ->
-                                TorneoCard(torneo) { onTorneoClick(torneo) }
+                            items(lista, key = { it.id ?: it.hashCode() }) { e ->
+                                EventoCard(e, vm, snackbarHost)
                             }
                         }
                     }
@@ -95,64 +111,318 @@ fun EventosScreen(
             }
         }
     }
-}
 
-@Composable
-private fun TorneoCard(torneo: Torneos, onClick: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(torneo.nombre, color = Color.White, fontWeight = FontWeight.Bold)
-            Text("📍 ${torneo.lugar}", color = Color.White.copy(alpha = 0.8f))
-            Text("🏁 ${torneo.tipo}", color = Color.White.copy(alpha = 0.8f))
-            Text(
-                "📅 ${torneo.fechaInicio?.toDate()?.toString()?.substring(0, 10) ?: "Sin fecha"}",
-                color = Color(0xFF6BF47F)
-            )
+    if (showForm) {
+        ModalBottomSheet(
+            onDismissRequest = { showForm = false },
+            containerColor = ScreenBg
+        ) {
+            NuevoEventoSheet(vm = vm, snackbarHostState = snackbarHost) {
+                showForm = false
+            }
         }
     }
 }
 
+/* ============================================================
+   🟩 PILLS
+   ============================================================ */
 @Composable
-fun SegmentedSelectorEventos(
-    options: List<String>,
-    selectedOption: String,
-    onOptionSelected: (String) -> Unit
+fun BigPillsEventos(
+    left: String,
+    right: String,
+    selected: String,
+    onSelect: (String) -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .background(Color(0xFF0D1B12), RoundedCornerShape(50))
-            .padding(6.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+            .padding(16.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardBg)
+            .padding(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        options.forEach { option ->
-            val selected = option == selectedOption
-            val bg = if (selected) Color(0xFF00FF77) else Color.Transparent
-            val fg = if (selected) Color.Black else Color.White
-
-            OutlinedButton(
-                onClick = { onOptionSelected(option) },
-                shape = RoundedCornerShape(50),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = bg,
-                    contentColor = fg
-                ),
-                border = if (selected)
-                    BorderStroke(1.dp, Color(0xFF00FF77))
-                else
-                    BorderStroke(1.dp, Color.White.copy(alpha = 0.25f)),
-                modifier = Modifier.height(44.dp)
+        @Composable
+        fun pill(text: String, isSelected: Boolean) =
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(100))
+                    .background(if (isSelected) PillUnselected else PillSelected)
+                    .clickable { onSelect(text) },
+                contentAlignment = Alignment.Center
             ) {
-                Text(option, fontWeight = FontWeight.Bold)
+                Text(
+                    text = text,
+                    color = if (isSelected) Color.Black else Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+        pill(left, selected == left)
+        pill(right, selected == right)
+    }
+}
+
+/* ============================================================
+   🟩 EVENTO CARD (muestra y permite inscribirse)
+   ============================================================ */
+@Composable
+fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState) {
+    val df = remember { SimpleDateFormat("dd MMMM, yyyy - HH:mm", Locale("es", "ES")) }
+    val scope = rememberCoroutineScope()
+    val plazasRestantes = e.plazas ?: 0
+    val agotado = plazasRestantes <= 0
+
+    Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Text("🏌️ ${e.nombre ?: "--"}", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                "${e.fechaInicio?.toDate()?.let(df::format)} → ${e.fechaFin?.toDate()?.let(df::format)}",
+                color = Color.White.copy(alpha = .8f)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text("Tipo: ${e.tipo ?: "--"}", color = Color.White.copy(alpha = .8f))
+            Text("💰 Socio: ${e.precioSocio}€ · No socio: ${e.precioNoSocio}€", color = Color.White.copy(alpha = .8f))
+            Text("👥 Plazas restantes: $plazasRestantes", color = if (agotado) Color.Red else Color.White)
+
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    scope.launch {
+                        if (agotado) {
+                            snackbarHost.showSnackbar("🚫 No quedan plazas disponibles.")
+                        } else {
+                            vm.inscribirseEnEvento(e)
+                            snackbarHost.showSnackbar("✅ Inscripción completada")
+                        }
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (agotado) Color.Gray else PillUnselected
+                ),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !agotado
+            ) {
+                Text(
+                    if (agotado) "Sin plazas" else "Inscribirse",
+                    color = if (agotado) Color.White else Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+/* ============================================================
+   🟩 CREAR NUEVO EVENTO (Solo organizador)
+   ============================================================ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NuevoEventoSheet(
+    vm: EventosViewModel,
+    snackbarHostState: SnackbarHostState,
+    onClose: () -> Unit
+) {
+    var nombre by remember { mutableStateOf("") }
+    var tipo by remember { mutableStateOf<String?>(null) }
+    var plazas by remember { mutableStateOf("") }
+    var precioSocio by remember { mutableStateOf("") }
+    var precioNoSocio by remember { mutableStateOf("") }
+    var fechaInicio by remember { mutableStateOf<Timestamp?>(null) }
+    var fechaFin by remember { mutableStateOf<Timestamp?>(null) }
+
+    val scope = rememberCoroutineScope()
+    val botonActivo = nombre.isNotBlank() && tipo != null && fechaInicio != null && fechaFin != null
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text("Nuevo Evento", color = Color.White, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(14.dp))
+
+        OutlinedTextField(
+            value = nombre,
+            onValueChange = { nombre = it },
+            label = { Text("Nombre del torneo", color = Color.Gray) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = PillUnselected,
+                unfocusedBorderColor = Color.DarkGray,
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(10.dp))
+        DateTimePickerFieldEvento("Inicio del torneo", fechaInicio) { fechaInicio = it }
+        DateTimePickerFieldEvento("Fin del torneo", fechaFin) { fechaFin = it }
+
+        Spacer(Modifier.height(10.dp))
+        SelectFieldEvento("Tipo de torneo", tipo, listOf("Stableford", "Stroke Play", "Match Play", "Scramble", "Medal Play")) { tipo = it }
+
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = plazas,
+            onValueChange = { plazas = it.filter { c -> c.isDigit() } },
+            label = { Text("Plazas totales", color = Color.Gray) },
+            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PillUnselected, unfocusedBorderColor = Color.DarkGray),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(
+                value = precioSocio,
+                onValueChange = { precioSocio = it.filter { c -> c.isDigit() } },
+                label = { Text("Socio (€)", color = Color.Gray) },
+                modifier = Modifier.weight(1f),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PillUnselected, unfocusedBorderColor = Color.DarkGray)
+            )
+            OutlinedTextField(
+                value = precioNoSocio,
+                onValueChange = { precioNoSocio = it.filter { c -> c.isDigit() } },
+                label = { Text("No socio (€)", color = Color.Gray) },
+                modifier = Modifier.weight(1f),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PillUnselected, unfocusedBorderColor = Color.DarkGray)
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = {
+                scope.launch {
+                    vm.crearEvento(nombre, tipo, plazas, precioSocio, precioNoSocio, fechaInicio, fechaFin)
+                    snackbarHostState.showSnackbar("✅ Evento creado con éxito")
+                    onClose()
+                }
+            },
+            enabled = botonActivo,
+            shape = RoundedCornerShape(50),
+            colors = ButtonDefaults.buttonColors(containerColor = if (botonActivo) PillUnselected else Color.Gray),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Crear Evento", color = if (botonActivo) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/* ============================================================
+   🕓 PICKER FECHA/HORA
+   ============================================================ */
+@Composable
+fun DateTimePickerFieldEvento(
+    label: String,
+    value: Timestamp?,
+    onPicked: (Timestamp) -> Unit
+) {
+    val ctx = LocalContext.current
+    val cal = remember { Calendar.getInstance() }
+    val df = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
+
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, color = Color.White, modifier = Modifier.padding(bottom = 6.dp))
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable {
+                    DatePickerDialog(
+                        ctx,
+                        { _, y, m, d ->
+                            cal.set(y, m, d)
+                            TimePickerDialog(
+                                ctx,
+                                { _, h, min ->
+                                    cal.set(Calendar.HOUR_OF_DAY, h)
+                                    cal.set(Calendar.MINUTE, min)
+                                    onPicked(Timestamp(cal.time))
+                                },
+                                cal.get(Calendar.HOUR_OF_DAY),
+                                cal.get(Calendar.MINUTE),
+                                true
+                            ).show()
+                        },
+                        cal.get(Calendar.YEAR),
+                        cal.get(Calendar.MONTH),
+                        cal.get(Calendar.DAY_OF_MONTH)
+                    ).show()
+                },
+            color = CardBg
+        ) {
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = value?.toDate()?.let(df::format) ?: "Seleccionar fecha y hora",
+                    color = if (value == null) Color.Gray else Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(Icons.Default.Event, contentDescription = null, tint = Color.White)
+            }
+        }
+    }
+}
+
+/* ============================================================
+   🎯 SELECT FIELD
+   ============================================================ */
+@Composable
+fun SelectFieldEvento(
+    label: String,
+    value: String?,
+    options: List<String>,
+    onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxWidth()) {
+        Text(label, color = Color.White, modifier = Modifier.padding(bottom = 6.dp))
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { expanded = true },
+            color = CardBg
+        ) {
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = value ?: "Seleccionar tipo",
+                    color = if (value == null) Color.Gray else Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
+            }
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(CardBg)) {
+            options.forEach { opt ->
+                val isSelected = opt == value
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = opt,
+                            color = if (isSelected) Color.Black else Color.White,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    onClick = {
+                        onSelect(opt)
+                        expanded = false
+                    },
+                    modifier = Modifier.fillMaxWidth().background(if (isSelected) PillUnselected else PillSelected)
+                )
             }
         }
     }

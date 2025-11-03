@@ -107,15 +107,7 @@ fun HomeScreen(navController: NavController) {
                 when (current) {
                     "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                     "Reservas" -> ReservasScreen()
-                    "Eventos" -> EventosScreen(
-                        torneoRecienCreado = null,
-                        onTorneoClick = { torneo ->
-                            navController.navigate("eventoDetalle/${torneo.id}")
-                        },
-                        onCrearTorneo = {
-                            navController.navigate("torneosCrear")
-                        }
-                    )
+                    "Eventos" -> EventosScreen()
 
                     "Amigos" -> AmigosScreen(navController = navController)
                     "Alertas" -> AlertasScreen()

@@ -3,23 +3,18 @@ package com.maraloedev.golfmaster.view.eventos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import com.maraloedev.golfmaster.model.Evento
 import com.maraloedev.golfmaster.model.FirebaseRepo
-import com.maraloedev.golfmaster.model.Torneos
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * Gestiona los torneos del club:
- * - Obtiene torneos desde Firebase
- * - Crea nuevos torneos
- */
 class EventosViewModel(
     private val repo: FirebaseRepo = FirebaseRepo()
 ) : ViewModel() {
 
-    private val _torneos = MutableStateFlow<List<Torneos>>(emptyList())
-    val torneos = _torneos.asStateFlow()
+    private val _eventos = MutableStateFlow<List<Evento>>(emptyList())
+    val eventos = _eventos.asStateFlow()
 
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
@@ -27,42 +22,71 @@ class EventosViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    fun cargarTorneos() = viewModelScope.launch {
-        _loading.value = true
-        runCatching { repo.getTorneos() }
-            .onSuccess { lista -> _torneos.value = lista.sortedBy { it.fechaInicio?.toDate() } }
-            .onFailure { e -> _error.value = e.message }
-        _loading.value = false
-    }
-
-    fun crearTorneo(
-        nombre: String,
-        tipo: String,
-        premio: String,
-        lugar: String,
-        formato: String,
-        fechaInicio: Timestamp,
-        fechaFinal: Timestamp
-    ) = viewModelScope.launch {
-        if (nombre.isBlank() || tipo.isBlank() || lugar.isBlank() || formato.isBlank()) {
-            _error.value = "Todos los campos obligatorios deben completarse"
-            return@launch
+    // ================== 🔹 Cargar eventos ==================
+    fun cargarEventos() {
+        viewModelScope.launch {
+            _loading.value = true
+            runCatching { repo.getEventos() }
+                .onSuccess { _eventos.value = it.sortedBy { e -> e.fechaInicio?.seconds } }
+                .onFailure { _error.value = it.message }
+            _loading.value = false
         }
-
-        _loading.value = true
-        runCatching {
-            val torneo = Torneos(
-                nombre = nombre.trim(),
-                tipo = tipo.trim(),
-                premio = premio.trim(),
-                lugar = lugar.trim(),
-                formato = formato.trim(),
-                fechaInicio = fechaInicio,
-                fechaFin = fechaFinal
-            )
-            repo.crearTorneo(torneo)
-        }.onSuccess { cargarTorneos() }
-            .onFailure { _error.value = it.message }
-        _loading.value = false
     }
+
+    // ================== 🔹 Crear nuevo evento ==================
+    fun crearEvento(
+        nombre: String,
+        tipo: String?,
+        plazas: String,
+        precioSocio: String,
+        precioNoSocio: String,
+        fechaInicio: Timestamp?,
+        fechaFin: Timestamp?
+    ) {
+        viewModelScope.launch {
+            if (nombre.isBlank() || tipo == null || fechaInicio == null || fechaFin == null) return@launch
+
+            val nuevo = Evento(
+                nombre = nombre,
+                tipo = tipo,
+                plazas = plazas.toIntOrNull(),
+                precioSocio = precioSocio.toDoubleOrNull(),
+                precioNoSocio = precioNoSocio.toDoubleOrNull(),
+                fechaInicio = fechaInicio,
+                fechaFin = fechaFin
+            )
+
+            runCatching { repo.addEvento(nuevo) }
+                .onSuccess { cargarEventos() }
+                .onFailure { _error.value = it.message }
+        }
+    }
+
+    // ================== 🔹 Inscribirse a un evento ==================
+    fun inscribirseEnEvento(evento: Evento) {
+        viewModelScope.launch {
+            runCatching { repo.inscribirseEnEvento(evento) }
+                .onSuccess { cargarEventos() }
+                .onFailure { _error.value = it.message }
+        }
+    }
+
+    // 🔹 Editar evento
+    fun actualizarEvento(evento: Evento) {
+        viewModelScope.launch {
+            runCatching { repo.updateEvento(evento) }
+                .onSuccess { cargarEventos() }
+                .onFailure { _error.value = it.message }
+        }
+    }
+
+    // 🔹 Eliminar evento
+    fun eliminarEvento(id: String) {
+        viewModelScope.launch {
+            runCatching { repo.deleteEvento(id) }
+                .onSuccess { cargarEventos() }
+                .onFailure { _error.value = it.message }
+        }
+    }
+
 }
