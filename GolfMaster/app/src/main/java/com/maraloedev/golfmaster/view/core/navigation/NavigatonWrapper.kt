@@ -26,26 +26,14 @@ fun NavigationWrapper(navController: NavHostController) {
         composable("splash") { SplashScreen(navController) }
 
         composable("login") {
-            val err = authVm.errorMessage
             LoginScreen(
-                onLogin = { email, pass ->
-                    authVm.login(email, pass) { success ->
-                        if (success) {
-                            navController.navigate("home") {
-                                popUpTo("login") { inclusive = true }
-                            }
-                        }
-                    }
-                },
+                onLogin = { email, pass -> /* tu lógica de login */ },
                 onRegisterClick = { navController.navigate("register") },
-                onForgotPasswordClick = { /* TODO: recuperar contraseña */ },
-                errorMessage = err
             )
         }
 
         composable("register") {
-            RegisterScreen(navController
-            )
+            RegisterScreen(navController = navController)
         }
 
         composable("home") { HomeScreen(navController) }

@@ -3,6 +3,7 @@ package com.maraloedev.golfmaster.view.eventos
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,7 +11,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,24 +23,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
 import com.maraloedev.golfmaster.model.Evento
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.random.Random
 
-/* ============================================================
-   🎨 COLORES GLOBALES
-   ============================================================ */
+/* ===== 🎨 Colores ===== */
 private val PillSelected = Color(0xFF1F4D3E)
 private val PillUnselected = Color(0xFF00FF77)
 private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
 
-/* ============================================================
-   🏆 EVENTOS SCREEN
-   ============================================================ */
+/* ===== 🏆 Pantalla principal ===== */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventosScreen(vm: EventosViewModel = viewModel()) {
@@ -49,7 +50,6 @@ fun EventosScreen(vm: EventosViewModel = viewModel()) {
     var selectedTab by remember { mutableStateOf("Próximos") }
 
     val ahora = remember { Timestamp.now() }
-
     val (proximos, finalizados) = remember(eventos) {
         val prox = eventos.filter { (it.fechaFin?.seconds ?: 0) > ahora.seconds }
         val fin = eventos.filter { (it.fechaFin?.seconds ?: 0) <= ahora.seconds }
@@ -59,10 +59,7 @@ fun EventosScreen(vm: EventosViewModel = viewModel()) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showForm = true },
-                containerColor = PillUnselected
-            ) {
+            FloatingActionButton(onClick = { showForm = true }, containerColor = PillUnselected) {
                 Icon(Icons.Default.Add, contentDescription = "Nuevo evento", tint = Color.Black)
             }
         },
@@ -117,23 +114,14 @@ fun EventosScreen(vm: EventosViewModel = viewModel()) {
             onDismissRequest = { showForm = false },
             containerColor = ScreenBg
         ) {
-            NuevoEventoSheet(vm = vm, snackbarHostState = snackbarHost) {
-                showForm = false
-            }
+            NuevoEventoSheet(vm = vm, snackbarHostState = snackbarHost) { showForm = false }
         }
     }
 }
 
-/* ============================================================
-   🟩 PILLS
-   ============================================================ */
+/* ===== 🟩 Pills ===== */
 @Composable
-fun BigPillsEventos(
-    left: String,
-    right: String,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
+fun BigPillsEventos(left: String, right: String, selected: String, onSelect: (String) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -155,7 +143,7 @@ fun BigPillsEventos(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = text,
+                    text,
                     color = if (isSelected) Color.Black else Color.White,
                     fontWeight = FontWeight.Bold
                 )
@@ -166,18 +154,21 @@ fun BigPillsEventos(
     }
 }
 
-/* ============================================================
-   🟩 EVENTO CARD (muestra y permite inscribirse)
-   ============================================================ */
+/* ===== 🟩 Card de evento ===== */
 @Composable
 fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState) {
     val df = remember { SimpleDateFormat("dd MMMM, yyyy - HH:mm", Locale("es", "ES")) }
     val scope = rememberCoroutineScope()
-    val plazasRestantes = e.plazas ?: 0
-    val agotado = plazasRestantes <= 0
+
+    val plazasTotales = e.plazas ?: 0
+    val agotado = plazasTotales <= 0
 
     Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
             Text("🏌️ ${e.nombre ?: "--"}", color = Color.White, fontWeight = FontWeight.Bold)
             Text(
                 "${e.fechaInicio?.toDate()?.let(df::format)} → ${e.fechaFin?.toDate()?.let(df::format)}",
@@ -185,15 +176,22 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
             )
             Spacer(Modifier.height(6.dp))
             Text("Tipo: ${e.tipo ?: "--"}", color = Color.White.copy(alpha = .8f))
-            Text("💰 Socio: ${e.precioSocio}€ · No socio: ${e.precioNoSocio}€", color = Color.White.copy(alpha = .8f))
-            Text("👥 Plazas restantes: $plazasRestantes", color = if (agotado) Color.Red else Color.White)
+            Text(
+                "💰 Socio: ${e.precioSocio ?: "--"}€ · No socio: ${e.precioNoSocio ?: "--"}€",
+                color = Color.White.copy(alpha = .8f)
+            )
+            Text(
+                "👥 Plazas totales: $plazasTotales",
+                color = if (agotado) Color.Red else Color.White,
+                fontWeight = FontWeight.Medium
+            )
 
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
                     scope.launch {
                         if (agotado) {
-                            snackbarHost.showSnackbar("🚫 No quedan plazas disponibles.")
+                            snackbarHost.showSnackbar("🚫 No hay plazas configuradas.")
                         } else {
                             vm.inscribirseEnEvento(e)
                             snackbarHost.showSnackbar("✅ Inscripción completada")
@@ -217,9 +215,7 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
     }
 }
 
-/* ============================================================
-   🟩 CREAR NUEVO EVENTO (Solo organizador)
-   ============================================================ */
+/* ===== 🟩 Nuevo evento ===== */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NuevoEventoSheet(
@@ -229,20 +225,18 @@ fun NuevoEventoSheet(
 ) {
     var nombre by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf<String?>(null) }
-    var plazas by remember { mutableStateOf("") }
-    var precioSocio by remember { mutableStateOf("") }
-    var precioNoSocio by remember { mutableStateOf("") }
+
+    val plazasTotales = remember { Random.nextInt(10, 50) }
+    val precioSocio = 5
+    val precioNoSocio = 22
+
     var fechaInicio by remember { mutableStateOf<Timestamp?>(null) }
     var fechaFin by remember { mutableStateOf<Timestamp?>(null) }
 
     val scope = rememberCoroutineScope()
     val botonActivo = nombre.isNotBlank() && tipo != null && fechaInicio != null && fechaFin != null
 
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-    ) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text("Nuevo Evento", color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(14.dp))
 
@@ -264,57 +258,87 @@ fun NuevoEventoSheet(
         DateTimePickerFieldEvento("Fin del torneo", fechaFin) { fechaFin = it }
 
         Spacer(Modifier.height(10.dp))
-        SelectFieldEvento("Tipo de torneo", tipo, listOf("Stableford", "Stroke Play", "Match Play", "Scramble", "Medal Play")) { tipo = it }
+        SelectFieldEvento(
+            label = "Tipo de torneo",
+            value = tipo,
+            options = listOf("Stableford", "Stroke Play", "Match Play", "Scramble", "Medal Play")
+        ) { tipo = it }
 
-        Spacer(Modifier.height(10.dp))
-        OutlinedTextField(
-            value = plazas,
-            onValueChange = { plazas = it.filter { c -> c.isDigit() } },
-            label = { Text("Plazas totales", color = Color.Gray) },
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PillUnselected, unfocusedBorderColor = Color.DarkGray),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(
-                value = precioSocio,
-                onValueChange = { precioSocio = it.filter { c -> c.isDigit() } },
-                label = { Text("Socio (€)", color = Color.Gray) },
-                modifier = Modifier.weight(1f),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PillUnselected, unfocusedBorderColor = Color.DarkGray)
-            )
-            OutlinedTextField(
-                value = precioNoSocio,
-                onValueChange = { precioNoSocio = it.filter { c -> c.isDigit() } },
-                label = { Text("No socio (€)", color = Color.Gray) },
-                modifier = Modifier.weight(1f),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PillUnselected, unfocusedBorderColor = Color.DarkGray)
-            )
-        }
+        Spacer(Modifier.height(20.dp))
+        PlazasYPreciosSection(plazas = plazasTotales, precioSocio = precioSocio, precioNoSocio = precioNoSocio)
 
         Spacer(Modifier.height(20.dp))
         Button(
             onClick = {
                 scope.launch {
-                    vm.crearEvento(nombre, tipo, plazas, precioSocio, precioNoSocio, fechaInicio, fechaFin)
+                    vm.crearEvento(
+                        nombre = nombre,
+                        tipo = tipo,
+                        plazas = plazasTotales.toString(),
+                        precioSocio = precioSocio.toString(),
+                        precioNoSocio = precioNoSocio.toString(),
+                        fechaInicio = fechaInicio,
+                        fechaFin = fechaFin
+                    )
                     snackbarHostState.showSnackbar("✅ Evento creado con éxito")
                     onClose()
                 }
             },
             enabled = botonActivo,
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = if (botonActivo) PillUnselected else Color.Gray),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (botonActivo) PillUnselected else Color.Gray
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Crear Evento", color = if (botonActivo) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                "Crear Evento",
+                color = if (botonActivo) Color.Black else Color.White,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
 
-/* ============================================================
-   🕓 PICKER FECHA/HORA
-   ============================================================ */
+/* ===== 🟩 Plazas y precios ===== */
+@Composable
+fun PlazasYPreciosSection(plazas: Int, precioSocio: Int, precioNoSocio: Int) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
+            border = BorderStroke(1.dp, Color(0xFFBBA864))
+        ) {
+            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                Text("Plazas totales: $plazas", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedCard(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
+                border = BorderStroke(1.dp, Color(0xFFBBA864))
+            ) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                    Text("Socio (€): $precioSocio", color = Color.White, fontSize = 16.sp)
+                }
+            }
+            OutlinedCard(
+                modifier = Modifier.weight(1f),
+                colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
+                border = BorderStroke(1.dp, Color(0xFFBBA864))
+            ) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                    Text("No socio (€): $precioNoSocio", color = Color.White, fontSize = 16.sp)
+                }
+            }
+        }
+    }
+}
+
+/* ===== 🕓 DateTime Picker ===== */
 @Composable
 fun DateTimePickerFieldEvento(
     label: String,
@@ -356,10 +380,7 @@ fun DateTimePickerFieldEvento(
                 },
             color = CardBg
         ) {
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = value?.toDate()?.let(df::format) ?: "Seleccionar fecha y hora",
                     color = if (value == null) Color.Gray else Color.White,
@@ -371,9 +392,7 @@ fun DateTimePickerFieldEvento(
     }
 }
 
-/* ============================================================
-   🎯 SELECT FIELD
-   ============================================================ */
+/* ===== 🎯 Select tipo ===== */
 @Composable
 fun SelectFieldEvento(
     label: String,
@@ -393,10 +412,7 @@ fun SelectFieldEvento(
                 .clickable { expanded = true },
             color = CardBg
         ) {
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = value ?: "Seleccionar tipo",
                     color = if (value == null) Color.Gray else Color.White,
@@ -406,7 +422,11 @@ fun SelectFieldEvento(
             }
         }
 
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(CardBg)) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(CardBg)
+        ) {
             options.forEach { opt ->
                 val isSelected = opt == value
                 DropdownMenuItem(
@@ -417,11 +437,10 @@ fun SelectFieldEvento(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     },
-                    onClick = {
-                        onSelect(opt)
-                        expanded = false
-                    },
-                    modifier = Modifier.fillMaxWidth().background(if (isSelected) PillUnselected else PillSelected)
+                    onClick = { onSelect(opt); expanded = false },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (isSelected) PillUnselected else PillSelected)
                 )
             }
         }
