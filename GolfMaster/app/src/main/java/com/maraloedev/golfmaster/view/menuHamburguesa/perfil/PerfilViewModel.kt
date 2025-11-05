@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.perfil
+package com.maraloedev.golfmaster.view.menuHamburguesa.perfil
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

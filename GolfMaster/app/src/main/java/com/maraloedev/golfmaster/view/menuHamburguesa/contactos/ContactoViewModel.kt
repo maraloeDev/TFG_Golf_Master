@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.contactos
+package com.maraloedev.golfmaster.view.menuHamburguesa.contactos
 
 import androidx.lifecycle.ViewModel
 import com.google.firebase.firestore.FirebaseFirestore

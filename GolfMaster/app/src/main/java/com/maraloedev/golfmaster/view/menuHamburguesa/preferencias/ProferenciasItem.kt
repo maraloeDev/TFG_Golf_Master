@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.preferencias
+package com.maraloedev.golfmaster.view.menuHamburguesa.preferencias
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background

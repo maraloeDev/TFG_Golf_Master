@@ -1,6 +1,5 @@
-package com.maraloedev.golfmaster.view.preferencias
+package com.maraloedev.golfmaster.view.menuHamburguesa.preferencias
 
-import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

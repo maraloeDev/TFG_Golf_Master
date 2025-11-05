@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.preferencias
+package com.maraloedev.golfmaster.view.menuHamburguesa.preferencias
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

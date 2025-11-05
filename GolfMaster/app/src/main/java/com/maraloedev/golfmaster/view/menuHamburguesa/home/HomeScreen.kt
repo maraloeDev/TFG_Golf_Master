@@ -35,10 +35,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.view.alertas.AlertasScreen
 import com.maraloedev.golfmaster.view.amigos.AmigosScreen
-import com.maraloedev.golfmaster.view.contactos.ContactoScreen
+import com.maraloedev.golfmaster.view.menuHamburguesa.contactos.ContactoScreen
 import com.maraloedev.golfmaster.view.eventos.EventosScreen
-import com.maraloedev.golfmaster.view.perfil.PerfilScreen
-import com.maraloedev.golfmaster.view.preferencias.PreferenciasScreen
+import com.maraloedev.golfmaster.view.menuHamburguesa.home.HomeViewModel
+import com.maraloedev.golfmaster.view.menuHamburguesa.informacion.InformacionScreen
+import com.maraloedev.golfmaster.view.menuHamburguesa.perfil.PerfilScreen
+import com.maraloedev.golfmaster.view.menuHamburguesa.preferencias.PreferenciasScreen
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
 import kotlinx.coroutines.launch
 
@@ -106,9 +108,9 @@ fun HomeScreen(navController: NavController) {
             ) {
                 when (current) {
                     "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
+                    "Información" -> InformacionScreen(navController = navController) // ✅ aquí el navController
                     "Reservas" -> ReservasScreen()
                     "Eventos" -> EventosScreen()
-
                     "Amigos" -> AmigosScreen(navController = navController)
                     "Alertas" -> AlertasScreen()
                     "Mi Perfil" -> PerfilScreen(navController = navController)
@@ -116,6 +118,9 @@ fun HomeScreen(navController: NavController) {
                     "Contacto" -> ContactoScreen()
                     else -> HomeLandingContent(nombreJugador = jugador?.nombre_jugador)
                 }
+
+
+
             }
         }
     }

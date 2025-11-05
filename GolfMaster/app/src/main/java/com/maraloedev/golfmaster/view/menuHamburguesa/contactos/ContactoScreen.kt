@@ -1,4 +1,4 @@
-package com.maraloedev.golfmaster.view.contactos
+package com.maraloedev.golfmaster.view.menuHamburguesa.contactos
 
 import android.content.Intent
 import android.net.Uri
