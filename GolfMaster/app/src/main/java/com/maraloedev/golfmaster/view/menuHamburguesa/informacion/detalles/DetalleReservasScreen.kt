@@ -34,7 +34,7 @@ fun DetalleReservasScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Reservas de Equipamiento", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("informacion") }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
                 },

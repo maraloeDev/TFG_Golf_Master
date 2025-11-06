@@ -32,7 +32,7 @@ fun DetalleReglasScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Reglas Locales", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("informacion") }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
                 },

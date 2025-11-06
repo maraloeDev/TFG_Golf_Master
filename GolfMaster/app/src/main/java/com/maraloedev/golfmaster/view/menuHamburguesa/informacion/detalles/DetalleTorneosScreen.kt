@@ -31,7 +31,7 @@ fun DetalleTorneosScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Términos y Condiciones", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("informacion") }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
                 },

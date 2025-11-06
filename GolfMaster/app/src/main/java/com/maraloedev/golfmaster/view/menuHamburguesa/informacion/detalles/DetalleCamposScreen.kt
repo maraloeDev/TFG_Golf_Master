@@ -31,7 +31,7 @@ fun DetalleCamposScreen(navController: NavController) {
 
     // 🔹 Cargar datos desde Firestore
     LaunchedEffect(Unit) {
-        db.collection("campos_golf")
+        db.collection("campos de golf")
             .get()
             .addOnSuccessListener { result ->
                 campos = result.documents.mapNotNull { it.toObject(CampoGolf::class.java) }
@@ -47,7 +47,7 @@ fun DetalleCamposScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Correspondencia de Campos", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.navigate("informacion") }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
                 },
