@@ -37,6 +37,9 @@ private val ScreenBg = Color(0xFF00281F)
 private val PillUnselected = Color(0xFF00FF77)
 private val BorderNormal = Color(0xFF00FF77)
 private val BorderError = Color(0xFFFF4444)
+private val LabelColor = Color.White
+private val TextColor = Color.White
+private val CursorColor = Color(0xFF00FF77)
 
 /* ============================================================
    🟩 REGISTER SCREEN
@@ -52,6 +55,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var provincia by rememberSaveable { mutableStateOf("") }
+    var ciudad by rememberSaveable { mutableStateOf("") }
     var codigoPostal by rememberSaveable { mutableStateOf("") }
     var prefijoCP by rememberSaveable { mutableStateOf("") }
     var direccion by rememberSaveable { mutableStateOf("") }
@@ -60,9 +64,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var socio by rememberSaveable { mutableStateOf(false) }
     var showPassword by rememberSaveable { mutableStateOf(false) }
     var loading by rememberSaveable { mutableStateOf(false) }
-
-
-    // Errores
+    var sexo by rememberSaveable { mutableStateOf("") }
     var errores by remember { mutableStateOf(mapOf<String, String>()) }
 
     // Provincias y prefijos
@@ -81,7 +83,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
         "Valladolid" to "47", "Bizkaia" to "48", "Zamora" to "49", "Zaragoza" to "50",
         "Ceuta" to "51", "Melilla" to "52"
     )
-
     val provincias = provinciasPrefijos.keys.sorted()
     val handicap = handicapText.toDoubleOrNull()
 
@@ -131,7 +132,15 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     isError = errores.containsKey("password"), errorMessage = errores["password"]
                 )
 
-                // 🔹 PRIMERO: Provincia
+                SexoDropdown(
+                    label = "Sexo",
+                    opciones = listOf("Masculino", "Femenino"),
+                    value = sexo,
+                    onValueChange = { sexo = it },
+                    isError = errores.containsKey("sexo"),
+                    errorMessage = errores["sexo"]
+                )
+
                 ProvinciaDropdown(
                     label = "Provincia",
                     provincias = provincias,
@@ -140,7 +149,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                         provincia = it
                         val prefijo = provinciasPrefijos[it] ?: ""
                         prefijoCP = prefijo
-                        // si ya había un CP escrito, actualizamos los 2 primeros dígitos
                         codigoPostal = if (codigoPostal.length >= 2)
                             prefijo + codigoPostal.drop(2)
                         else prefijo
@@ -149,32 +157,24 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     errorMessage = errores["provincia"]
                 )
 
-                // 🔹 Después de seleccionar la provincia
-                AnimatedTextField(
-                    label = "Código Postal",
-                    value = codigoPostal,
-                    type = KeyboardType.Number,
-                    onChange = { nuevo ->
-                        // siempre debe comenzar con el prefijo provincial
-                        if (prefijoCP.isNotEmpty()) {
-                            // Si intenta borrar el prefijo → lo reponemos
-                            codigoPostal = if (!nuevo.startsWith(prefijoCP)) {
-                                // Mantiene el prefijo y añade lo que haya después
-                                val resto = nuevo.filter { it.isDigit() }.drop(prefijoCP.length)
-                                prefijoCP + resto.take(3)
-                            } else {
-                                // Deja escribir sólo los tres últimos dígitos
-                                prefijoCP + nuevo.drop(prefijoCP.length).filter { it.isDigit() }.take(3)
-                            }
-                        } else {
-                            // Si aún no se ha seleccionado provincia, solo permitimos escribir hasta 5 números
-                            codigoPostal = nuevo.filter { it.isDigit() }.take(5)
-                        }
-                    },
-                    isError = errores.containsKey("codigoPostal"),
-                    errorMessage = errores["codigoPostal"]
+                AnimatedTextField("Ciudad", ciudad, KeyboardType.Text, onChange = { ciudad = it },
+                    isError = errores.containsKey("ciudad"), errorMessage = errores["ciudad"]
                 )
 
+                AnimatedTextField("Código Postal", codigoPostal, KeyboardType.Number, onChange = { nuevo ->
+                    if (prefijoCP.isNotEmpty()) {
+                        codigoPostal = if (!nuevo.startsWith(prefijoCP)) {
+                            val resto = nuevo.filter { it.isDigit() }.drop(prefijoCP.length)
+                            prefijoCP + resto.take(3)
+                        } else {
+                            prefijoCP + nuevo.drop(prefijoCP.length).filter { it.isDigit() }.take(3)
+                        }
+                    } else {
+                        codigoPostal = nuevo.filter { it.isDigit() }.take(5)
+                    }
+                },
+                    isError = errores.containsKey("codigoPostal"), errorMessage = errores["codigoPostal"]
+                )
 
                 AnimatedTextField("Dirección", direccion, KeyboardType.Text, onChange = { direccion = it },
                     isError = errores.containsKey("direccion"), errorMessage = errores["direccion"]
@@ -194,16 +194,16 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 
                 Spacer(Modifier.height(24.dp))
 
-                // --- BOTÓN REGISTRAR ---
                 Button(
                     onClick = {
                         val nuevosErrores = mutableMapOf<String, String>()
-
                         if (nombre.isBlank()) nuevosErrores["nombre"] = "Campo vacío"
                         if (apellido.isBlank()) nuevosErrores["apellido"] = "Campo vacío"
                         if (!correo.contains("@")) nuevosErrores["correo"] = "Formato incorrecto"
                         if (password.isBlank()) nuevosErrores["password"] = "Campo vacío"
+                        if (sexo.isBlank()) nuevosErrores["sexo"] = "Seleccione un sexo"
                         if (provincia.isBlank()) nuevosErrores["provincia"] = "Seleccione una provincia"
+                        if (ciudad.isBlank()) nuevosErrores["ciudad"] = "Campo vacío"
                         if (codigoPostal.length != 5) nuevosErrores["codigoPostal"] = "Debe tener 5 números"
                         if (direccion.isBlank()) nuevosErrores["direccion"] = "Campo vacío"
                         if (telefono.isBlank()) nuevosErrores["telefono"] = "Campo vacío"
@@ -226,10 +226,11 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             direccion_jugador = direccion,
                             codigo_postal_jugador = codigoPostal,
                             telefono_jugador = telefono,
-                            sexo_jugador = "Masculino",
+                            sexo_jugador = sexo,
                             socio_jugador = socio,
                             handicap_jugador = handicap ?: 0.0,
                             provincia_jugador = provincia,
+                            ciudad_jugador = ciudad,
                             password_jugador = password
                         )
 
@@ -239,7 +240,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             jugador = jugador,
                             onSuccess = {
                                 loading = false
-                                Toast.makeText(context, "Registrado correctamente", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Registrado correctamente ✅", Toast.LENGTH_SHORT).show()
                                 navController.navigate("login") { popUpTo("register") { inclusive = true } }
                             },
                             onError = {
@@ -251,9 +252,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     enabled = !loading,
                     colors = ButtonDefaults.buttonColors(containerColor = PillUnselected),
                     shape = RoundedCornerShape(50),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
+                    modifier = Modifier.fillMaxWidth().height(52.dp)
                 ) {
                     Text("Registrar", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
@@ -277,9 +276,9 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 }
 
 /* ============================================================
-   🧩 COMPONENTES (igual que antes)
+   🧩 COMPONENTES DE FORMULARIO (reutilizables)
    ============================================================ */
-@OptIn(ExperimentalMaterial3Api::class)
+
 @Composable
 fun AnimatedTextField(
     label: String,
@@ -292,30 +291,22 @@ fun AnimatedTextField(
     isError: Boolean = false,
     errorMessage: String? = null
 ) {
-    val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
-        label = "borderAnim"
-    )
+    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
     Column {
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
-            label = { Text(label, color = Color.White) },
+            label = { Text(label, color = LabelColor) },
             singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            visualTransformation = if (isPassword && !showPassword)
-                PasswordVisualTransformation() else VisualTransformation.None,
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            visualTransformation = if (isPassword && !showPassword) PasswordVisualTransformation() else VisualTransformation.None,
             trailingIcon = {
                 if (isPassword && onTogglePassword != null) {
                     IconButton(onClick = onTogglePassword) {
                         Icon(
-                            painter = painterResource(
-                                if (showPassword) R.drawable.ic_ojo_abierto else R.drawable.ic_ojo_cerrado
-                            ),
+                            painter = painterResource(if (showPassword) R.drawable.ic_ojo_abierto else R.drawable.ic_ojo_cerrado),
                             contentDescription = "Mostrar contraseña",
-                            tint = PillUnselected
+                            tint = BorderNormal
                         )
                     }
                 }
@@ -324,20 +315,61 @@ fun AnimatedTextField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = borderColor,
                 unfocusedBorderColor = borderColor,
-                cursorColor = PillUnselected,
-                focusedLabelColor = PillUnselected,
-                unfocusedLabelColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+                cursorColor = CursorColor,
+                focusedLabelColor = BorderNormal,
+                unfocusedLabelColor = LabelColor,
+                focusedTextColor = TextColor,
+                unfocusedTextColor = TextColor
             )
         )
         if (isError && !errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = BorderError,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SexoDropdown(
+    label: String,
+    opciones: List<String>,
+    value: String,
+    onValueChange: (String) -> Unit,
+    isError: Boolean = false,
+    errorMessage: String? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
+    Column {
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label, color = LabelColor) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth().padding(vertical = 4.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = borderColor,
+                    unfocusedBorderColor = borderColor,
+                    cursorColor = CursorColor,
+                    focusedLabelColor = BorderNormal,
+                    unfocusedLabelColor = LabelColor,
+                    focusedTextColor = TextColor,
+                    unfocusedTextColor = TextColor
+                )
             )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                opciones.forEach { opcion ->
+                    DropdownMenuItem(text = { Text(opcion) }, onClick = {
+                        onValueChange(opcion)
+                        expanded = false
+                    })
+                }
+            }
+        }
+        if (isError && !errorMessage.isNullOrBlank()) {
+            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
         }
     }
 }
@@ -353,52 +385,37 @@ fun ProvinciaDropdown(
     errorMessage: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
-        label = "provinciaAnim"
-    )
-
+    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
     Column {
         ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
             OutlinedTextField(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text(label, color = Color.White) },
+                label = { Text(label, color = LabelColor) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                modifier = Modifier.menuAnchor().fillMaxWidth().padding(vertical = 4.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = borderColor,
                     unfocusedBorderColor = borderColor,
-                    cursorColor = PillUnselected,
-                    focusedLabelColor = PillUnselected,
-                    unfocusedLabelColor = Color.White,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                    cursorColor = CursorColor,
+                    focusedLabelColor = BorderNormal,
+                    unfocusedLabelColor = LabelColor,
+                    focusedTextColor = TextColor,
+                    unfocusedTextColor = TextColor
                 )
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 provincias.forEach { p ->
-                    DropdownMenuItem(
-                        text = { Text(p) },
-                        onClick = {
-                            onValueChange(p)
-                            expanded = false
-                        }
-                    )
+                    DropdownMenuItem(text = { Text(p) }, onClick = {
+                        onValueChange(p)
+                        expanded = false
+                    })
                 }
             }
         }
         if (isError && !errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = BorderError,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
-            )
+            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
         }
     }
 }

@@ -13,7 +13,7 @@ data class Jugador(
     val nombre_jugador: String = "",
     val correo_jugador: String = "",
     val telefono_jugador: String = "",
-    val handicap_jugador: Double? = null
+    val handicap_jugador: String? = null
 )
 
 class HomeViewModel : ViewModel() {
@@ -21,11 +21,9 @@ class HomeViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    // --- Estado del jugador actual ---
     private val _jugador = MutableStateFlow<Jugador?>(null)
     val jugador: StateFlow<Jugador?> = _jugador
 
-    // --- Estado de carga (por si quieres mostrar un spinner en el futuro) ---
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -39,22 +37,31 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.emit(true)
             try {
-                // Intentamos obtener la colección "jugadores"
                 db.collection("jugadores")
                     .document(user.uid)
                     .get()
                     .addOnSuccessListener { doc ->
                         if (doc.exists()) {
+
+                            // ✅ Manejo seguro del tipo de dato
+                            val handicapField = doc.get("handicap_jugador")
+                            val handicap = when (handicapField) {
+                                is Number -> handicapField.toString()
+                                is String -> handicapField
+                                else -> ""
+                            }
+
                             val jugador = Jugador(
                                 id_jugador = doc.id,
                                 nombre_jugador = doc.getString("nombre_jugador") ?: (user.displayName ?: ""),
                                 correo_jugador = doc.getString("correo_jugador") ?: (user.email ?: ""),
                                 telefono_jugador = doc.getString("telefono_jugador") ?: "",
-                                handicap_jugador = doc.getDouble("handicap_jugador")
+                                handicap_jugador = handicap
                             )
                             _jugador.value = jugador
+
                         } else {
-                            // Si no existe en Firestore, usamos los datos básicos del Auth
+                            // Si no existe en Firestore, creamos con los datos del Auth
                             _jugador.value = Jugador(
                                 id_jugador = user.uid,
                                 nombre_jugador = user.displayName ?: "Jugador",
@@ -82,7 +89,7 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    /** 🔹 Cierra la sesión y limpia datos */
+    /** 🔹 Cierra sesión y limpia el estado */
     fun cerrarSesion(onLogout: () -> Unit) {
         viewModelScope.launch {
             auth.signOut()

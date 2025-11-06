@@ -61,7 +61,7 @@ fun MainNavHost(navController: NavHostController) {
 
         // 🔹 Perfil
         composable("perfil") {
-            PerfilScreen()
+            PerfilScreen(navController)
         }
 
         // 🔹 Preferencias
