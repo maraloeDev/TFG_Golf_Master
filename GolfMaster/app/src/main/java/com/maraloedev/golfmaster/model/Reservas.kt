@@ -3,12 +3,11 @@ package com.maraloedev.golfmaster.model
 import com.google.firebase.Timestamp
 
 data class Reserva(
-    val id: String = "",
+    val id: String? = null,
     val usuarioId: String = "",
-    val fecha: Timestamp? = null,
-    val hora: Timestamp? = null,
+    val fecha: com.google.firebase.Timestamp? = null,
+    val hora: com.google.firebase.Timestamp? = null,
     val recorrido: String? = null,
     val hoyos: String? = null,
-    val jugadores: String? = null,
-    val jugadorPrincipal: String? = null
+    val jugadores: String? = null
 )

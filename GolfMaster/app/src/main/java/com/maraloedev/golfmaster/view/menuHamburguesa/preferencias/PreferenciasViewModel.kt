@@ -9,18 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-
-/**
- * ViewModel que gestiona las preferencias del usuario autenticado
- * directamente desde la colección `preferencias/{uid}`
- */
 class PreferenciasViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val uid get() = auth.currentUser?.uid
+    private val email get() = auth.currentUser?.email ?: "desconocido"
 
-    // Flujo de estado con las preferencias del usuario
     private val _preferencias = MutableStateFlow(Preferencias())
     val preferencias: StateFlow<Preferencias> = _preferencias
 
@@ -37,19 +32,17 @@ class PreferenciasViewModel : ViewModel() {
                     val prefs = doc.toObject(Preferencias::class.java)
                     if (prefs != null) _preferencias.value = prefs
                 } else {
-                    // Si no existe, se crea documento por defecto
-                    val prefs = Preferencias()
+                    val prefs = Preferencias(usuario = email)
                     db.collection("preferencias").document(userId).set(prefs)
                     _preferencias.value = prefs
                 }
             }
             .addOnFailureListener {
-                _preferencias.value = Preferencias() // fallback
+                _preferencias.value = Preferencias(usuario = email)
             }
     }
 
     fun guardarPreferencias(
-        idioma: String,
         dias: List<String>,
         intereses: List<String>,
         onSuccess: () -> Unit,
@@ -58,7 +51,7 @@ class PreferenciasViewModel : ViewModel() {
         val userId = uid ?: return onError("Usuario no autenticado")
 
         val prefs = Preferencias(
-            idioma = idioma,
+            usuario = email,
             dias_juego = dias,
             intereses = intereses
         )

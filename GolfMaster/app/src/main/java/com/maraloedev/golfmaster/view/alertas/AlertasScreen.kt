@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,43 +16,60 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.firebase.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
 
+/* 🎨 Colores globales */
+private val ScreenBg = Color(0xFF00281F)
+private val CardBg = Color(0xFF0D1B12)
+private val Accent = Color(0xFF00FF77)
+
+/* ============================================================
+   🟩 PANTALLA DE ALERTAS (Invitaciones)
+   ============================================================ */
 @Composable
 fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
-    val alertas by vm.alertas.collectAsState()
+    val invitaciones by vm.invitaciones.collectAsState()
     val loading by vm.loading.collectAsState()
     val error by vm.error.collectAsState()
 
-    LaunchedEffect(Unit) { vm.cargarAlertas() }
+    LaunchedEffect(Unit) { vm.observarInvitaciones() }
 
-    Scaffold(
-        containerColor = Color(0xFF00281F),
-        topBar = {
-            TopAppBar(
-                title = { Text("Alertas", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0C1A12))
-            )
-        }
-    ) { pad ->
+    Scaffold(containerColor = ScreenBg) { pad ->
         Box(
             modifier = Modifier
                 .padding(pad)
                 .fillMaxSize()
-                .background(Color(0xFF00281F))
+                .background(ScreenBg)
         ) {
             when {
                 loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF00FF77))
+                    CircularProgressIndicator(color = Accent)
                 }
 
                 error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Error: $error", color = Color.Red)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "⚠️ Error al cargar alertas",
+                            color = Color.Yellow,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            error ?: "",
+                            color = Color.Red.copy(alpha = 0.9f),
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "📘 Si el error menciona un índice, créalo en Firebase Console → Firestore → Indexes.",
+                            color = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                        )
+                    }
                 }
 
-                alertas.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                invitaciones.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Filled.Notifications,
@@ -62,7 +78,7 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
                             modifier = Modifier.size(60.dp)
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text("No tienes alertas pendientes", color = Color.White.copy(alpha = 0.7f))
+                        Text("No tienes invitaciones", color = Color.White.copy(alpha = 0.7f))
                     }
                 }
 
@@ -72,8 +88,16 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(alertas) { alerta ->
-                        AlertaCard(alerta)
+                    // 🔒 Claves seguras aunque el id esté vacío
+                    items(
+                        items = invitaciones,
+                        key = { inv -> inv.id.ifBlank { inv.hashCode().toString() } }
+                    ) { inv ->
+                        InvitacionCard(
+                            inv = inv,
+                            onAceptar = { vm.aceptarInvitacion(inv.id) },
+                            onRechazar = { vm.rechazarInvitacion(inv.id) }
+                        )
                     }
                 }
             }
@@ -81,30 +105,45 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
     }
 }
 
-/* ------------------- CARD DE ALERTA ------------------- */
+/* ============================================================
+   🟩 CARD DE INVITACIÓN
+   ============================================================ */
 @Composable
-private fun AlertaCard(alerta: Alerta) {
+private fun InvitacionCard(
+    inv: Invitacion,
+    onAceptar: () -> Unit,
+    onRechazar: () -> Unit
+) {
     val formato = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
-    val fecha = alerta.fecha?.toDate()?.let { formato.format(it) } ?: "Sin fecha"
+    val fecha = inv.fecha?.toDate()?.let { formato.format(it) } ?: "—"
 
     ElevatedCard(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1B12)),
+        colors = CardDefaults.cardColors(containerColor = CardBg),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (alerta.tipo == "advertencia") Icons.Filled.Warning else Icons.Filled.Notifications,
-                    contentDescription = null,
-                    tint = Color(0xFF00FF77)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(alerta.titulo, color = Color.White, fontWeight = FontWeight.Bold)
+            Text("Invitación de juego", color = Color.White, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Text("Estado: ${inv.estado}", color = Color.White.copy(alpha = .9f))
+            Text("Fecha: $fecha", color = Color.White.copy(alpha = .9f))
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Button(
+                    onClick = onAceptar,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Accent)
+                ) { Text("Aceptar", color = Color.Black, fontWeight = FontWeight.Bold) }
+
+                OutlinedButton(
+                    onClick = onRechazar,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    border = ButtonDefaults.outlinedButtonBorder(true)
+                ) { Text("Rechazar") }
             }
-            Spacer(Modifier.height(6.dp))
-            Text(alerta.descripcion, color = Color.White.copy(alpha = 0.9f))
-            Spacer(Modifier.height(6.dp))
-            Text(fecha, color = Color(0xFF6BF47F), fontSize = MaterialTheme.typography.bodySmall.fontSize)
         }
     }
 }

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.maraloedev.golfmaster.view.reservas
 
 import android.app.DatePickerDialog
@@ -8,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -28,9 +31,10 @@ import com.maraloedev.golfmaster.model.Reserva
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.UUID
 
 /* ============================================================
-   🎨 COLORES GLOBALES
+   🎨 COLORES
    ============================================================ */
 private val PillSelected = Color(0xFF1F4D3E)
 private val PillUnselected = Color(0xFF00FF77)
@@ -38,9 +42,8 @@ private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
 
 /* ============================================================
-   🟩 PANTALLA PRINCIPAL
+   🟩 PANTALLA PRINCIPAL DE RESERVAS
    ============================================================ */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
     val reservas by vm.reservas.collectAsState()
@@ -90,7 +93,11 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
             } else {
                 Crossfade(targetState = selectedTab, label = "reservasCrossfade") { tab ->
                     val lista = if (tab == "Próximas") proximas else pasadas
-                    if (lista.isEmpty()) {
+
+                    // 🔧 Elimina duplicados por id + fecha.seconds
+                    val listaUnica = lista.distinctBy { "${it.id}_${it.fecha?.seconds}" }
+
+                    if (listaUnica.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
                                 "No hay reservas ${tab.lowercase()}",
@@ -104,7 +111,17 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(lista, key = { it.id ?: it.hashCode() }) { r ->
+                            // 🔒 Claves únicas con índice (0 % duplicados)
+                            itemsIndexed(
+                                items = listaUnica,
+                                key = { index, r ->
+                                    val base = (r.id ?: "") +
+                                            (r.usuarioId ?: "") +
+                                            (r.fecha?.seconds?.toString() ?: "") +
+                                            index.toString()
+                                    base.ifBlank { UUID.randomUUID().toString() }
+                                }
+                            ) { _, r ->
                                 ReservaCard(r)
                             }
                         }
@@ -127,7 +144,34 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
 }
 
 /* ============================================================
-   🟩 PILLS DE SELECCIÓN
+   🟩 CARD DE RESERVA
+   ============================================================ */
+@Composable
+private fun ReservaCard(r: Reserva) {
+    val df = remember { SimpleDateFormat("dd MMMM yyyy - HH:mm", Locale("es", "ES")) }
+
+    Surface(
+        color = CardBg,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text("⛳ ${r.hoyos ?: "--"} Hoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text(
+                r.fecha?.toDate()?.let(df::format) ?: "Sin fecha",
+                color = Color.White.copy(alpha = .8f)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Recorrido: ${r.recorrido ?: "--"}  ·  Jugadores: ${r.jugadores ?: "Solo"}",
+                color = Color.White.copy(alpha = .8f)
+            )
+        }
+    }
+}
+
+/* ============================================================
+   🟩 PILLS
    ============================================================ */
 @Composable
 private fun BigPills(
@@ -139,10 +183,9 @@ private fun BigPills(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(CardBg)
-            .padding(10.dp),
+            .background(CardBg),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         @Composable
@@ -169,26 +212,7 @@ private fun BigPills(
 }
 
 /* ============================================================
-   🟩 CARD DE RESERVA
-   ============================================================ */
-@Composable
-private fun ReservaCard(r: Reserva) {
-    val df = remember { SimpleDateFormat("dd MMMM, yyyy - HH:mm", Locale("es", "ES")) }
-    Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp)) {
-            Text("⛳ ${r.hoyos ?: "--"} Hoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Text(r.fecha?.toDate()?.let(df::format) ?: "--", color = Color.White.copy(alpha = .8f))
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Recorrido: ${r.recorrido ?: "--"}  ·  Jugadores: ${r.jugadores ?: "1"}",
-                color = Color.White.copy(alpha = .8f)
-            )
-        }
-    }
-}
-
-/* ============================================================
-   🟩 NUEVA RESERVA (con búsqueda de jugadores)
+   🟩 NUEVA RESERVA (Sheet)
    ============================================================ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -201,31 +225,34 @@ fun NuevaReservaSheet(
     val loadingJugadores by vm.loadingJugadores.collectAsState()
 
     var fecha by remember { mutableStateOf<Timestamp?>(null) }
-    var recorrido by remember { mutableStateOf<String?>(null) }
     var hoyos by remember { mutableStateOf<String?>(null) }
     var jugadoresSeleccionados by remember { mutableStateOf<List<Jugadores>>(emptyList()) }
     var search by remember { mutableStateOf("") }
 
     val scope = rememberCoroutineScope()
-    val botonActivo = fecha != null && !recorrido.isNullOrBlank() && jugadoresSeleccionados.isNotEmpty()
-
-    val currentUser = FirebaseAuth.getInstance().currentUser?.uid
+    val currentUser = FirebaseAuth.getInstance().currentUser
+    val botonActivo = fecha != null && hoyos != null
 
     Column(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
+            .background(ScreenBg)
     ) {
-        Text("Nueva Reserva", color = Color.White, fontWeight = FontWeight.Bold)
+        Text(
+            "Nueva Reserva",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge
+        )
         Spacer(Modifier.height(14.dp))
 
         DateTimePickerField("Fecha y hora del juego", fecha) { fecha = it }
-        SelectField("Recorrido", recorrido, listOf("Campo Norte (9 hoyos)", "Campo Sur (18 hoyos)")) {
-            recorrido = it
-            hoyos = if (it.contains("9")) "9" else "18"
-        }
-
         Spacer(Modifier.height(12.dp))
+
+        SelectField("Recorrido", hoyos, listOf("9 hoyos", "18 hoyos")) { hoyos = it }
+        Spacer(Modifier.height(20.dp))
+
         Text("Seleccionar jugadores", color = Color.White, fontWeight = FontWeight.SemiBold)
 
         OutlinedTextField(
@@ -245,8 +272,8 @@ fun NuevaReservaSheet(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+        Spacer(Modifier.height(8.dp))
 
-        Spacer(Modifier.height(6.dp))
         if (loadingJugadores) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = PillUnselected)
@@ -255,65 +282,57 @@ fun NuevaReservaSheet(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 220.dp)
-                    .padding(vertical = 4.dp),
+                    .heightIn(max = 250.dp)
+                    .padding(vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(jugadores.filter { it.id != currentUser }) { j ->
-                    val selected = jugadoresSeleccionados.contains(j)
-                    JugadorCard(jugador = j, seleccionado = selected) {
+                items(
+                    jugadores.filter { it.id != currentUser?.uid },
+                    key = { it.id.ifBlank { UUID.randomUUID().toString() } }
+                ) { jugador ->
+                    val seleccionado = jugadoresSeleccionados.contains(jugador)
+                    JugadorCard(jugador = jugador, seleccionado = seleccionado) {
                         jugadoresSeleccionados =
-                            if (selected) jugadoresSeleccionados - j else jugadoresSeleccionados + j
+                            if (seleccionado) jugadoresSeleccionados - jugador else jugadoresSeleccionados + jugador
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
 
         Button(
             onClick = {
                 scope.launch {
-                    vm.crearReserva(
-                        fecha, fecha, recorrido, hoyos,
-                        jugadoresSeleccionados.joinToString { it.nombre_jugador }
+                    vm.crearReservaConInvitaciones(
+                        fecha = fecha,
+                        hoyos = hoyos,
+                        jugadores = jugadoresSeleccionados
                     )
-                    snackbarHostState.showSnackbar("✅ Reserva creada con éxito")
+                    snackbarHostState.showSnackbar(
+                        if (jugadoresSeleccionados.isEmpty())
+                            "✅ Reserva creada correctamente"
+                        else
+                            "✅ Reserva creada e invitaciones enviadas"
+                    )
                     onClose()
                 }
             },
             enabled = botonActivo,
             shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(containerColor = if (botonActivo) PillUnselected else Color.Gray),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (botonActivo) PillUnselected else Color.Gray
+            ),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Bloquear", color = if (botonActivo) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                "Bloquear reserva",
+                color = if (botonActivo) Color.Black else Color.White,
+                fontWeight = FontWeight.Bold
+            )
         }
-    }
-}
 
-/* ============================================================
-   🟩 JUGADOR CARD
-   ============================================================ */
-@Composable
-fun JugadorCard(jugador: Jugadores, seleccionado: Boolean, onClick: () -> Unit) {
-    val bg = if (seleccionado) PillUnselected else PillSelected
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(bg)
-            .clickable { onClick() }
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.Person, contentDescription = null, tint = if (seleccionado) Color.Black else Color.White)
-        Spacer(Modifier.width(10.dp))
-        Text(
-            jugador.nombre_jugador,
-            color = if (seleccionado) Color.Black else Color.White,
-            fontWeight = FontWeight.Bold
-        )
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -379,7 +398,7 @@ fun DateTimePickerField(
 }
 
 /* ============================================================
-   🟩 SELECT FIELD (verde claro / verde oscuro)
+   🟩 SELECT FIELD
    ============================================================ */
 @Composable
 fun SelectField(
@@ -415,13 +434,7 @@ fun SelectField(
             }
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .background(CardBg)
-                .padding(vertical = 4.dp)
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { opt ->
                 val isSelected = opt == value
                 DropdownMenuItem(
@@ -432,10 +445,7 @@ fun SelectField(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     },
-                    onClick = {
-                        onSelect(opt)
-                        expanded = false
-                    },
+                    onClick = { onSelect(opt); expanded = false },
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
@@ -445,5 +455,26 @@ fun SelectField(
                 Spacer(Modifier.height(4.dp))
             }
         }
+    }
+}
+
+/* ============================================================
+   🟩 JUGADOR CARD
+   ============================================================ */
+@Composable
+fun JugadorCard(jugador: Jugadores, seleccionado: Boolean, onClick: () -> Unit) {
+    val bg = if (seleccionado) PillUnselected else PillSelected
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg)
+            .clickable { onClick() }
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Person, contentDescription = null, tint = if (seleccionado) Color.Black else Color.White)
+        Spacer(Modifier.width(10.dp))
+        Text(jugador.nombre_jugador, color = if (seleccionado) Color.Black else Color.White, fontWeight = FontWeight.Bold)
     }
 }

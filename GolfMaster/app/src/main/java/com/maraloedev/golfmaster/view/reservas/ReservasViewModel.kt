@@ -10,7 +10,6 @@ import com.maraloedev.golfmaster.model.Reserva
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
 /**
  * ViewModel de Reservas
@@ -172,4 +171,47 @@ class ReservasViewModel(
             _loading.value = false
         }
     }
+
+
+    fun crearReservaConInvitaciones(
+        fecha: Timestamp?,
+        hoyos: String?,
+        jugadores: List<Jugadores>
+    ) {
+        val uid = auth.currentUser?.uid ?: return
+        if (fecha == null || hoyos.isNullOrBlank()) return
+
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                // 🟢 1. Crea la reserva principal
+                val reserva = Reserva(
+                    id = "",
+                    usuarioId = uid,
+                    fecha = fecha,
+                    hora = fecha,
+                    recorrido = hoyos,
+                    hoyos = hoyos,
+                    jugadores = if (jugadores.isEmpty()) "Solo" else jugadores.joinToString { it.nombre_jugador }
+                )
+
+                val idReserva = repo.crearReserva(reserva)
+
+                // 🟢 2. Si hay invitados, crea las invitaciones
+                jugadores.forEach { j ->
+                    repo.crearInvitacion(de = uid, para = j.id, reservaId = idReserva)
+                }
+
+                // 🟢 3. Recarga las reservas del usuario
+                cargarReservas()
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+
+
 }

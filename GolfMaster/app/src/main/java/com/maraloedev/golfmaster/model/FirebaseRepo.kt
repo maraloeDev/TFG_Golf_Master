@@ -126,11 +126,6 @@ class FirebaseRepo(
         return snapshot.toObjects(Reserva::class.java)
     }
 
-    suspend fun crearReserva(r: Reserva) {
-        val ref = db.collection("reservas").document()
-        val reservaFinal = r.copy(id = ref.id)
-        ref.set(reservaFinal).await()
-    }
 
     suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
         if (id.isBlank()) throw Exception("ID de reserva no válido")
@@ -141,6 +136,40 @@ class FirebaseRepo(
         if (id.isBlank()) throw Exception("ID de reserva no válido")
         db.collection("reservas").document(id).delete().await()
     }
+
+    // ============================================================
+    // 🟩 CREAR INVITACIÓN
+    // ============================================================
+    // ============================================================
+// 📅 RESERVAS
+// ============================================================
+    suspend fun crearReserva(r: Reserva): String {
+        val ref = db.collection("reservas").document()
+        val reservaFinal = r.copy(id = ref.id)
+        ref.set(reservaFinal).await()
+        return ref.id
+    }
+
+    // ============================================================
+// 🟩 CREAR INVITACIÓN
+// ============================================================
+    suspend fun crearInvitacion(de: String, para: String, reservaId: String) {
+        if (de.isBlank() || para.isBlank() || reservaId.isBlank()) {
+            throw Exception("Datos de invitación inválidos.")
+        }
+
+        val ref = db.collection("invitaciones").document()
+        val data = hashMapOf(
+            "id" to ref.id,
+            "de" to de,
+            "para" to para,
+            "reservaId" to reservaId,
+            "estado" to "pendiente",
+            "fecha" to com.google.firebase.Timestamp.now()
+        )
+        ref.set(data).await()
+    }
+
 
     // ============================================================
     // 🏆 EVENTOS (TORNEOS ABIERTOS)
@@ -250,4 +279,9 @@ class FirebaseRepo(
         )
         ref.set(data).await()
     }
+
+
+
+
+
 }
