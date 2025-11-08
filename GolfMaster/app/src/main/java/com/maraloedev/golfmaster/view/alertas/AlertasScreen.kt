@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.maraloedev.golfmaster.view.alertas
 
 import androidx.compose.foundation.background
@@ -19,14 +17,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
-/* 🎨 Colores globales */
 private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
 private val Accent = Color(0xFF00FF77)
 
-/* ============================================================
-   🟩 PANTALLA DE ALERTAS (Invitaciones)
-   ============================================================ */
 @Composable
 fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
     val invitaciones by vm.invitaciones.collectAsState()
@@ -47,56 +41,28 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
                     CircularProgressIndicator(color = Accent)
                 }
 
-                error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "⚠️ Error al cargar alertas",
-                            color = Color.Yellow,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            error ?: "",
-                            color = Color.Red.copy(alpha = 0.9f),
-                            modifier = Modifier.padding(horizontal = 20.dp)
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            "📘 Si el error menciona un índice, créalo en Firebase Console → Firestore → Indexes.",
-                            color = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(horizontal = 20.dp)
-                        )
-                    }
-                }
+                error != null -> Text("Error: $error", color = Color.Red)
 
                 invitaciones.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Filled.Notifications,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.size(60.dp)
-                        )
+                        Icon(Icons.Filled.Notifications, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
                         Spacer(Modifier.height(8.dp))
-                        Text("No tienes invitaciones", color = Color.White.copy(alpha = 0.7f))
+                        Text("No tienes alertas pendientes", color = Color.White.copy(alpha = 0.7f))
                     }
                 }
 
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // 🔒 Claves seguras aunque el id esté vacío
-                    items(
-                        items = invitaciones,
-                        key = { inv -> inv.id.ifBlank { inv.hashCode().toString() } }
-                    ) { inv ->
-                        InvitacionCard(
+                    items(invitaciones, key = { it.id }) { inv ->
+                        AmistadCard(
                             inv = inv,
-                            onAceptar = { vm.aceptarInvitacion(inv.id) },
-                            onRechazar = { vm.rechazarInvitacion(inv.id) }
+                            onAceptar = { vm.aceptarAmistad(inv.id, inv.de, inv.nombreDe) },
+                            onRechazar = { vm.rechazarAmistad(inv.id) },
+                            onEliminar = { vm.eliminarAlerta(inv.id) }
                         )
                     }
                 }
@@ -105,44 +71,30 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
     }
 }
 
-/* ============================================================
-   🟩 CARD DE INVITACIÓN
-   ============================================================ */
 @Composable
-private fun InvitacionCard(
+fun AmistadCard(
     inv: Invitacion,
     onAceptar: () -> Unit,
-    onRechazar: () -> Unit
+    onRechazar: () -> Unit,
+    onEliminar: () -> Unit
 ) {
-    val formato = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
-    val fecha = inv.fecha?.toDate()?.let { formato.format(it) } ?: "—"
-
-    ElevatedCard(
-        colors = CardDefaults.cardColors(containerColor = CardBg),
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    ElevatedCard(colors = CardDefaults.cardColors(containerColor = CardBg), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Text("Invitación de juego", color = Color.White, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text("Estado: ${inv.estado}", color = Color.White.copy(alpha = .9f))
-            Text("Fecha: $fecha", color = Color.White.copy(alpha = .9f))
+            Text("👤 Solicitud de amistad de ${inv.nombreDe}", color = Color.White, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = onAceptar,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent)
-                ) { Text("Aceptar", color = Color.Black, fontWeight = FontWeight.Bold) }
-
-                OutlinedButton(
-                    onClick = onRechazar,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                    border = ButtonDefaults.outlinedButtonBorder(true)
-                ) { Text("Rechazar") }
+                Button(onClick = onAceptar, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+                    Text("Aceptar", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(onClick = onRechazar, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                    Text("Rechazar")
+                }
+                OutlinedButton(onClick = onEliminar, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)) {
+                    Text("Eliminar")
+                }
             }
         }
     }

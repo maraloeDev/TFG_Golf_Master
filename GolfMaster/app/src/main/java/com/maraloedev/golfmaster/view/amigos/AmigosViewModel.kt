@@ -1,19 +1,24 @@
 package com.maraloedev.golfmaster.view.amigos
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.maraloedev.golfmaster.model.Amigo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.util.*
 
 class AmigosViewModel : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    private val _amigos = MutableStateFlow<List<String>>(emptyList())
-    val amigos: StateFlow<List<String>> = _amigos.asStateFlow()
+    private val _amigos = MutableStateFlow<List<Amigo>>(emptyList())
+    val amigos: StateFlow<List<Amigo>> = _amigos.asStateFlow()
 
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -28,46 +33,100 @@ class AmigosViewModel : ViewModel() {
         suscribeAmigos()
     }
 
+    /** 🔄 Escucha lista de amigos en tiempo real */
     private fun suscribeAmigos() {
         val uid = auth.currentUser?.uid ?: return
-        db.collection("usuarios").document(uid)
+        db.collection("jugadores").document(uid)
             .collection("amigos")
             .addSnapshotListener { snapshot, _ ->
-                _amigos.value = snapshot?.documents?.mapNotNull { it.getString("nombre") } ?: emptyList()
+                val lista = snapshot?.documents?.mapNotNull {
+                    it.toObject(Amigo::class.java)?.copy(id = it.id)
+                } ?: emptyList()
+                _amigos.value = lista
                 _loading.value = false
             }
     }
 
-    fun buscarPorNombre(nombre: String) {
-        if (nombre.isBlank()) {
+    /** 🟢 Obtiene nombre real desde la colección jugadores */
+    private suspend fun nombreActualDesdeJugadores(): String {
+        val uid = auth.currentUser?.uid ?: return "Desconocido"
+        return try {
+            val snap = db.collection("jugadores").document(uid).get().await()
+            snap.getString("nombre_jugador") ?: "Jugador"
+        } catch (_: Exception) { "Jugador" }
+    }
+
+    /** 🔍 Buscar jugador por nombre o número de licencia */
+    fun buscarJugador(texto: String) {
+        if (texto.isBlank()) {
             _resultados.value = emptyList()
             return
         }
         _buscando.value = true
         val uidActual = auth.currentUser?.uid
-        db.collection("usuarios")
-            .whereEqualTo("nombre", nombre)
+
+        db.collection("jugadores")
+            .whereGreaterThanOrEqualTo("nombre_jugador", texto)
+            .whereLessThanOrEqualTo("nombre_jugador", texto + "\uf8ff")
             .get()
             .addOnSuccessListener { docs ->
                 _resultados.value = docs.documents.mapNotNull { d ->
                     val id = d.id
-                    val nom = d.getString("nombre")
-                    if (id != uidActual && nom != null) id to nom else null
+                    val nombre = d.getString("nombre_jugador")
+                    if (id != uidActual && nombre != null) id to nombre else null
                 }
                 _buscando.value = false
             }
-            .addOnFailureListener {
-                _buscando.value = false
-            }
+            .addOnFailureListener { _buscando.value = false }
     }
 
-    fun addAmigo(id: String, nombre: String, onDone: () -> Unit) {
+    /** 📨 Enviar solicitud de amistad */
+    fun enviarSolicitudAmistad(idDestino: String, nombreDestino: String, onDone: (String) -> Unit) {
         val uid = auth.currentUser?.uid ?: return
-        db.collection("usuarios")
-            .document(uid)
-            .collection("amigos")
-            .document(id)
-            .set(mapOf("nombre" to nombre))
-            .addOnSuccessListener { onDone() }
+
+        viewModelScope.launch {
+            try {
+                val nombreActual = nombreActualDesdeJugadores()
+
+                // Evitar duplicados
+                val existentes = db.collection("amigo")
+                    .whereEqualTo("de", uid)
+                    .whereEqualTo("para", idDestino)
+                    .get()
+                    .await()
+
+                if (!existentes.isEmpty) {
+                    onDone("⚠️ Ya existe una solicitud pendiente a $nombreDestino")
+                    return@launch
+                }
+
+                val doc = mapOf(
+                    "tipo" to "amistad",
+                    "de" to uid,
+                    "nombreDe" to nombreActual,
+                    "para" to idDestino,
+                    "nombrePara" to nombreDestino,
+                    "estado" to "pendiente",
+                    "fecha" to com.google.firebase.Timestamp.now()
+                )
+
+                db.collection("amigo").add(doc).await()
+                onDone("📩 Solicitud enviada a $nombreDestino")
+            } catch (e: Exception) {
+                onDone("❌ Error al enviar: ${e.message}")
+            }
+        }
+    }
+
+    /** 🗑️ Eliminar amigo */
+    fun eliminarAmigo(amigoId: String) = viewModelScope.launch {
+        val uid = auth.currentUser?.uid ?: return@launch
+        try {
+            db.collection("jugadores").document(uid)
+                .collection("amigos").document(amigoId).delete().await()
+
+            db.collection("jugadores").document(amigoId)
+                .collection("amigos").document(uid).delete().await()
+        } catch (_: Exception) { }
     }
 }

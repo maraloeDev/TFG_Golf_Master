@@ -13,15 +13,17 @@ import kotlinx.coroutines.tasks.await
 
 data class Invitacion(
     val id: String = "",
-    val de: String = "",            // uid del emisor
-    val para: String = "",          // uid del receptor (usuario actual)
+    val tipo: String = "",
+    val de: String = "",
+    val nombreDe: String = "",
+    val para: String = "",
+    val nombrePara: String = "",
     val reservaId: String = "",
     val estado: String = "pendiente",
     val fecha: Timestamp? = null
 )
 
 class AlertasViewModel : ViewModel() {
-
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
@@ -36,77 +38,64 @@ class AlertasViewModel : ViewModel() {
 
     private var listener: ListenerRegistration? = null
 
-    /** 🟢 Empieza a escuchar invitaciones dirigidas al usuario actual */
     fun observarInvitaciones() {
-        val uid = auth.currentUser?.uid ?: run {
-            _error.value = "Usuario no autenticado"
-            return
-        }
+        val uid = auth.currentUser?.uid ?: return
         _loading.value = true
-
         listener?.remove()
-        listener = db.collection("invitaciones")
+
+        listener = db.collection("amigo")
             .whereEqualTo("para", uid)
-            .orderBy("fecha", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .addSnapshotListener { snaps, e ->
                 if (e != null) {
                     _error.value = e.localizedMessage
                     _loading.value = false
                     return@addSnapshotListener
                 }
+
                 val lista = snaps?.documents?.mapNotNull { doc ->
-                    val inv = doc.toObject(Invitacion::class.java)
-                    inv?.copy(id = doc.id)
+                    doc.toObject(Invitacion::class.java)?.copy(id = doc.id)
                 }.orEmpty()
-                _invitaciones.value = lista
+
+                _invitaciones.value = lista.sortedByDescending { it.fecha?.seconds ?: 0 }
                 _loading.value = false
             }
     }
 
-    /** 🟢 Aceptar invitación (crea copia segura de la reserva para el usuario actual) */
-    fun aceptarInvitacion(invitacionId: String) = viewModelScope.launch {
-        val uid = auth.currentUser?.uid ?: return@launch
+    fun aceptarAmistad(alertaId: String, deUid: String, nombreDe: String) = viewModelScope.launch {
+        val currentUid = auth.currentUser?.uid ?: return@launch
         try {
-            // 1️⃣ Leer la invitación
-            val invDoc = db.collection("invitaciones").document(invitacionId).get().await()
-            val reservaId = invDoc.getString("reservaId") ?: throw Exception("Reserva no encontrada")
+            db.collection("amigo").document(alertaId).update("estado", "aceptada").await()
 
-            // 2️⃣ Actualizar el estado a 'aceptada'
-            db.collection("invitaciones").document(invitacionId)
-                .update("estado", "aceptada").await()
+            val currentSnap = db.collection("jugadores").document(currentUid).get().await()
+            val miNombre = currentSnap.getString("nombre_jugador") ?: "Jugador"
 
-            // 3️⃣ Obtener los datos de la reserva original
-            val reservaDoc = db.collection("reservas").document(reservaId).get().await()
-            if (!reservaDoc.exists()) throw Exception("La reserva original ya no existe")
+            db.collection("jugadores").document(currentUid)
+                .collection("amigos").document(deUid)
+                .set(mapOf("nombre" to nombreDe)).await()
 
-            val data = reservaDoc.data ?: throw Exception("Datos de reserva vacíos")
+            db.collection("jugadores").document(deUid)
+                .collection("amigos").document(currentUid)
+                .set(mapOf("nombre" to miNombre)).await()
 
-            // 4️⃣ Crear una copia segura para el usuario que acepta
-            val reservaCopia = hashMapOf(
-                "usuarioId" to uid,
-                "fecha" to (data["fecha"] ?: Timestamp.now()),
-                "hora" to (data["hora"] ?: data["fecha"] ?: Timestamp.now()),
-                "recorrido" to (data["recorrido"] ?: "Campo principal"),
-                "hoyos" to (data["hoyos"] ?: "18 hoyos"),
-                "jugadores" to (data["jugadores"] ?: "Solo")
-            )
-
-            // 5️⃣ Guardar la nueva reserva en la colección 'reservas'
-            db.collection("reservas").add(reservaCopia).await()
-
-            // Refrescar las invitaciones
+            // Refrescar
             observarInvitaciones()
-
         } catch (e: Exception) {
-            _error.value = "❌ Error al aceptar invitación: ${e.message}"
+            _error.value = e.localizedMessage
         }
     }
 
-    /** 🟥 Rechazar invitación */
-    fun rechazarInvitacion(invitacionId: String) = viewModelScope.launch {
+    fun rechazarAmistad(alertaId: String) = viewModelScope.launch {
         try {
-            db.collection("invitaciones").document(invitacionId)
+            db.collection("amigo").document(alertaId)
                 .update("estado", "rechazada").await()
+        } catch (e: Exception) {
+            _error.value = e.localizedMessage
+        }
+    }
+
+    fun eliminarAlerta(alertaId: String) = viewModelScope.launch {
+        try {
+            db.collection("amigo").document(alertaId).delete().await()
         } catch (e: Exception) {
             _error.value = e.localizedMessage
         }
