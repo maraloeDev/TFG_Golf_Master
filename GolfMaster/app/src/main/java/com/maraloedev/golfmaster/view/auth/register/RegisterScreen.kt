@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.maraloedev.golfmaster.view.auth.register
 
 import android.widget.Toast
@@ -44,7 +46,6 @@ private val CursorColor = Color(0xFF00FF77)
 /* ============================================================
    🟩 REGISTER SCREEN
    ============================================================ */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
     val context = LocalContext.current
@@ -54,10 +55,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var apellido by rememberSaveable { mutableStateOf("") }
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    var provincia by rememberSaveable { mutableStateOf("") }
-    var ciudad by rememberSaveable { mutableStateOf("") }
-    var codigoPostal by rememberSaveable { mutableStateOf("") }
-    var prefijoCP by rememberSaveable { mutableStateOf("") }
     var direccion by rememberSaveable { mutableStateOf("") }
     var telefono by rememberSaveable { mutableStateOf("") }
     var handicapText by rememberSaveable { mutableStateOf("") }
@@ -67,10 +64,38 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var sexo by rememberSaveable { mutableStateOf("") }
     var errores by remember { mutableStateOf(mapOf<String, String>()) }
 
-    // Provincias y prefijos
-    val provinciasPrefijos = mapOf(
+    // Comunidad / Provincia / CP
+    var comunidad by rememberSaveable { mutableStateOf("") }
+    var provincia by rememberSaveable { mutableStateOf("") }
+    var codigoPostal by rememberSaveable { mutableStateOf("") }
+    var prefijoCP by rememberSaveable { mutableStateOf("") }
+
+    // ============================================================
+    // DATOS DE COMUNIDADES Y PROVINCIAS
+    // ============================================================
+    val provinciasPorComunidad = mapOf(
+        "Andalucía" to listOf("Almería","Cádiz","Córdoba","Granada","Huelva","Jaén","Málaga","Sevilla"),
+        "Aragón" to listOf("Huesca","Teruel","Zaragoza"),
+        "Principado de Asturias" to listOf("Asturias"),
+        "Islas Baleares" to listOf("Illes Balears"),
+        "Islas Canarias" to listOf("Las Palmas","Santa Cruz de Tenerife"),
+        "Cantabria" to listOf("Cantabria"),
+        "Castilla-La Mancha" to listOf("Albacete","Ciudad Real","Cuenca","Guadalajara","Toledo"),
+        "Castilla y León" to listOf("Ávila","Burgos","León","Palencia","Salamanca","Segovia","Soria","Valladolid","Zamora"),
+        "Cataluña" to listOf("Barcelona","Girona","Lleida","Tarragona"),
+        "Comunidad Valenciana" to listOf("Alicante","Castellón","Valencia"),
+        "Extremadura" to listOf("Badajoz","Cáceres"),
+        "Galicia" to listOf("A Coruña","Lugo","Ourense","Pontevedra"),
+        "Comunidad de Madrid" to listOf("Madrid"),
+        "Región de Murcia" to listOf("Murcia"),
+        "Comunidad Foral de Navarra" to listOf("Navarra"),
+        "País Vasco" to listOf("Álava","Bizkaia","Guipúzcoa"),
+        "La Rioja" to listOf("La Rioja"),
+    )
+
+    val prefijoPorProvincia = mapOf(
         "Álava" to "01", "Albacete" to "02", "Alicante" to "03", "Almería" to "04",
-        "Ávila" to "05", "Badajoz" to "06", "Islas Baleares" to "07", "Barcelona" to "08",
+        "Ávila" to "05", "Badajoz" to "06", "Illes Balears" to "07", "Barcelona" to "08",
         "Burgos" to "09", "Cáceres" to "10", "Cádiz" to "11", "Castellón" to "12",
         "Ciudad Real" to "13", "Córdoba" to "14", "A Coruña" to "15", "Cuenca" to "16",
         "Girona" to "17", "Granada" to "18", "Guadalajara" to "19", "Guipúzcoa" to "20",
@@ -80,10 +105,16 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
         "Las Palmas" to "35", "Pontevedra" to "36", "Salamanca" to "37", "Santa Cruz de Tenerife" to "38",
         "Cantabria" to "39", "Segovia" to "40", "Sevilla" to "41", "Soria" to "42",
         "Tarragona" to "43", "Teruel" to "44", "Toledo" to "45", "Valencia" to "46",
-        "Valladolid" to "47", "Bizkaia" to "48", "Zamora" to "49", "Zaragoza" to "50",
-        "Ceuta" to "51", "Melilla" to "52"
+        "Valladolid" to "47", "Bizkaia" to "48", "Zamora" to "49", "Zaragoza" to "50"
     )
-    val provincias = provinciasPrefijos.keys.sorted()
+
+    val comunidades = listOf(
+        "Andalucía","Aragón","Principado de Asturias","Islas Baleares","Islas Canarias","Cantabria",
+        "Castilla-La Mancha","Castilla y León","Cataluña","Comunidad Valenciana","Extremadura",
+        "Galicia","Comunidad de Madrid","Region de Murcia","Comunidad Foral de Navarra",
+        "País Vasco","La Rioja"
+    )
+
     val handicap = handicapText.toDoubleOrNull()
 
     Scaffold(containerColor = ScreenBg) { pv ->
@@ -117,14 +148,11 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 
                 // --- CAMPOS ---
                 AnimatedTextField("Nombre", nombre, KeyboardType.Text, onChange = { nombre = it },
-                    isError = errores.containsKey("nombre"), errorMessage = errores["nombre"]
-                )
+                    isError = errores.containsKey("nombre"), errorMessage = errores["nombre"])
                 AnimatedTextField("Apellidos", apellido, KeyboardType.Text, onChange = { apellido = it },
-                    isError = errores.containsKey("apellido"), errorMessage = errores["apellido"]
-                )
+                    isError = errores.containsKey("apellido"), errorMessage = errores["apellido"])
                 AnimatedTextField("Correo electrónico", correo, KeyboardType.Email, onChange = { correo = it },
-                    isError = errores.containsKey("correo"), errorMessage = errores["correo"]
-                )
+                    isError = errores.containsKey("correo"), errorMessage = errores["correo"])
                 AnimatedTextField("Contraseña", password, KeyboardType.Password,
                     onChange = { password = it },
                     isPassword = true, showPassword = showPassword,
@@ -141,24 +169,33 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     errorMessage = errores["sexo"]
                 )
 
-                ProvinciaDropdown(
+                ComunidadDropdown(
+                    label = "Comunidad Autónoma",
+                    opciones = comunidades,
+                    value = comunidad,
+                    onValueChange = {
+                        comunidad = it
+                        provincia = ""
+                    },
+                    isError = errores.containsKey("comunidad"),
+                    errorMessage = errores["comunidad"]
+                )
+
+                ProvinciaDependienteDropdown(
                     label = "Provincia",
-                    provincias = provincias,
+                    comunidad = comunidad,
+                    provinciasPorComunidad = provinciasPorComunidad,
                     value = provincia,
                     onValueChange = {
                         provincia = it
-                        val prefijo = provinciasPrefijos[it] ?: ""
-                        prefijoCP = prefijo
+                        val pref = prefijoPorProvincia[it] ?: ""
+                        prefijoCP = pref
                         codigoPostal = if (codigoPostal.length >= 2)
-                            prefijo + codigoPostal.drop(2)
-                        else prefijo
+                            pref + codigoPostal.drop(2)
+                        else pref
                     },
                     isError = errores.containsKey("provincia"),
                     errorMessage = errores["provincia"]
-                )
-
-                AnimatedTextField("Ciudad", ciudad, KeyboardType.Text, onChange = { ciudad = it },
-                    isError = errores.containsKey("ciudad"), errorMessage = errores["ciudad"]
                 )
 
                 AnimatedTextField("Código Postal", codigoPostal, KeyboardType.Number, onChange = { nuevo ->
@@ -202,8 +239,8 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                         if (!correo.contains("@")) nuevosErrores["correo"] = "Formato incorrecto"
                         if (password.isBlank()) nuevosErrores["password"] = "Campo vacío"
                         if (sexo.isBlank()) nuevosErrores["sexo"] = "Seleccione un sexo"
+                        if (comunidad.isBlank()) nuevosErrores["comunidad"] = "Seleccione una comunidad"
                         if (provincia.isBlank()) nuevosErrores["provincia"] = "Seleccione una provincia"
-                        if (ciudad.isBlank()) nuevosErrores["ciudad"] = "Campo vacío"
                         if (codigoPostal.length != 5) nuevosErrores["codigoPostal"] = "Debe tener 5 números"
                         if (direccion.isBlank()) nuevosErrores["direccion"] = "Campo vacío"
                         if (telefono.isBlank()) nuevosErrores["telefono"] = "Campo vacío"
@@ -230,7 +267,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             socio_jugador = socio,
                             handicap_jugador = handicap ?: 0.0,
                             provincia_jugador = provincia,
-                            ciudad_jugador = ciudad,
+                            ciudad_jugador = comunidad, // de momento comunidad aquí
                             password_jugador = password
                         )
 
@@ -276,7 +313,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 }
 
 /* ============================================================
-   🧩 COMPONENTES DE FORMULARIO (reutilizables)
+   🧩 COMPONENTES DE FORMULARIO
    ============================================================ */
 
 @Composable
@@ -328,7 +365,6 @@ fun AnimatedTextField(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SexoDropdown(
     label: String,
@@ -374,11 +410,10 @@ fun SexoDropdown(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProvinciaDropdown(
+fun ComunidadDropdown(
     label: String,
-    provincias: List<String>,
+    opciones: List<String>,
     value: String,
     onValueChange: (String) -> Unit,
     isError: Boolean = false,
@@ -403,6 +438,66 @@ fun ProvinciaDropdown(
                     unfocusedLabelColor = LabelColor,
                     focusedTextColor = TextColor,
                     unfocusedTextColor = TextColor
+                )
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                opciones.forEach { opcion ->
+                    DropdownMenuItem(text = { Text(opcion) }, onClick = {
+                        onValueChange(opcion)
+                        expanded = false
+                    })
+                }
+            }
+        }
+        if (isError && !errorMessage.isNullOrBlank()) {
+            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
+        }
+    }
+}
+
+@Composable
+fun ProvinciaDependienteDropdown(
+    label: String,
+    comunidad: String,
+    provinciasPorComunidad: Map<String, List<String>>,
+    value: String,
+    onValueChange: (String) -> Unit,
+    isError: Boolean = false,
+    errorMessage: String? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val provincias = provinciasPorComunidad[comunidad] ?: emptyList()
+    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
+    Column {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = {
+                if (comunidad.isNotBlank()) expanded = !expanded
+            }
+        ) {
+            OutlinedTextField(
+                value = if (comunidad.isBlank()) "" else value,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label, color = LabelColor) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor().fillMaxWidth().padding(vertical = 4.dp),
+                placeholder = {
+                    if (comunidad.isBlank())
+                        Text("Selecciona primero la Comunidad Autónoma", color = LabelColor.copy(alpha = 0.6f))
+                },
+                enabled = comunidad.isNotBlank(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = borderColor,
+                    unfocusedBorderColor = borderColor,
+                    disabledBorderColor = BorderNormal.copy(alpha = 0.4f),
+                    cursorColor = CursorColor,
+                    focusedLabelColor = BorderNormal,
+                    unfocusedLabelColor = LabelColor,
+                    disabledLabelColor = LabelColor.copy(alpha = 0.6f),
+                    focusedTextColor = TextColor,
+                    unfocusedTextColor = TextColor,
+                    disabledTextColor = TextColor.copy(alpha = 0.6f)
                 )
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

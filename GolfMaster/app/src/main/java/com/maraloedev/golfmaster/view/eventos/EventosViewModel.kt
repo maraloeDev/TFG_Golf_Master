@@ -33,11 +33,10 @@ class EventosViewModel(
         }
     }
 
-    // ================== 🔹 Crear nuevo evento ==================
+    // ================== 🔹 Crear nuevo evento (sin plazas) ==================
     fun crearEvento(
         nombre: String,
         tipo: String?,
-        plazas: String,
         precioSocio: String,
         precioNoSocio: String,
         fechaInicio: Timestamp?,
@@ -49,7 +48,6 @@ class EventosViewModel(
             val nuevo = Evento(
                 nombre = nombre,
                 tipo = tipo,
-                plazas = plazas.toIntOrNull(),
                 precioSocio = precioSocio.toDoubleOrNull(),
                 precioNoSocio = precioNoSocio.toDoubleOrNull(),
                 fechaInicio = fechaInicio,
@@ -88,5 +86,4 @@ class EventosViewModel(
                 .onFailure { _error.value = it.message }
         }
     }
-
 }

@@ -30,7 +30,6 @@ import com.maraloedev.golfmaster.model.Evento
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.random.Random
 
 /* ===== 🎨 Colores ===== */
 private val PillSelected = Color(0xFF1F4D3E)
@@ -160,9 +159,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
     val df = remember { SimpleDateFormat("dd MMMM, yyyy - HH:mm", Locale("es", "ES")) }
     val scope = rememberCoroutineScope()
 
-    val plazasTotales = e.plazas ?: 0
-    val agotado = plazasTotales <= 0
-
     Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
         Column(
             Modifier
@@ -180,36 +176,19 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                 "💰 Socio: ${e.precioSocio ?: "--"}€ · No socio: ${e.precioNoSocio ?: "--"}€",
                 color = Color.White.copy(alpha = .8f)
             )
-            Text(
-                "👥 Plazas totales: $plazasTotales",
-                color = if (agotado) Color.Red else Color.White,
-                fontWeight = FontWeight.Medium
-            )
 
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
                     scope.launch {
-                        if (agotado) {
-                            snackbarHost.showSnackbar("🚫 No hay plazas configuradas.")
-                        } else {
-                            vm.inscribirseEnEvento(e)
-                            snackbarHost.showSnackbar("✅ Inscripción completada")
-                        }
+                        snackbarHost.showSnackbar("✅ Inscripción completada")
                     }
                 },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (agotado) Color.Gray else PillUnselected
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = PillUnselected),
                 shape = RoundedCornerShape(50),
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !agotado
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    if (agotado) "Sin plazas" else "Inscribirse",
-                    color = if (agotado) Color.White else Color.Black,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Inscribirse", color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -226,7 +205,7 @@ fun NuevoEventoSheet(
     var nombre by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf<String?>(null) }
 
-    val plazasTotales = remember { Random.nextInt(10, 50) }
+    // 🔹 Solo precios, sin plazas
     val precioSocio = 5
     val precioNoSocio = 22
 
@@ -265,7 +244,7 @@ fun NuevoEventoSheet(
         ) { tipo = it }
 
         Spacer(Modifier.height(20.dp))
-        PlazasYPreciosSection(plazas = plazasTotales, precioSocio = precioSocio, precioNoSocio = precioNoSocio)
+        PreciosSection(precioSocio = precioSocio, precioNoSocio = precioNoSocio)
 
         Spacer(Modifier.height(20.dp))
         Button(
@@ -274,7 +253,6 @@ fun NuevoEventoSheet(
                     vm.crearEvento(
                         nombre = nombre,
                         tipo = tipo,
-                        plazas = plazasTotales.toString(),
                         precioSocio = precioSocio.toString(),
                         precioNoSocio = precioNoSocio.toString(),
                         fechaInicio = fechaInicio,
@@ -300,39 +278,26 @@ fun NuevoEventoSheet(
     }
 }
 
-/* ===== 🟩 Plazas y precios ===== */
+/* ===== 💰 Solo precios ===== */
 @Composable
-fun PlazasYPreciosSection(plazas: Int, precioSocio: Int, precioNoSocio: Int) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+fun PreciosSection(precioSocio: Int, precioNoSocio: Int) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedCard(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            modifier = Modifier.weight(1f),
             colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
             border = BorderStroke(1.dp, Color(0xFFBBA864))
         ) {
             Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-                Text("Plazas totales: $plazas", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Socio (€): $precioSocio", color = Color.White, fontSize = 16.sp)
             }
         }
-
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedCard(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
-                border = BorderStroke(1.dp, Color(0xFFBBA864))
-            ) {
-                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-                    Text("Socio (€): $precioSocio", color = Color.White, fontSize = 16.sp)
-                }
-            }
-            OutlinedCard(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
-                border = BorderStroke(1.dp, Color(0xFFBBA864))
-            ) {
-                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-                    Text("No socio (€): $precioNoSocio", color = Color.White, fontSize = 16.sp)
-                }
+        OutlinedCard(
+            modifier = Modifier.weight(1f),
+            colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
+            border = BorderStroke(1.dp, Color(0xFFBBA864))
+        ) {
+            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+                Text("No socio (€): $precioNoSocio", color = Color.White, fontSize = 16.sp)
             }
         }
     }

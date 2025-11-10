@@ -47,13 +47,6 @@ fun AmigosScreen(
                 .padding(padding)
                 .background(Color(0xFF0C1A12))
         ) {
-            Text(
-                "Amigos",
-                modifier = Modifier.padding(16.dp),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineSmall
-            )
 
             when {
                 loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

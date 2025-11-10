@@ -46,41 +46,4 @@ class AuthViewModel : ViewModel() {
             }
     }
 
-    fun logout() {
-        auth.signOut()
-    }
-
-    fun eliminarCuenta(
-        email: String,
-        password: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val user = auth.currentUser
-        val uid = user?.uid ?: return onError("Usuario no autenticado")
-
-        val credential = EmailAuthProvider.getCredential(email, password)
-        user.reauthenticate(credential)
-            .addOnSuccessListener {
-                db.collection("jugadores").document(uid)
-                    .delete()
-                    .addOnSuccessListener {
-                        user.delete()
-                            .addOnSuccessListener {
-                                auth.signOut()
-                                onSuccess()
-                            }
-                            .addOnFailureListener { e ->
-                                onError(e.message ?: "Error al eliminar usuario de Auth")
-                            }
-                    }
-                    .addOnFailureListener { e ->
-                        onError(e.message ?: "Error al eliminar jugador en Firestore")
-                    }
-            }
-            .addOnFailureListener { e ->
-                onError("Debes iniciar sesión de nuevo: ${e.message}")
-            }
-    }
-
 }
