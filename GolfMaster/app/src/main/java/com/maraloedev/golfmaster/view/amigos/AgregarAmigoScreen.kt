@@ -49,8 +49,10 @@ fun AgregarAmigoScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(Color(0xFF0C1A12))
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
         ) {
+            Spacer(modifier = Modifier.height(20.dp)) // 🔹 Separación entre TopBar y contenido
+
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it },
@@ -79,27 +81,47 @@ fun AgregarAmigoScreen(
                 Text("Buscar", color = Color.White)
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp)) // 🔹 Más espacio antes de las cards
 
             if (buscando) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF4CAF50))
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     items(resultados) { (id, nombre) ->
-                        Box(
+                        // 💬 Tarjeta más grande y visualmente destacada
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFF1B372B), shape = MaterialTheme.shapes.medium)
+                                .height(90.dp) // 🔹 Más alta
                                 .clickable {
                                     vm.enviarSolicitudAmistad(id, nombre) { msg ->
                                         scope.launch { snackbar.showSnackbar(msg) }
                                     }
-                                }
-                                .padding(16.dp)
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color(0xFF1B372B)
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                            shape = MaterialTheme.shapes.medium
                         ) {
-                            Text(nombre, color = Color.White, fontWeight = FontWeight.Bold)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(20.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = nombre,
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
                         }
                     }
                 }

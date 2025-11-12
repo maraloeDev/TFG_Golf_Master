@@ -1,6 +1,7 @@
 package com.maraloedev.golfmaster.view.amigos
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,7 +47,9 @@ fun AmigosScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(Color(0xFF0C1A12))
+                .padding(horizontal = 16.dp)
         ) {
+            Spacer(modifier = Modifier.height(20.dp)) // 🔹 Separación superior
 
             when {
                 loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -60,8 +63,8 @@ fun AmigosScreen(
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(amigos, key = { it.id }) { amigo ->
                         val dismissState = rememberSwipeToDismissBoxState(
@@ -83,22 +86,40 @@ fun AmigosScreen(
                                         .padding(horizontal = 20.dp),
                                     contentAlignment = Alignment.CenterEnd
                                 ) {
-                                    Text("Eliminar", color = Color.White, fontWeight = FontWeight.Bold)
-                                }
-                            },
-                            content = {
-                                // 💡 Tarjeta de amigo oscura
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF1B372B), shape = MaterialTheme.shapes.medium)
-                                        .padding(16.dp)
-                                ) {
                                     Text(
-                                        text = amigo.nombre,
+                                        "Eliminar",
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
+                                }
+                            },
+                            content = {
+                                // 💡 Card del amigo (más grande y moderna)
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(90.dp) // 🔹 Más alta
+                                        .padding(horizontal = 4.dp)
+                                        .clickable(enabled = false) {}, // Ripple sin acción
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFF1B372B)
+                                    ),
+                                    shape = MaterialTheme.shapes.medium,
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(20.dp),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        Text(
+                                            text = amigo.nombre,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                    }
                                 }
                             }
                         )
