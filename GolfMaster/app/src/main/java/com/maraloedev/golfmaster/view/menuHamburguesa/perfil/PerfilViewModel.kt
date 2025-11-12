@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 /**
- * Modelo de datos del jugador.
+ * Modelo de datos del jugador mostrado en el perfil.
  */
 data class JugadorPerfil(
     val id: String = "",
@@ -27,6 +27,7 @@ data class JugadorPerfil(
 
 /**
  * ViewModel del perfil del jugador.
+ * Gestiona la carga, actualización y eliminación de su información.
  */
 class PerfilViewModel : ViewModel() {
 
@@ -34,15 +35,15 @@ class PerfilViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
     private val _jugador = MutableStateFlow<JugadorPerfil?>(null)
-    val jugador: StateFlow<JugadorPerfil?> = _jugador
+    val jugador: StateFlow<JugadorPerfil?> get() = _jugador
 
     init {
         cargarPerfil()
     }
 
     /**
-     * Carga el perfil desde Firestore.
-     * Si no existe, crea un nuevo perfil con licencia generada.
+     * 🔹 Carga el perfil del jugador desde Firestore.
+     * Si no existe o no tiene licencia, la genera automáticamente y la guarda.
      */
     fun cargarPerfil() {
         val user = auth.currentUser ?: return
@@ -53,24 +54,32 @@ class PerfilViewModel : ViewModel() {
             .addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     val data = doc.data ?: return@addOnSuccessListener
+
+                    // Si no tiene licencia, generar y actualizar
+                    val licencia = (data["licencia_jugador"] as? String)
+                        ?: generarLicencia().also { nueva ->
+                            db.collection("jugadores").document(uid)
+                                .update("licencia_jugador", nueva)
+                        }
+
                     _jugador.value = JugadorPerfil(
-                        id = data["id"] as? String ?: uid,
+                        id = uid,
                         nombre_jugador = data["nombre_jugador"] as? String ?: "",
                         correo_jugador = data["correo_jugador"] as? String ?: user.email.orEmpty(),
                         telefono_jugador = data["telefono_jugador"] as? String ?: "",
-                        sexo_jugador = data["sexo_jugador"] as? String ?: "Hombre",
+                        sexo_jugador = data["sexo_jugador"] as? String ?: "",
                         ciudad_jugador = data["ciudad_jugador"] as? String ?: "",
                         provincia_jugador = data["provincia_jugador"] as? String ?: "",
                         codigo_postal_jugador = data["codigo_postal_jugador"] as? String ?: "",
-                        licencia_jugador = data["licencia_jugador"] as? String ?: generarLicencia(),
-                        handicap_jugador = when (val valor = data["handicap_jugador"]) {
-                            is Number -> valor.toString()
-                            is String -> valor
+                        licencia_jugador = licencia,
+                        handicap_jugador = when (val h = data["handicap_jugador"]) {
+                            is Number -> h.toString()
+                            is String -> h
                             else -> ""
                         }
                     )
                 } else {
-                    // Si el documento no existe, crear uno nuevo con licencia generada
+                    // 🔸 Si el documento no existe, crear uno nuevo con licencia generada
                     val nuevaLicencia = generarLicencia()
                     val nuevo = JugadorPerfil(
                         id = uid,
@@ -87,62 +96,47 @@ class PerfilViewModel : ViewModel() {
     }
 
     /**
-     * Genera una licencia aleatoria de 6 cifras numéricas.
-     * Ejemplo: 777305 o 565512
+     * 🔹 Genera una licencia única de 6 dígitos aleatorios.
+     * Ejemplo: 583201
      */
-    private fun generarLicencia(): String {
-        val numero = Random.nextInt(100000, 999999)
-        return numero.toString()
-    }
+    private fun generarLicencia(): String = Random.nextInt(100000, 999999).toString()
 
     /**
-     * Actualiza el perfil del jugador en Firestore.
+     * 🔹 Actualiza los datos del perfil en Firestore.
      */
     fun actualizarPerfil(
         perfil: JugadorPerfil,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        val uid = auth.currentUser?.uid
-        if (uid == null) {
-            onError("Usuario no autenticado")
-            return
-        }
+        val uid = auth.currentUser?.uid ?: return onError("Usuario no autenticado")
 
         viewModelScope.launch {
-            db.collection("jugadores").document(uid)
-                .set(perfil)
-                .addOnSuccessListener {
-                    _jugador.value = perfil
-                    onSuccess()
-                }
-                .addOnFailureListener { e ->
-                    onError(e.localizedMessage ?: "Error al actualizar perfil")
-                }
+            runCatching {
+                db.collection("jugadores").document(uid).set(perfil)
+            }.onSuccess {
+                _jugador.value = perfil
+                onSuccess()
+            }.onFailure {
+                onError(it.localizedMessage ?: "Error al actualizar perfil")
+            }
         }
     }
 
     /**
-     * Elimina la cuenta del usuario (documentos + autenticación).
+     * 🔹 Elimina completamente la cuenta del usuario (documento + autenticación).
      */
-    fun eliminarCuenta(
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
+    fun eliminarCuenta(onSuccess: () -> Unit, onError: (String) -> Unit) {
         val uid = auth.currentUser?.uid ?: return onError("Usuario no autenticado")
         val user = auth.currentUser
 
         viewModelScope.launch {
-            // Eliminar documentos asociados
-            db.collection("jugadores").document(uid).delete()
-            db.collection("preferencias").document(uid).delete()
-
-            // Eliminar autenticación
-            user?.delete()
-                ?.addOnSuccessListener { onSuccess() }
-                ?.addOnFailureListener { e ->
-                    onError(e.localizedMessage ?: "Error al eliminar cuenta")
-                }
+            runCatching {
+                db.collection("jugadores").document(uid).delete()
+                db.collection("preferencias").document(uid).delete()
+                user?.delete()
+            }.onSuccess { onSuccess() }
+                .onFailure { e -> onError(e.localizedMessage ?: "Error al eliminar cuenta") }
         }
     }
 }

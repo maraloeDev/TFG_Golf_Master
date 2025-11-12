@@ -4,7 +4,6 @@ import android.util.Patterns
 import androidx.compose.runtime.*
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
 
 @Composable
 fun LoginScreenContainer(navController: NavController) {
@@ -13,8 +12,10 @@ fun LoginScreenContainer(navController: NavController) {
     var erroresCampo by remember { mutableStateOf(mapOf<String, String>()) }
 
     LoginScreen(
+        erroresCampo = erroresCampo,
+        errorMessage = errorGeneral,
         onLogin = { email, password ->
-            // --- Validación local básica ---
+            // --- Validación local ---
             val nuevos = mutableMapOf<String, String>()
             if (email.isBlank()) {
                 nuevos["email"] = "Campo obligatorio"
@@ -24,6 +25,7 @@ fun LoginScreenContainer(navController: NavController) {
             if (password.isBlank()) {
                 nuevos["password"] = "Campo obligatorio"
             }
+
             erroresCampo = nuevos
             if (erroresCampo.isNotEmpty()) {
                 errorGeneral = "Corrige los campos marcados en rojo"
@@ -34,30 +36,27 @@ fun LoginScreenContainer(navController: NavController) {
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        errorGeneral = "Inicio de sesión correcto ✅"
+                        errorGeneral = null
                         navController.navigate("home") {
                             popUpTo("login") { inclusive = true }
                         }
                     } else {
                         val mapped = mapFirebaseLoginError(task.exception)
-                        erroresCampo = mapped.first   // errores por campo
-                        errorGeneral = mapped.second  // mensaje general
+                        erroresCampo = mapped.first
+                        errorGeneral = mapped.second
                     }
                 }
         },
-        onRegisterClick = { navController.navigate("register") },
-        errorMessage = errorGeneral
+        onRegisterClick = { navController.navigate("register") }
     )
 }
 
 /**
  * Mapea excepciones de Firebase a:
  *  - Pair<erroresPorCampo, mensajeGeneral>
- * Campo puede ser "email" o "password" para que se pinte en rojo.
  */
 private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, String> {
     val campo = mutableMapOf<String, String>()
-
     val mensajeGeneral: String = when (ex) {
         is com.google.firebase.auth.FirebaseAuthException -> {
             when (ex.errorCode) {
@@ -81,13 +80,7 @@ private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, Str
                     campo["email"] = "Demasiados intentos fallidos"
                     "Demasiados intentos. Intenta más tarde"
                 }
-                "ERROR_INVALID_CREDENTIAL" -> {
-                    campo["email"] = "Credenciales incorrectas o caducadas"
-                    "Las credenciales son incorrectas o han caducado"
-                }
-                else -> {
-                    "Error al iniciar sesión. Verifica tus datos."
-                }
+                else -> "Error al iniciar sesión. Verifica tus datos."
             }
         }
         else -> "No se pudo conectar con el servidor. Inténtalo de nuevo."
@@ -99,4 +92,3 @@ private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, Str
 
     return campo to mensajeGeneral
 }
-

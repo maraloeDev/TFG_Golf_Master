@@ -1,17 +1,13 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.maraloedev.golfmaster.view.auth.login
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,224 +22,166 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.maraloedev.golfmaster.R
-import kotlinx.coroutines.launch
 
-/* ============================================================
-   🎨 COLORES GLOBALES
-   ============================================================ */
+/* 🎨 Colores principales */
 private val ScreenBg = Color(0xFF00281F)
-private val PillUnselected = Color(0xFF00FF77)
-private val BorderNormal = Color(0xFF00FF77)
-private val BorderError = Color(0xFFFF4444)
+private val Accent = Color(0xFF00FF77)
+private val TextMuted = Color.White.copy(alpha = 0.8f)
 
-/* ============================================================
-   🟩 LOGIN SCREEN
-   ============================================================ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
-    onLogin: (String, String) -> Unit,
-    onRegisterClick: () -> Unit,
+    erroresCampo: Map<String, String> = emptyMap(),
     errorMessage: String? = null,
-    erroresExternos: Map<String, String> = emptyMap()
+    onLogin: (String, String) -> Unit,
+    onRegisterClick: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    // 🔹 Control dinámico de errores: si el usuario escribe, desaparece el borde rojo
+    var emailError by remember { mutableStateOf(erroresCampo["email"]) }
+    var passwordError by remember { mutableStateOf(erroresCampo["password"]) }
 
-    // Errores internos (campos vacíos) + externos (Firebase)
-    var errores by remember { mutableStateOf(mapOf<String, String>()) }
-
-    // Mostrar Snackbar si llega un error nuevo
-    LaunchedEffect(errorMessage) {
-        if (!errorMessage.isNullOrBlank()) {
-            scope.launch { snackbarHostState.showSnackbar(errorMessage) }
-        }
+    LaunchedEffect(erroresCampo) {
+        emailError = erroresCampo["email"]
+        passwordError = erroresCampo["password"]
     }
 
-    // Combinar errores externos (Firebase)
-    LaunchedEffect(erroresExternos) {
-        if (erroresExternos.isNotEmpty()) errores = erroresExternos
-    }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = ScreenBg
-    ) { pad ->
-        Box(
-            Modifier
+    Surface(modifier = Modifier.fillMaxSize(), color = ScreenBg) {
+        Column(
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(pad)
-                .background(ScreenBg),
-            contentAlignment = Alignment.Center
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // 🏌️ LOGO
+            Image(
+                painter = painterResource(id = R.drawable.logo_app),
+                contentDescription = "Logo GolfMaster",
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .wrapContentHeight()
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo_app),
-                    contentDescription = "Logo GolfMaster",
-                    modifier = Modifier.size(120.dp)
-                )
+                    .size(110.dp)
+                    .padding(bottom = 24.dp)
+            )
 
+            // 🏷️ TÍTULO
+            Text(
+                "Iniciar Sesión",
+                fontSize = 26.sp,
+                color = Accent,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.height(32.dp))
+
+            // 📧 EMAIL
+            OutlinedTextField(
+                value = email,
+                onValueChange = {
+                    email = it
+                    if (emailError != null && it.isNotBlank()) emailError = null
+                },
+                label = { Text("Correo electrónico") },
+                leadingIcon = {
+                    Icon(Icons.Outlined.Email, contentDescription = null, tint = Accent)
+                },
+                isError = emailError != null,
+                supportingText = {
+                    emailError?.let { msg ->
+                        Text(msg, color = Color.Red, fontSize = 12.sp)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Accent,
+                    unfocusedBorderColor = TextMuted,
+                    errorBorderColor = Color.Red,
+                    focusedLabelColor = Accent,
+                    errorLabelColor = Color.Red
+                )
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // 🔐 CONTRASEÑA
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    if (passwordError != null && it.isNotBlank()) passwordError = null
+                },
+                label = { Text("Contraseña") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = Accent)
+                },
+                trailingIcon = {
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible)
+                                Icons.Default.VisibilityOff
+                            else
+                                Icons.Default.Visibility,
+                            contentDescription = if (passwordVisible)
+                                "Ocultar contraseña"
+                            else
+                                "Mostrar contraseña",
+                            tint = Accent
+                        )
+                    }
+                },
+                visualTransformation = if (passwordVisible) VisualTransformation.None
+                else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                isError = passwordError != null,
+                supportingText = {
+                    passwordError?.let { msg ->
+                        Text(msg, color = Color.Red, fontSize = 12.sp)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Accent,
+                    unfocusedBorderColor = TextMuted,
+                    errorBorderColor = Color.Red,
+                    focusedLabelColor = Accent,
+                    errorLabelColor = Color.Red
+                )
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // 🟩 BOTÓN LOGIN
+            Button(
+                onClick = { onLogin(email, password) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Accent)
+            ) {
+                Text("Iniciar sesión", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 🔹 ENLACE REGISTRO
+            TextButton(onClick = onRegisterClick) {
+                Text("¿No tienes cuenta? Regístrate", color = Accent)
+            }
+
+            // ⚠️ MENSAJE GENERAL DE ERROR
+            if (!errorMessage.isNullOrBlank()) {
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "Bienvenido a GolfMaster",
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = errorMessage,
+                    color = Color.Red,
+                    fontSize = 14.sp,
                     textAlign = TextAlign.Center
                 )
-
-                Spacer(Modifier.height(30.dp))
-
-                // --- CAMPO EMAIL ---
-                AnimatedTextFieldLogin(
-                    label = "Correo electrónico",
-                    value = email,
-                    onValueChange = {
-                        email = it
-                        // Si escribes algo, se quita el error
-                        if (errores.containsKey("email") && it.isNotBlank()) {
-                            errores = errores - "email"
-                        }
-                    },
-                    keyboardType = KeyboardType.Email,
-                    isError = errores.containsKey("email"),
-                    errorMessage = errores["email"]
-                )
-
-                // --- CAMPO CONTRASEÑA ---
-                AnimatedTextFieldLogin(
-                    label = "Contraseña",
-                    value = password,
-                    onValueChange = {
-                        password = it
-                        if (errores.containsKey("password") && it.isNotBlank()) {
-                            errores = errores - "password"
-                        }
-                    },
-                    keyboardType = KeyboardType.Password,
-                    isPassword = true,
-                    showPassword = passwordVisible,
-                    onTogglePassword = { passwordVisible = !passwordVisible },
-                    isError = errores.containsKey("password"),
-                    errorMessage = errores["password"]
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                // --- BOTÓN INICIAR SESIÓN ---
-                Button(
-                    onClick = {
-                        val nuevosErrores = mutableMapOf<String, String>()
-                        if (email.isBlank()) nuevosErrores["email"] = "Campo obligatorio"
-                        if (password.isBlank()) nuevosErrores["password"] = "Campo obligatorio"
-
-                        errores = nuevosErrores
-
-                        if (errores.isNotEmpty()) {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Corrige los campos marcados en rojo")
-                            }
-                            return@Button
-                        }
-
-                        onLogin(email.trim(), password.trim())
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = PillUnselected),
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text("Iniciar Sesión", color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("¿Aún no tienes cuenta?", color = Color.White)
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        "Regístrate",
-                        color = PillUnselected,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { onRegisterClick() }
-                    )
-                }
             }
-        }
-    }
-}
-
-/* ============================================================
-   🧩 TEXTFIELD LOGIN CON ANIMACIÓN Y ERRORES
-   ============================================================ */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AnimatedTextFieldLogin(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    isPassword: Boolean = false,
-    showPassword: Boolean = false,
-    onTogglePassword: (() -> Unit)? = null,
-    isError: Boolean = false,
-    errorMessage: String? = null
-) {
-    val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
-        label = "borderAnimLogin"
-    )
-
-    Column {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label, color = Color.White) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            visualTransformation = if (isPassword && !showPassword)
-                PasswordVisualTransformation() else VisualTransformation.None,
-            trailingIcon = {
-                if (isPassword && onTogglePassword != null) {
-                    IconButton(onClick = onTogglePassword) {
-                        val icon = if (showPassword)
-                            Icons.Default.VisibilityOff else Icons.Default.Visibility
-                        Icon(icon, contentDescription = null, tint = PillUnselected)
-                    }
-                }
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = borderColor,
-                unfocusedBorderColor = borderColor,
-                cursorColor = PillUnselected,
-                focusedLabelColor = PillUnselected,
-                unfocusedLabelColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
-            )
-        )
-        if (isError && !errorMessage.isNullOrBlank()) {
-            Text(
-                text = errorMessage,
-                color = BorderError,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 8.dp, top = 2.dp)
-            )
         }
     }
 }

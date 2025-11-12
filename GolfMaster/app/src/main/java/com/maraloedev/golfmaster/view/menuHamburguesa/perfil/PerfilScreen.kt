@@ -1,6 +1,7 @@
 package com.maraloedev.golfmaster.view.menuHamburguesa.perfil
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,7 +31,7 @@ import androidx.navigation.compose.rememberNavController
 import com.maraloedev.golfmaster.R
 import kotlinx.coroutines.launch
 
-// 🎨 Paleta de colores
+/* 🎨 PALETA DE COLORES GOLFMASTER */
 private val Fondo = Color(0xFF0B3D2E)
 private val Verde = Color(0xFF00FF77)
 private val VerdeOscuro = Color(0xFF173E34)
@@ -58,7 +59,7 @@ fun PerfilScreen(
         return
     }
 
-    // Variables del jugador
+    // Campos del jugador
     var nombre by remember { mutableStateOf(jugador!!.nombre_jugador) }
     var telefono by remember { mutableStateOf(jugador!!.telefono_jugador) }
     var sexo by remember { mutableStateOf(jugador!!.sexo_jugador) }
@@ -83,7 +84,7 @@ fun PerfilScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 🟩 Imagen del perfil (mejorada)
+            // 🟩 Imagen de perfil
             Box(
                 modifier = Modifier
                     .size(140.dp)
@@ -104,9 +105,7 @@ fun PerfilScreen(
                     painter = painterResource(id = R.drawable.ic_usuario),
                     contentDescription = "Foto de perfil",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 if (modoEdicion) {
@@ -127,6 +126,8 @@ fun PerfilScreen(
             }
 
             Spacer(Modifier.height(14.dp))
+
+            // 🧍 Nombre y correo
             Text(
                 text = jugador!!.nombre_jugador.ifBlank { "Jugador" },
                 color = Color.White,
@@ -134,10 +135,39 @@ fun PerfilScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "ID: ${jugador!!.id}",
+                text = jugador!!.correo_jugador.ifBlank { "Sin correo" },
                 color = Color.Gray,
                 fontSize = 13.sp
             )
+
+            // 🏷️ Tarjeta de licencia (nueva)
+            Spacer(Modifier.height(16.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Verde.copy(alpha = 0.1f)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(2.dp, Verde),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "LICENCIA",
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "#${jugador!!.licencia_jugador.ifBlank { "Pendiente" }}",
+                        color = Verde,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             Spacer(Modifier.height(28.dp))
 
@@ -186,7 +216,6 @@ fun PerfilScreen(
 
             // Campos del perfil
             PerfilCampo("Nombre", nombre, modoEdicion) { nombre = it }
-            PerfilCampo("Email", jugador!!.correo_jugador, false)
             PerfilCampo("Teléfono", telefono, modoEdicion) { telefono = it }
             PerfilCampo("Sexo", sexo, modoEdicion) { sexo = it }
             PerfilCampo("Provincia", provincia, modoEdicion) { provincia = it }
@@ -196,10 +225,7 @@ fun PerfilScreen(
             Spacer(Modifier.height(32.dp))
 
             // 🗑️ Eliminar cuenta
-            Row(
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                 Button(
                     onClick = { mostrarDialogo = true },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
@@ -230,7 +256,9 @@ fun PerfilScreen(
                         }) { Text("Sí, eliminar", color = Color.Red) }
                     },
                     dismissButton = {
-                        TextButton(onClick = { mostrarDialogo = false }) { Text("Cancelar", color = Color.Gray) }
+                        TextButton(onClick = { mostrarDialogo = false }) {
+                            Text("Cancelar", color = Color.Gray)
+                        }
                     },
                     containerColor = VerdeOscuro,
                     titleContentColor = Color.White,
