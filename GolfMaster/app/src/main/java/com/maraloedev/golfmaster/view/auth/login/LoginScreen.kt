@@ -77,6 +77,7 @@ fun LoginScreen(
             Spacer(Modifier.height(32.dp))
 
             // 📧 EMAIL
+            // 📧 EMAIL
             OutlinedTextField(
                 value = email,
                 onValueChange = {
@@ -95,6 +96,9 @@ fun LoginScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Accent,
                     unfocusedBorderColor = TextMuted,
@@ -103,6 +107,7 @@ fun LoginScreen(
                     errorLabelColor = Color.Red
                 )
             )
+
 
             Spacer(Modifier.height(16.dp))
 
@@ -132,9 +137,10 @@ fun LoginScreen(
                         )
                     }
                 },
-                visualTransformation = if (passwordVisible) VisualTransformation.None
-                else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                visualTransformation = if (passwordVisible)
+                    VisualTransformation.None
+                else
+                    PasswordVisualTransformation(),
                 isError = passwordError != null,
                 supportingText = {
                     passwordError?.let { msg ->
@@ -143,6 +149,9 @@ fun LoginScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Accent,
                     unfocusedBorderColor = TextMuted,
@@ -151,6 +160,7 @@ fun LoginScreen(
                     errorLabelColor = Color.Red
                 )
             )
+
 
             Spacer(Modifier.height(24.dp))
 
