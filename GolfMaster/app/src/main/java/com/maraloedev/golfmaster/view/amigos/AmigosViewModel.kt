@@ -39,28 +39,24 @@ class AmigosViewModel : ViewModel() {
         db.collection("jugadores").document(uid)
             .collection("amigos")
             .addSnapshotListener { snapshot, _ ->
-                val lista = snapshot?.documents?.mapNotNull { doc ->
-                    val nombre = doc.getString("nombre") ?: return@mapNotNull null
-                    val numeroLicencia = doc.getString("licencia_jugador")
-                        ?: doc.getString("numeroLicencia")
-                        ?: ""
-                    val fecha = doc.getTimestamp("fecha")
-                        ?: doc.getTimestamp("fechaAmistad")
-                        ?: com.google.firebase.Timestamp.now()
-
-                    Amigo(
-                        id = doc.id,
-                        nombre = nombre,
-                        numero_licencia = numeroLicencia,
-                        fechaAmistad = fecha
-                    )
+                val lista = snapshot?.documents?.mapNotNull {
+                    it.toObject(Amigo::class.java)?.copy(id = it.id)
                 } ?: emptyList()
                 _amigos.value = lista
                 _loading.value = false
             }
     }
 
-    /** 🔍 Buscar jugador */
+    /** 🟢 Obtiene nombre real desde la colección jugadores */
+    private suspend fun nombreActualDesdeJugadores(): String {
+        val uid = auth.currentUser?.uid ?: return "Desconocido"
+        return try {
+            val snap = db.collection("jugadores").document(uid).get().await()
+            snap.getString("nombre_jugador") ?: "Jugador"
+        } catch (_: Exception) { "Jugador" }
+    }
+
+    /** 🔍 Buscar jugador por nombre o número de licencia */
     fun buscarJugador(texto: String) {
         if (texto.isBlank()) {
             _resultados.value = emptyList()
@@ -84,28 +80,15 @@ class AmigosViewModel : ViewModel() {
             .addOnFailureListener { _buscando.value = false }
     }
 
-    /** 🗑️ Eliminar amigo */
-    fun eliminarAmigo(amigoId: String) = viewModelScope.launch {
-        val uid = auth.currentUser?.uid ?: return@launch
-        try {
-            db.collection("jugadores").document(uid)
-                .collection("amigos").document(amigoId).delete().await()
-
-            db.collection("jugadores").document(amigoId)
-                .collection("amigos").document(uid).delete().await()
-        } catch (_: Exception) { }
-    }
-
     /** 📨 Enviar solicitud de amistad */
     fun enviarSolicitudAmistad(idDestino: String, nombreDestino: String, onDone: (String) -> Unit) {
         val uid = auth.currentUser?.uid ?: return
 
         viewModelScope.launch {
             try {
-                // 🔹 Obtener el nombre del jugador actual
                 val nombreActual = nombreActualDesdeJugadores()
 
-                // 🔹 Evitar solicitudes duplicadas
+                // Evitar duplicados
                 val existentes = db.collection("amigo")
                     .whereEqualTo("de", uid)
                     .whereEqualTo("para", idDestino)
@@ -117,7 +100,6 @@ class AmigosViewModel : ViewModel() {
                     return@launch
                 }
 
-                // 🔹 Crear solicitud
                 val doc = mapOf(
                     "tipo" to "amistad",
                     "de" to uid,
@@ -136,17 +118,15 @@ class AmigosViewModel : ViewModel() {
         }
     }
 
-    /** 🟢 Obtiene el nombre del jugador actual desde la colección 'jugadores' */
-    private suspend fun nombreActualDesdeJugadores(): String {
-        val uid = auth.currentUser?.uid ?: return "Desconocido"
+    /** 🗑️ Eliminar amigo */
+    fun eliminarAmigo(amigoId: String) = viewModelScope.launch {
+        val uid = auth.currentUser?.uid ?: return@launch
+        try {
+            db.collection("jugadores").document(uid)
+                .collection("amigos").document(amigoId).delete().await()
 
-        return try {
-            val snap = db.collection("jugadores").document(uid).get().await()
-            snap.getString("nombre_jugador") ?: "Jugador"
-        } catch (e: Exception) {
-            "Jugador"
-        }
+            db.collection("jugadores").document(amigoId)
+                .collection("amigos").document(uid).delete().await()
+        } catch (_: Exception) { }
     }
-
-
 }

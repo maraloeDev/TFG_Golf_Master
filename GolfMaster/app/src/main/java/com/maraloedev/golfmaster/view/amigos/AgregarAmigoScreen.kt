@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AgregarAmigoScreen(
     onFinish: () -> Unit,
-        vm: AmigosViewModel = viewModel()
+    vm: AmigosViewModel = viewModel()
 ) {
     val resultados by vm.resultados.collectAsState()
     val buscando by vm.buscando.collectAsState()
