@@ -2,6 +2,7 @@ package com.maraloedev.golfmaster.view.menuHamburguesa.contactos
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,12 +23,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+
+/* 🎨 Paleta GolfMaster */
+private val ScreenBg = Color(0xFF00281F)
+private val CardBg = Color(0xFF0D1B12)
+private val Accent = Color(0xFF00FF77)
 
 private const val CONTACT_PHONE = "609 048 714"
 private const val CONTACT_EMAIL = "martinsonsecaeduardo@gmail.com"
@@ -39,15 +46,15 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // 🔹 Obtener jugador autenticado
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
 
     var nombre by remember { mutableStateOf("") }
     var correo by remember { mutableStateOf("") }
     var mensaje by remember { mutableStateOf("") }
+    var errorMensaje by remember { mutableStateOf(false) }
 
-    // Cargar datos del jugador desde Firestore
+    // 🔹 Cargar datos del jugador actual
     LaunchedEffect(Unit) {
         val uid = auth.currentUser?.uid
         if (uid != null) {
@@ -58,11 +65,14 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
                     correo = doc.getString("correo_jugador") ?: ""
                 }
                 .addOnFailureListener {
-                    scope.launch { snackbarHostState.showSnackbar("❌ Error al cargar tus datos") }
+                    scope.launch {
+                        snackbarHostState.showSnackbar("❌ Error al cargar tus datos")
+                    }
                 }
         }
     }
 
+    // ====== 🔹 Funciones de acción ======
     fun abrirEmailCliente() {
         val uri = Uri.parse("mailto:$CONTACT_EMAIL")
         val intent = Intent(Intent.ACTION_SENDTO, uri).apply {
@@ -84,7 +94,7 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
         try {
             context.startActivity(Intent.createChooser(intent, "Enviar email"))
             scope.launch { snackbarHostState.showSnackbar("📧 Abriendo cliente de correo...") }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             scope.launch { snackbarHostState.showSnackbar("❌ No se encontró app de correo") }
         }
     }
@@ -99,13 +109,14 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
         }
     }
 
+    // ====== 🔹 UI principal ======
     Scaffold(
-        containerColor = Color(0xFF0B3D2E),
+        containerColor = ScreenBg,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Contacto", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B3D2E))
+                title = { Text("Contacto", color = Accent, fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ScreenBg)
             )
         }
     ) { padding ->
@@ -117,7 +128,7 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 🧍 Nombre (solo lectura)
+            // 🔸 Campos de contacto
             OutlinedTextField(
                 value = nombre,
                 onValueChange = {},
@@ -130,7 +141,6 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
 
             Spacer(Modifier.height(12.dp))
 
-            // 📧 Correo (solo lectura)
             OutlinedTextField(
                 value = correo,
                 onValueChange = {},
@@ -144,48 +154,82 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
 
             Spacer(Modifier.height(12.dp))
 
-            // ✍️ Mensaje
             OutlinedTextField(
                 value = mensaje,
-                onValueChange = { mensaje = it },
+                onValueChange = {
+                    mensaje = it
+                    errorMensaje = false
+                },
                 label = { Text("Mensaje") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(130.dp),
-                colors = fieldColors()
+                colors = fieldColors(),
+                isError = errorMensaje
             )
+
+            AnimatedVisibility(errorMensaje) {
+                Text(
+                    text = "El mensaje no puede estar vacío",
+                    color = Color.Red,
+                    fontSize = 13.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    textAlign = TextAlign.Start
+                )
+            }
 
             Spacer(Modifier.height(20.dp))
 
-            // 📨 Enviar
             Button(
                 onClick = {
+                    if (mensaje.isBlank()) {
+                        errorMensaje = true
+                        scope.launch {
+                            snackbarHostState.showSnackbar("❌ Escribe un mensaje antes de enviar")
+                        }
+                        return@Button
+                    }
+
                     vm.enviarMensaje(
                         nombre = nombre,
                         correo = correo,
                         mensaje = mensaje,
                         onSuccess = {
-                            scope.launch { snackbarHostState.showSnackbar("✅ Mensaje enviado correctamente") }
+                            scope.launch {
+                                snackbarHostState.showSnackbar("✅ Mensaje enviado correctamente")
+                            }
                             abrirEmailCliente()
                             mensaje = ""
                         },
                         onError = {
-                            scope.launch { snackbarHostState.showSnackbar("❌ Error: $it") }
+                            scope.launch {
+                                snackbarHostState.showSnackbar("❌ Error: $it")
+                            }
                         }
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00FF77))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Accent)
             ) {
                 Text("Enviar", color = Color.Black, fontWeight = FontWeight.Bold)
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(36.dp))
             Divider(color = Color.Gray.copy(alpha = 0.3f))
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // ℹ️ Información de contacto
-            Text("Información de contacto", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            // 🔸 Información adicional
+            Text(
+                "Información de contacto",
+                color = Accent,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+
             Spacer(Modifier.height(16.dp))
 
             ContactInfoItem(
@@ -201,9 +245,15 @@ fun ContactoScreen(vm: ContactoViewModel = viewModel()) {
                 text = CONTACT_EMAIL,
                 onClick = { abrirEmailCliente() }
             )
+
+            Spacer(Modifier.height(20.dp))
         }
     }
 }
+
+/* ============================================================
+ * 🔹 COMPONENTES REUTILIZABLES
+ * ============================================================ */
 
 @Composable
 private fun ContactInfoItem(
@@ -214,20 +264,19 @@ private fun ContactInfoItem(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp)
             .clip(CircleShape)
             .clickable { onClick() }
-            .padding(8.dp),
+            .padding(vertical = 8.dp, horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF00FF77).copy(alpha = 0.2f)),
+                .background(Accent.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = Color(0xFF00FF77))
+            Icon(icon, contentDescription = null, tint = Accent)
         }
         Spacer(Modifier.width(12.dp))
         Text(text, color = Color.White, fontSize = 15.sp)
@@ -236,13 +285,13 @@ private fun ContactInfoItem(
 
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Color(0xFF00FF77),
+    focusedBorderColor = Accent,
     unfocusedBorderColor = Color(0xFF1F4D3E),
     focusedContainerColor = Color(0xFF173E34),
     unfocusedContainerColor = Color(0xFF173E34),
-    focusedLabelColor = Color(0xFF00FF77),
+    focusedLabelColor = Accent,
     unfocusedLabelColor = Color.Gray,
-    cursorColor = Color(0xFF00FF77),
+    cursorColor = Accent,
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White
 )

@@ -6,22 +6,13 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.maraloedev.golfmaster.model.Invitacion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-data class Invitacion(
-    val id: String = "",
-    val tipo: String = "",
-    val de: String = "",
-    val nombreDe: String = "",
-    val para: String = "",
-    val nombrePara: String = "",
-    val reservaId: String = "",
-    val estado: String = "pendiente",
-    val fecha: Timestamp? = null
-)
+
 
 class AlertasViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()

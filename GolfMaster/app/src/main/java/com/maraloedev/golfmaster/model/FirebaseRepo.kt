@@ -11,15 +11,18 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * FirebaseRepo
- * ---------------------------------------------
+ * ============================================================
+ * 🧩 FirebaseRepo
+ * ------------------------------------------------------------
  * Repositorio central para operaciones con Firebase:
  *  - Autenticación
  *  - Jugadores
  *  - Torneos
  *  - Reservas
+ *  - Invitaciones
  *  - Eventos
  *  - Inscripciones
+ * ============================================================
  */
 class FirebaseRepo(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -31,11 +34,6 @@ class FirebaseRepo(
     // ============================================================
     // 🔐 AUTENTICACIÓN
     // ============================================================
-
-    // ============================================================
-// 🔐 AUTENTICACIÓN
-// ============================================================
-
     suspend fun login(email: String, pass: String) {
         try {
             auth.signInWithEmailAndPassword(email, pass).await()
@@ -54,6 +52,7 @@ class FirebaseRepo(
     }
 
     fun logout() = auth.signOut()
+
 
     // ============================================================
     // 🧍 JUGADORES
@@ -75,6 +74,7 @@ class FirebaseRepo(
             .get()
             .await()
             .toObjects(Jugadores::class.java)
+
 
     // ============================================================
     // 🏌️ TORNEOS
@@ -109,9 +109,17 @@ class FirebaseRepo(
         awaitClose { listener.remove() }
     }
 
+
     // ============================================================
     // 📅 RESERVAS
     // ============================================================
+    suspend fun crearReserva(r: Reserva): String {
+        val ref = db.collection("reservas").document()
+        val reservaFinal = r.copy(id = ref.id)
+        ref.set(reservaFinal).await()
+        return ref.id
+    }
+
     suspend fun getReservasPorJugador(uid: String): List<Reserva> {
         if (uid.isBlank()) throw Exception("UID inválido.")
         val snapshot = db.collection("reservas")
@@ -126,7 +134,6 @@ class FirebaseRepo(
         return snapshot.toObjects(Reserva::class.java)
     }
 
-
     suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
         if (id.isBlank()) throw Exception("ID de reserva no válido")
         db.collection("reservas").document(id).update(nuevosDatos).await()
@@ -137,22 +144,10 @@ class FirebaseRepo(
         db.collection("reservas").document(id).delete().await()
     }
 
-    // ============================================================
-    // 🟩 CREAR INVITACIÓN
-    // ============================================================
-    // ============================================================
-// 📅 RESERVAS
-// ============================================================
-    suspend fun crearReserva(r: Reserva): String {
-        val ref = db.collection("reservas").document()
-        val reservaFinal = r.copy(id = ref.id)
-        ref.set(reservaFinal).await()
-        return ref.id
-    }
 
     // ============================================================
-// 🟩 CREAR INVITACIÓN
-// ============================================================
+    // 🟩 INVITACIONES
+    // ============================================================
     suspend fun crearInvitacion(de: String, para: String, reservaId: String) {
         if (de.isBlank() || para.isBlank() || reservaId.isBlank()) {
             throw Exception("Datos de invitación inválidos.")
@@ -165,14 +160,14 @@ class FirebaseRepo(
             "para" to para,
             "reservaId" to reservaId,
             "estado" to "pendiente",
-            "fecha" to com.google.firebase.Timestamp.now()
+            "fecha" to Timestamp.now()
         )
         ref.set(data).await()
     }
 
 
     // ============================================================
-    // 🏆 EVENTOS (TORNEOS ABIERTOS)
+    // 🏆 EVENTOS
     // ============================================================
     suspend fun getEventos(): List<Evento> {
         return try {
@@ -208,7 +203,6 @@ class FirebaseRepo(
         db.runTransaction { tx ->
             val snapshot = tx.get(docRef)
             val plazasActuales = snapshot.getLong("plazas") ?: 0
-
             if (plazasActuales > 0) {
                 tx.update(docRef, "plazas", plazasActuales - 1)
             } else {
@@ -254,8 +248,9 @@ class FirebaseRepo(
         eventoRef.delete().await()
     }
 
+
     // ============================================================
-    // 📬 SOLICITUDES DE INSCRIPCIÓN (torneos)
+    // 📬 SOLICITUDES DE INSCRIPCIÓN (TORNEOS)
     // ============================================================
     suspend fun enviarSolicitudInscripcion(torneoId: String, usuarioId: String) {
         if (torneoId.isBlank() || usuarioId.isBlank()) throw Exception("Datos inválidos.")
@@ -279,9 +274,4 @@ class FirebaseRepo(
         )
         ref.set(data).await()
     }
-
-
-
-
-
 }

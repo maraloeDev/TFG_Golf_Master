@@ -14,33 +14,38 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.firebase.firestore.FirebaseFirestore
 
 data class CampoGolf(
-    val nombre: String = "",
-    val ubicacion: String = "",
-    val telefono: String = ""
+    val nombre: String,
+    val ubicacion: String,
+    val telefono: String
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalleCamposScreen(navController: NavController) {
-    val db = FirebaseFirestore.getInstance()
-    var campos by remember { mutableStateOf<List<CampoGolf>>(emptyList()) }
-    var cargando by remember { mutableStateOf(true) }
-
-    // 🔹 Cargar datos desde Firestore
-    LaunchedEffect(Unit) {
-        db.collection("campos de golf")
-            .get()
-            .addOnSuccessListener { result ->
-                campos = result.documents.mapNotNull { it.toObject(CampoGolf::class.java) }
-                cargando = false
-            }
-            .addOnFailureListener {
-                cargando = false
-            }
-    }
+    val campos = listOf(
+        CampoGolf("Real Club Valderrama", "Sotogrande, Cádiz", "956 791 200"),
+        CampoGolf("PGA Catalunya Golf", "Caldes de Malavella, Girona", "972 472 577"),
+        CampoGolf("Real Club de Golf El Prat", "Terrassa, Barcelona", "937 281 000"),
+        CampoGolf("La Reserva Club", "Sotogrande, Cádiz", "956 785 252"),
+        CampoGolf("Finca Cortesín Golf Club", "Casares, Málaga", "952 937 883"),
+        CampoGolf("Real Club de Golf de Sevilla", "Alcalá de Guadaíra, Sevilla", "954 124 301"),
+        CampoGolf("Club de Golf La Moraleja", "Alcobendas, Madrid", "916 505 400"),
+        CampoGolf("Real Club de Golf de Las Palmas", "Bandama, Gran Canaria", "928 350 104"),
+        CampoGolf("Club de Golf Son Gual", "Palma de Mallorca, Baleares", "971 785 888"),
+        CampoGolf("Real Sociedad Hípica Española Club de Campo", "San Sebastián de los Reyes, Madrid", "916 582 100"),
+        CampoGolf("Real Club de Golf de La Herrería", "San Lorenzo de El Escorial, Madrid", "918 905 038"),
+        CampoGolf("Golf Santander", "Boadilla del Monte, Madrid", "916 348 000"),
+        CampoGolf("Real Golf de Pedreña", "Pedreña, Cantabria", "942 500 001"),
+        CampoGolf("Club de Golf Retamares", "Alalpardo, Madrid", "918 414 500"),
+        CampoGolf("Golf Son Muntaner", "Palma de Mallorca, Baleares", "971 783 000"),
+        CampoGolf("Club de Golf Aloha", "Marbella, Málaga", "952 907 085"),
+        CampoGolf("Real Club de Golf Campoamor", "Orihuela Costa, Alicante", "965 320 410"),
+        CampoGolf("Club de Golf La Manga", "Cartagena, Murcia", "968 175 000"),
+        CampoGolf("Golf Las Américas", "Playa de las Américas, Tenerife", "922 752 005"),
+        CampoGolf("Real Club de Golf de San Sebastián", "Fontarabie, Gipuzkoa", "943 630 061")
+    )
 
     Scaffold(
         topBar = {
@@ -57,51 +62,36 @@ fun DetalleCamposScreen(navController: NavController) {
         containerColor = Color(0xFF00281F)
     ) { padding ->
 
-        when {
-            cargando -> {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(campos) { campo ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0C3C2C)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    CircularProgressIndicator(color = Color(0xFF00FF77))
-                }
-            }
-            campos.isEmpty() -> {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "No hay correspondencias de campos registradas.",
-                        color = Color.LightGray,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(campos) { campo ->
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0C3C2C)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(campo.nombre, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                Text(campo.ubicacion, color = Color.LightGray, fontSize = 14.sp)
-                                Spacer(Modifier.height(6.dp))
-                                Text("Tel: ${campo.telefono}", color = Color(0xFF00FF77), fontWeight = FontWeight.SemiBold)
-                            }
-                        }
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            campo.nombre,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                        Text(
+                            campo.ubicacion,
+                            color = Color.LightGray,
+                            fontSize = 14.sp
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Tel: ${campo.telefono}",
+                            color = Color(0xFF00FF77),
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }

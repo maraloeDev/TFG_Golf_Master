@@ -7,7 +7,7 @@ import androidx.navigation.compose.composable
 import com.maraloedev.golfmaster.view.auth.login.LoginScreenContainer
 import com.maraloedev.golfmaster.view.auth.register.RegisterScreen
 import com.maraloedev.golfmaster.view.core.splash.SplashScreen
-import com.maraloedev.golfmaster.view.inicio.HomeScreen
+import com.maraloedev.golfmaster.view.menuHamburguesa.home.HomeScreen
 import com.maraloedev.golfmaster.view.menuHamburguesa.contactos.ContactoScreen
 import com.maraloedev.golfmaster.view.menuHamburguesa.informacion.InformacionScreen
 import com.maraloedev.golfmaster.view.menuHamburguesa.informacion.detalles.DetalleCamposScreen
@@ -25,7 +25,7 @@ import com.maraloedev.golfmaster.view.amigos.AgregarAmigoScreen
 fun MainNavHost(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = "splash" // 👈 Pantalla inicial
+        startDestination = "splash"
     ) {
 
         // ============================================================

@@ -8,42 +8,45 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-data class Jugador(
-    val id_jugador: String = "",
-    val nombre_jugador: String = "",
-    val correo_jugador: String = "",
-    val telefono_jugador: String = "",
-    val handicap_jugador: String? = null
-)
-
+/**
+ * ViewModel principal del Home.
+ * Carga la información del jugador autenticado desde Firestore.
+ */
 class HomeViewModel : ViewModel() {
+
+    data class Jugador(
+        val id: String = "",
+        val nombre: String = "",
+        val correo: String = "",
+        val telefono: String = "",
+        val handicap: String? = null
+    )
 
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
     private val _jugador = MutableStateFlow<Jugador?>(null)
-    val jugador: StateFlow<Jugador?> = _jugador
+    val jugador: StateFlow<Jugador?> get() = _jugador
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> get() = _isLoading
 
     init {
         cargarDatosJugador()
     }
 
-    /** 🔹 Carga la información del jugador desde Firestore o desde FirebaseAuth */
+    /** 🔹 Carga los datos del jugador actual desde Firestore */
     fun cargarDatosJugador() {
         val user = auth.currentUser ?: return
+
         viewModelScope.launch {
-            _isLoading.emit(true)
+            _isLoading.value = true
             try {
                 db.collection("jugadores")
                     .document(user.uid)
                     .get()
                     .addOnSuccessListener { doc ->
-                        if (doc.exists()) {
-
-                            // ✅ Manejo seguro del tipo de dato
+                        val jugador = if (doc.exists()) {
                             val handicapField = doc.get("handicap_jugador")
                             val handicap = when (handicapField) {
                                 is Number -> handicapField.toString()
@@ -51,50 +54,50 @@ class HomeViewModel : ViewModel() {
                                 else -> ""
                             }
 
-                            val jugador = Jugador(
-                                id_jugador = doc.id,
-                                nombre_jugador = doc.getString("nombre_jugador") ?: (user.displayName ?: ""),
-                                correo_jugador = doc.getString("correo_jugador") ?: (user.email ?: ""),
-                                telefono_jugador = doc.getString("telefono_jugador") ?: "",
-                                handicap_jugador = handicap
+                            Jugador(
+                                id = doc.id,
+                                nombre = doc.getString("nombre_jugador") ?: (user.displayName ?: ""),
+                                correo = doc.getString("correo_jugador") ?: (user.email ?: ""),
+                                telefono = doc.getString("telefono_jugador") ?: "",
+                                handicap = handicap
                             )
-                            _jugador.value = jugador
-
                         } else {
-                            // Si no existe en Firestore, creamos con los datos del Auth
-                            _jugador.value = Jugador(
-                                id_jugador = user.uid,
-                                nombre_jugador = user.displayName ?: "Jugador",
-                                correo_jugador = user.email ?: "Sin correo"
+                            // Si no existe en Firestore, crear datos básicos desde Auth
+                            Jugador(
+                                id = user.uid,
+                                nombre = user.displayName ?: "Jugador",
+                                correo = user.email ?: "Sin correo"
                             )
                         }
-                        viewModelScope.launch { _isLoading.emit(false) }
+
+                        _jugador.value = jugador
+                        _isLoading.value = false
                     }
                     .addOnFailureListener {
                         _jugador.value = Jugador(
-                            id_jugador = user.uid,
-                            nombre_jugador = user.displayName ?: "Jugador",
-                            correo_jugador = user.email ?: "Sin correo"
+                            id = user.uid,
+                            nombre = user.displayName ?: "Jugador",
+                            correo = user.email ?: "Sin correo"
                         )
-                        viewModelScope.launch { _isLoading.emit(false) }
+                        _isLoading.value = false
                     }
             } catch (e: Exception) {
                 _jugador.value = Jugador(
-                    id_jugador = user.uid,
-                    nombre_jugador = user.displayName ?: "Jugador",
-                    correo_jugador = user.email ?: "Sin correo"
+                    id = user.uid,
+                    nombre = user.displayName ?: "Jugador",
+                    correo = user.email ?: "Sin correo"
                 )
-                _isLoading.emit(false)
+                _isLoading.value = false
             }
         }
     }
 
-    /** 🔹 Cierra sesión y limpia el estado */
+/*    *//** 🔹 Cierra sesión del usuario y limpia los estados *//*
     fun cerrarSesion(onLogout: () -> Unit) {
         viewModelScope.launch {
             auth.signOut()
             _jugador.value = null
             onLogout()
         }
-    }
+    }*/
 }
