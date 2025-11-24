@@ -68,7 +68,6 @@
 |-------------------------|------------------------------------------|
 | Firebase Authentication | Autenticación segura de usuarios         |
 | Firebase Firestore      | Base de datos NoSQL en tiempo real       |
-| Firebase Storage        | Almacenamiento de imágenes                |
 
 ---
 
@@ -93,42 +92,12 @@
    - Descarga `google-services.json` y colócalo en la carpeta `app/`
    - Configura Authentication, Firestore y Storage
 
----
-
-## 📋 Funcionalidades Detalladas
-
-- **Gestión de partidas**
-  - Registro y validación de puntuaciones por hoyo
-  - Cálculo automático de estadísticas y tendencias
-- **Perfiles de usuario**
-  - Personalización y gestión de privacidad
-  - Seguimiento de logros y preferencias
-- **Sistema social**
-  - Búsqueda de jugadores y solicitudes de amistad
-  - Comparativas de rendimiento y comunidad
-
----
-
 ## 📊 Estado del Proyecto
 
 - **Inicio**: Agosto 2025
 - **Finalización prevista**: Diciembre 2025
 - **Estado actual**: Desarrollo activo
 - **Contexto**: TFG - Grado en Desarrollo de Aplicaciones Multiplataforma
-
----
-
-## 🏆 Objetivos Académicos
-
-Este proyecto busca demostrar:
-
-- Dominio de tecnologías Android modernas
-- Aplicación de patrones arquitectónicos avanzados
-- Integración de servicios cloud y bases de datos
-- Diseño UX/UI centrado en el usuario
-- Desarrollo de software escalable y mantenible
-
----
 
 ## 📞 Contacto y Colaboración
 
