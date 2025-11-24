@@ -1,4 +1,4 @@
-[# ⛳ GolfMaster
+⛳ GolfMaster
 
 [![Android](https://img.shields.io/badge/Platform-Android-brightgreen.svg)](https://android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org)
