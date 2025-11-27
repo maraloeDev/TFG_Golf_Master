@@ -15,8 +15,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.maraloedev.golfmaster.model.Invitacion
-import java.text.SimpleDateFormat
-import java.util.*
 
 private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
@@ -46,7 +44,11 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
 
                 invitaciones.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.Notifications, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
+                        Icon(
+                            Icons.Filled.Notifications,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.6f)
+                        )
                         Spacer(Modifier.height(8.dp))
                         Text("No tienes alertas pendientes", color = Color.White.copy(alpha = 0.7f))
                     }
@@ -62,8 +64,7 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
                         AmistadCard(
                             inv = inv,
                             onAceptar = { vm.aceptarAmistad(inv.id, inv.de, inv.nombreDe) },
-                            onRechazar = { vm.rechazarAmistad(inv.id) },
-                            onEliminar = { vm.eliminarAlerta(inv.id) }
+                            onRechazar = { vm.rechazarAmistad(inv.id) }
                         )
                     }
                 }
@@ -76,25 +77,34 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
 fun AmistadCard(
     inv: Invitacion,
     onAceptar: () -> Unit,
-    onRechazar: () -> Unit,
-    onEliminar: () -> Unit
+    onRechazar: () -> Unit
 ) {
-    ElevatedCard(colors = CardDefaults.cardColors(containerColor = CardBg), modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        colors = CardDefaults.cardColors(containerColor = CardBg),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(Modifier.padding(14.dp)) {
-            Text("👤 Solicitud de amistad de ${inv.nombreDe}", color = Color.White, fontWeight = FontWeight.Bold)
+            Text(
+                text = "👤 Solicitud de amistad de ${inv.nombreDe}",
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
             Spacer(Modifier.height(10.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(onClick = onAceptar, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
+                Button(
+                    onClick = onAceptar,
+                    colors = ButtonDefaults.buttonColors(containerColor = Accent)
+                ) {
                     Text("Aceptar", color = Color.Black, fontWeight = FontWeight.Bold)
                 }
-                OutlinedButton(onClick = onRechazar, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)) {
+                OutlinedButton(
+                    onClick = onRechazar,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                ) {
                     Text("Rechazar")
-                }
-                OutlinedButton(onClick = onEliminar, colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Gray)) {
-                    Text("Eliminar")
                 }
             }
         }

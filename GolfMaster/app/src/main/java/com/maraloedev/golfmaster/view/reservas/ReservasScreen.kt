@@ -77,7 +77,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
             Modifier
                 .padding(pad)
                 .fillMaxSize()
-                .background(ScreenBg)
         ) {
             BigPills(
                 left = "Próximas",

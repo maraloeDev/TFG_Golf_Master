@@ -5,15 +5,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.component1
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
@@ -32,99 +38,155 @@ fun AgregarAmigoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Añadir Amigo", color = Color.White) },
+                title = { Text("Añadir amigo", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onFinish) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0C1A12))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ScreenBg)
             )
         },
         snackbarHost = { SnackbarHost(snackbar) },
-        containerColor = Color(0xFF0C1A12)
+        containerColor = ScreenBg
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFF0C1A12))
-                .padding(horizontal = 16.dp)
+                .background(ScreenBg)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp)) // 🔹 Separación entre TopBar y contenido
+
+            Text(
+                text = "Busca jugadores y envía solicitudes 📨",
+                color = TextMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
                 value = searchText,
-                onValueChange = { searchText = it },
-                placeholder = { Text("Buscar por nombre o licencia", color = Color.Gray) },
+                onValueChange = {
+                    searchText = it
+                    // 🔍 BÚSQUEDA AUTOMÁTICA
+                    vm.buscarJugador(it.trim())
+                },
+                placeholder = { Text("Ej. Víctor García", color = TextMuted) },
                 singleLine = true,
-                colors = TextFieldDefaults.colors(
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Accent)
+                },
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
-                    cursorColor = Color(0xFF4CAF50),
-                    focusedContainerColor = Color(0xFF0C1A12),
-                    unfocusedContainerColor = Color(0xFF0C1A12),
-                    focusedIndicatorColor = Color(0xFF4CAF50),
-                    unfocusedIndicatorColor = Color.DarkGray
+                    cursorColor = Accent,
+                    focusedBorderColor = Accent,
+                    unfocusedBorderColor = TextMuted,
+                    focusedLabelColor = Accent
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(12.dp))
-
-            Button(
-                onClick = { vm.buscarJugador(searchText.trim()) },
-                enabled = searchText.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("Buscar", color = Color.White)
-            }
-
-            Spacer(Modifier.height(24.dp)) // 🔹 Más espacio antes de las cards
+            Spacer(Modifier.height(16.dp))
 
             if (buscando) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF4CAF50))
+                    CircularProgressIndicator(color = Accent)
+                }
+            } else if (searchText.isBlank()) {
+                // Mensaje cuando no se ha empezado a escribir
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Empieza a escribir para buscar 👇", color = TextMuted)
+                }
+            } else if (resultados.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("No hay jugadores que coincidan.", color = TextMuted)
+                    }
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(resultados) { (id, nombre) ->
-                        // 💬 Tarjeta más grande y visualmente destacada
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(90.dp) // 🔹 Más alta
-                                .clickable {
-                                    vm.enviarSolicitudAmistad(id, nombre) { msg ->
-                                        scope.launch { snackbar.showSnackbar(msg) }
-                                    }
-                                },
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFF1B372B)
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                            shape = MaterialTheme.shapes.medium
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(20.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                Text(
-                                    text = nombre,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                        ResultadoJugadorCardMini(
+                            nombre = nombre,
+                            onClick = {
+                                vm.enviarSolicitudAmistad(id, nombre) { msg ->
+                                    scope.launch { snackbar.showSnackbar(msg) }
+                                }
                             }
-                        }
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResultadoJugadorCardMini(
+    nombre: String,
+    onClick: () -> Unit
+) {
+    val inicial = nombre.trim().take(1).uppercase()
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp)              // 🔹 CARD PEQUEÑA
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = CardBg),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)          // 🔹 AVATAR MINI
+                    .clip(CircleShape)
+                    .background(Accent.copy(alpha = 0.18f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = inicial,
+                    color = Accent,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "👤 $nombre",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Toca para enviar solicitud ✅",
+                    color = TextMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }

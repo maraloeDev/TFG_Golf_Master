@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,8 +17,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -116,6 +120,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     )
 
     val handicap = handicapText.toDoubleOrNull()
+    val focusManager = LocalFocusManager.current
 
     Scaffold(containerColor = ScreenBg) { pv ->
         Box(
@@ -123,7 +128,10 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 .fillMaxSize()
                 .background(ScreenBg)
                 .padding(pv)
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 24.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { focusManager.clearFocus() })
+                },
             contentAlignment = Alignment.Center
         ) {
             Column(

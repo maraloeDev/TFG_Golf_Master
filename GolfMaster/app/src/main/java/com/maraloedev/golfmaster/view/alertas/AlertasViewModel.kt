@@ -2,7 +2,6 @@ package com.maraloedev.golfmaster.view.alertas
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -11,8 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
-
 
 class AlertasViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -55,21 +52,28 @@ class AlertasViewModel : ViewModel() {
     fun aceptarAmistad(alertaId: String, deUid: String, nombreDe: String) = viewModelScope.launch {
         val currentUid = auth.currentUser?.uid ?: return@launch
         try {
-            db.collection("amigo").document(alertaId).update("estado", "aceptada").await()
+            // Opcional: marcar como aceptada antes de borrar
+            db.collection("amigo").document(alertaId)
+                .update("estado", "aceptada")
+                .await()
 
             val currentSnap = db.collection("jugadores").document(currentUid).get().await()
             val miNombre = currentSnap.getString("nombre_jugador") ?: "Jugador"
 
+            // Añadir ambos como amigos
             db.collection("jugadores").document(currentUid)
                 .collection("amigos").document(deUid)
-                .set(mapOf("nombre" to nombreDe)).await()
+                .set(mapOf("nombre" to nombreDe))
+                .await()
 
             db.collection("jugadores").document(deUid)
                 .collection("amigos").document(currentUid)
-                .set(mapOf("nombre" to miNombre)).await()
+                .set(mapOf("nombre" to miNombre))
+                .await()
 
-            // Refrescar
-            observarInvitaciones()
+            // Borrar la notificación para que desaparezca
+            db.collection("amigo").document(alertaId).delete().await()
+
         } catch (e: Exception) {
             _error.value = e.localizedMessage
         }
@@ -77,8 +81,15 @@ class AlertasViewModel : ViewModel() {
 
     fun rechazarAmistad(alertaId: String) = viewModelScope.launch {
         try {
+            // Opcional: marcar como rechazada antes de borrarla
             db.collection("amigo").document(alertaId)
-                .update("estado", "rechazada").await()
+                .update("estado", "rechazada")
+                .await()
+
+            // Borrar la notificación
+            db.collection("amigo").document(alertaId)
+                .delete()
+                .await()
         } catch (e: Exception) {
             _error.value = e.localizedMessage
         }
