@@ -13,9 +13,37 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +58,8 @@ import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.model.Reserva
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 import java.util.UUID
 
 /* ============================================================
@@ -110,7 +139,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // 🔒 Claves únicas con índice (0 % duplicados)
                             itemsIndexed(
                                 items = listaUnica,
                                 key = { index, r ->
@@ -121,7 +149,47 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                     base.ifBlank { UUID.randomUUID().toString() }
                                 }
                             ) { _, r ->
-                                ReservaCard(r)
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { value ->
+                                        if (value == SwipeToDismissBoxValue.StartToEnd ||
+                                            value == SwipeToDismissBoxValue.EndToStart
+                                        ) {
+                                            // 🗑 Eliminar reserva al deslizar
+                                            r.id?.let { vm.eliminarReserva(it) }
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    }
+                                )
+
+                                SwipeToDismissBox(
+                                    state = dismissState,
+                                    enableDismissFromStartToEnd = true,
+                                    enableDismissFromEndToStart = true,
+                                    backgroundContent = {
+                                        val target = dismissState.targetValue
+                                        if (target != SwipeToDismissBoxValue.Settled) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(Color(0xFF8B0000))
+                                                    .padding(horizontal = 20.dp),
+                                                contentAlignment = if (target == SwipeToDismissBoxValue.StartToEnd)
+                                                    Alignment.CenterStart else Alignment.CenterEnd
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Eliminar",
+                                                    tint = Color.White
+                                                )
+                                            }
+                                        }
+                                    },
+                                    content = {
+                                        ReservaCard(r)
+                                    }
+                                )
                             }
                         }
                     }
@@ -213,7 +281,6 @@ private fun BigPills(
 /* ============================================================
    🟩 NUEVA RESERVA (Sheet)
    ============================================================ */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NuevaReservaSheet(
     vm: ReservasViewModel,
@@ -222,6 +289,7 @@ fun NuevaReservaSheet(
 ) {
     val jugadores by vm.jugadores.collectAsState()
     val loadingJugadores by vm.loadingJugadores.collectAsState()
+    val reservas by vm.reservas.collectAsState()   // para validar días repetidos
 
     var fecha by remember { mutableStateOf<Timestamp?>(null) }
     var hoyos by remember { mutableStateOf<String?>(null) }
@@ -303,11 +371,26 @@ fun NuevaReservaSheet(
         Button(
             onClick = {
                 scope.launch {
+                    // 1️⃣ Validar que ya no tenga reserva ese día
+                    val yaReservadoEseDia = reservas.any { existente ->
+                        mismaFecha(existente.fecha, fecha)
+                    }
+
+                    if (yaReservadoEseDia) {
+                        snackbarHostState.showSnackbar(
+                            "⚠️ Ya tienes una reserva ese día. No puedes reservar dos veces el mismo día."
+                        )
+                        return@launch
+                    }
+
+                    // 2️⃣ Crear la reserva + invitaciones
                     vm.crearReservaConInvitaciones(
                         fecha = fecha,
                         hoyos = hoyos,
                         jugadores = jugadoresSeleccionados
                     )
+
+                    // 3️⃣ Snackbar de éxito
                     snackbarHostState.showSnackbar(
                         if (jugadoresSeleccionados.isEmpty())
                             "✅ Reserva creada correctamente"
@@ -436,7 +519,7 @@ fun SelectField(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { opt ->
                 val isSelected = opt == value
-                DropdownMenuItem(
+                androidx.compose.material3.DropdownMenuItem(
                     text = {
                         Text(
                             text = opt,
@@ -472,8 +555,27 @@ fun JugadorCard(jugador: Jugadores, seleccionado: Boolean, onClick: () -> Unit) 
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.Default.Person, contentDescription = null, tint = if (seleccionado) Color.Black else Color.White)
+        Icon(
+            Icons.Default.Person,
+            contentDescription = null,
+            tint = if (seleccionado) Color.Black else Color.White
+        )
         Spacer(Modifier.width(10.dp))
-        Text(jugador.nombre_jugador, color = if (seleccionado) Color.Black else Color.White, fontWeight = FontWeight.Bold)
+        Text(
+            jugador.nombre_jugador,
+            color = if (seleccionado) Color.Black else Color.White,
+            fontWeight = FontWeight.Bold
+        )
     }
+}
+
+/* ============================================================
+   🟩 HELPER: MISMO DÍA
+   ============================================================ */
+private fun mismaFecha(a: Timestamp?, b: Timestamp?): Boolean {
+    if (a == null || b == null) return false
+    val c1 = Calendar.getInstance().apply { time = a.toDate() }
+    val c2 = Calendar.getInstance().apply { time = b.toDate() }
+    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
+            c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
 }

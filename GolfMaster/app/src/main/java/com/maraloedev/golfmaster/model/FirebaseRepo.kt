@@ -121,13 +121,17 @@ class FirebaseRepo(
     }
 
     suspend fun getReservasPorJugador(uid: String): List<Reserva> {
-        if (uid.isBlank()) throw Exception("UID inválido.")
         val snapshot = db.collection("reservas")
-            .whereEqualTo("usuarioId", uid)
+            .whereArrayContains("participantesIds", uid)  // 👈 AHORA POR PARTICIPANTES
             .get()
             .await()
-        return snapshot.toObjects(Reserva::class.java)
+
+        return snapshot.documents.mapNotNull { doc ->
+            val reserva = doc.toObject(Reserva::class.java)
+            reserva?.copy(id = doc.id)
+        }
     }
+
 
     suspend fun getReservasUsuario(): List<Reserva> {
         val snapshot = db.collection("reservas").get().await()

@@ -47,7 +47,7 @@ class ReservasViewModel(
     }
 
     // ============================================================
-    // 🔄 CARGAR RESERVAS
+    // 🔄 CARGAR RESERVAS (donde el usuario participa)
     // ============================================================
     fun cargarReservas() {
         val uid = auth.currentUser?.uid ?: return
@@ -79,7 +79,7 @@ class ReservasViewModel(
             _loadingJugadores.value = true
             runCatching {
                 repo.buscarJugadoresPorNombre(nombre)
-                    .filter { it.id != currentUid }
+                    .filter { it.id != currentUid } // ya excluimos al actual
             }.onSuccess {
                 _jugadores.value = it
             }.onFailure {
@@ -91,7 +91,7 @@ class ReservasViewModel(
     }
 
     // ============================================================
-    // 🟩 CREAR NUEVA RESERVA
+    // 🟩 CREAR NUEVA RESERVA SIMPLE (si en algún sitio la usas)
     // ============================================================
     fun crearReserva(
         fecha: Timestamp?,
@@ -112,7 +112,8 @@ class ReservasViewModel(
                 hora = hora,
                 recorrido = recorrido,
                 hoyos = hoyos,
-                jugadores = jugadores
+                jugadores = jugadores,
+                participantesIds = listOf(uid) // solo el creador
             )
             runCatching {
                 repo.crearReserva(reserva)
@@ -172,7 +173,9 @@ class ReservasViewModel(
         }
     }
 
-
+    // ============================================================
+    // 🟩 CREAR RESERVA + INVITACIONES
+    // ============================================================
     fun crearReservaConInvitaciones(
         fecha: Timestamp?,
         hoyos: String?,
@@ -184,34 +187,45 @@ class ReservasViewModel(
         viewModelScope.launch {
             _loading.value = true
             try {
-                // 🟢 1. Crea la reserva principal
+                // 1️⃣ Participantes: creador + invitados
+                val participantesIds = buildList {
+                    add(uid)
+                    addAll(jugadores.map { it.id })
+                }
+
+                // 2️⃣ Texto para mostrar en UI
+                val nombresJugadores = if (jugadores.isEmpty()) {
+                    "Solo"
+                } else {
+                    jugadores.joinToString { it.nombre_jugador }
+                }
+
+                // 3️⃣ Crear la reserva
                 val reserva = Reserva(
                     id = "",
                     usuarioId = uid,
                     fecha = fecha,
-                    hora = fecha,
-                    recorrido = hoyos,
+                    hora = fecha,       // usas misma Timestamp para hora
+                    recorrido = hoyos,  // si luego tienes otro campo de recorrido real, se cambia aquí
                     hoyos = hoyos,
-                    jugadores = if (jugadores.isEmpty()) "Solo" else jugadores.joinToString { it.nombre_jugador }
+                    jugadores = nombresJugadores,
+                    participantesIds = participantesIds
                 )
 
                 val idReserva = repo.crearReserva(reserva)
 
-                // 🟢 2. Si hay invitados, crea las invitaciones
+                // 4️⃣ Crear invitaciones para los demás
                 jugadores.forEach { j ->
                     repo.crearInvitacion(de = uid, para = j.id, reservaId = idReserva)
                 }
 
-                // 🟢 3. Recarga las reservas del usuario
+                // 5️⃣ Recargar reservas del usuario
                 cargarReservas()
             } catch (e: Exception) {
-                _error.value = e.message
+                _error.value = e.message ?: "Error al crear reserva con invitaciones"
             } finally {
                 _loading.value = false
             }
         }
     }
-
-
-
 }
