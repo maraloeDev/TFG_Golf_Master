@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -36,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -78,6 +80,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
     val reservas by vm.reservas.collectAsState()
     val loading by vm.loading.collectAsState()
     val snackbarHost = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     var showForm by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf("Próximas") }
@@ -149,38 +152,95 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                     base.ifBlank { UUID.randomUUID().toString() }
                                 }
                             ) { _, r ->
+
+                                // Estado para mostrar el diálogo y recordar última dirección
+                                var mostrarDialogo by remember { mutableStateOf(false) }
+                                var ultimoSwipe by remember {
+                                    mutableStateOf(SwipeToDismissBoxValue.Settled)
+                                }
+
                                 val dismissState = rememberSwipeToDismissBoxState(
                                     confirmValueChange = { value ->
                                         if (value == SwipeToDismissBoxValue.StartToEnd ||
                                             value == SwipeToDismissBoxValue.EndToStart
                                         ) {
-                                            // 🗑 Eliminar reserva al deslizar
-                                            r.id?.let { vm.eliminarReserva(it) }
-                                            true
+                                            // Guardamos hacia dónde ha deslizado y mostramos diálogo
+                                            ultimoSwipe = value
+                                            mostrarDialogo = true
+                                            false // no completamos el swipe todavía
                                         } else {
                                             false
                                         }
                                     }
                                 )
 
+                                // 🚨 ALERTA DE CONFIRMACIÓN
+                                if (mostrarDialogo) {
+                                    androidx.compose.material3.AlertDialog(
+                                        onDismissRequest = { mostrarDialogo = false },
+                                        title = { Text("Eliminar reserva") },
+                                        text = { Text("¿Seguro que quieres eliminar esta reserva?") },
+                                        confirmButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        // Animar la tarjeta en la dirección original
+                                                        dismissState.animateTo(ultimoSwipe)
+                                                        // Eliminar en Firestore
+                                                        r.id?.let { vm.eliminarReserva(it) }
+                                                        // Snackbar de feedback
+                                                        snackbarHost.showSnackbar("Reserva eliminada")
+                                                    }
+                                                    mostrarDialogo = false
+                                                }
+                                            ) {
+                                                Text("Sí, eliminar", color = Color.Red)
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        // Volver al estado normal
+                                                        dismissState.animateTo(SwipeToDismissBoxValue.Settled)
+                                                    }
+                                                    mostrarDialogo = false
+                                                }
+                                            ) {
+                                                Text("Cancelar")
+                                            }
+                                        }
+                                    )
+                                }
+
                                 SwipeToDismissBox(
                                     state = dismissState,
                                     enableDismissFromStartToEnd = true,
                                     enableDismissFromEndToStart = true,
                                     backgroundContent = {
-                                        val target = dismissState.targetValue
-                                        if (target != SwipeToDismissBoxValue.Settled) {
-                                            Box(
+                                        // 🔴 Fondo rojo con iconos distintos a izquierda y derecha
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color(0xFF8B0000))
+                                                .padding(horizontal = 20.dp)
+                                        ) {
+                                            Row(
                                                 modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .background(Color(0xFF8B0000))
-                                                    .padding(horizontal = 20.dp),
-                                                contentAlignment = if (target == SwipeToDismissBoxValue.StartToEnd)
-                                                    Alignment.CenterStart else Alignment.CenterEnd
+                                                    .fillMaxSize(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
+                                                // Izquierda: icono distinto
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteForever,
+                                                    contentDescription = "Eliminar (izquierda)",
+                                                    tint = Color.White
+                                                )
+                                                // Derecha: otro icono
                                                 Icon(
                                                     imageVector = Icons.Default.Delete,
-                                                    contentDescription = "Eliminar",
+                                                    contentDescription = "Eliminar (derecha)",
                                                     tint = Color.White
                                                 )
                                             }
