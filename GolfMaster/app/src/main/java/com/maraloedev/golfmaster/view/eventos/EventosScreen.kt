@@ -29,10 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.model.Evento
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
 /* ===== 🎨 Colores ===== */
 private val PillSelected = Color(0xFF1F4D3E)
@@ -159,11 +161,18 @@ fun BigPillsEventos(left: String, right: String, selected: String, onSelect: (St
     }
 }
 
-/* ===== 🟩 Card de evento ===== */
+/* ===== 🟩 Card de evento (ACTUALIZADA) ===== */
 @Composable
 fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState) {
     val df = remember { SimpleDateFormat("dd MMMM, yyyy - HH:mm", Locale("es", "ES")) }
     val scope = rememberCoroutineScope()
+
+    val numInscritos = e.inscritos.size
+    val plazasTotales = e.plazas ?: 0
+    val completo = plazasTotales > 0 && numInscritos >= plazasTotales
+
+    val uid = FirebaseAuth.getInstance().currentUser?.uid
+    val yaInscrito = uid != null && e.inscritos.contains(uid)
 
     Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
         Column(
@@ -183,18 +192,43 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                 color = Color.White.copy(alpha = .8f)
             )
 
+            Spacer(Modifier.height(6.dp))
+
+            // 👥 Info de inscritos visible para todos los usuarios
+            val plazasTexto = if (plazasTotales > 0) " / $plazasTotales plazas" else ""
+            Text(
+                text = "👥 $numInscritos inscritos$plazasTexto",
+                color = Color.White.copy(alpha = .8f),
+                fontWeight = FontWeight.SemiBold
+            )
+
             Spacer(Modifier.height(10.dp))
+
+            val botonHabilitado = uid != null && !yaInscrito && !completo
+
             Button(
                 onClick = {
                     scope.launch {
+                        vm.inscribirseEnEvento(e)
                         snackbarHost.showSnackbar("✅ Inscripción completada")
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = PillUnselected),
+                enabled = botonHabilitado,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (botonHabilitado) PillUnselected else Color.Gray
+                ),
                 shape = RoundedCornerShape(50),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Inscribirse", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text(
+                    when {
+                        yaInscrito -> "Ya estás inscrito"
+                        completo -> "Evento completo"
+                        else -> "Inscribirse"
+                    },
+                    color = if (botonHabilitado) Color.Black else Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -221,7 +255,11 @@ fun NuevoEventoSheet(
     val scope = rememberCoroutineScope()
     val botonActivo = nombre.isNotBlank() && tipo != null && fechaInicio != null && fechaFin != null
 
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
         Text("Nuevo Evento", color = Color.White, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(14.dp))
 
@@ -293,7 +331,12 @@ fun PreciosSection(precioSocio: Int, precioNoSocio: Int) {
             colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
             border = BorderStroke(1.dp, Color(0xFFBBA864))
         ) {
-            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("Socio (€): $precioSocio", color = Color.White, fontSize = 16.sp)
             }
         }
@@ -302,7 +345,12 @@ fun PreciosSection(precioSocio: Int, precioNoSocio: Int) {
             colors = CardDefaults.outlinedCardColors(containerColor = Color.Transparent),
             border = BorderStroke(1.dp, Color(0xFFBBA864))
         ) {
-            Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("No socio (€): $precioNoSocio", color = Color.White, fontSize = 16.sp)
             }
         }
@@ -351,7 +399,12 @@ fun DateTimePickerFieldEvento(
                 },
             color = CardBg
         ) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = value?.toDate()?.let(df::format) ?: "Seleccionar fecha y hora",
                     color = if (value == null) Color.Gray else Color.White,
@@ -383,7 +436,12 @@ fun SelectFieldEvento(
                 .clickable { expanded = true },
             color = CardBg
         ) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = value ?: "Seleccionar tipo",
                     color = if (value == null) Color.Gray else Color.White,

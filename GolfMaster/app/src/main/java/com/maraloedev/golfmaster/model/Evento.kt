@@ -11,5 +11,6 @@ data class Evento(
     val precioNoSocio: Double? = null,
     val fechaInicio: Timestamp? = null,
     val fechaFin: Timestamp? = null,
-    val organizadorId: String? = null
+    val organizadorId: String? = null,
+    val inscritos: List<String> = emptyList() // 👈 NUEVO: lista de uids inscritos
 )

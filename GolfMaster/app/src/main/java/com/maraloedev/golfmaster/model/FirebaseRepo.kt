@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -21,7 +22,7 @@ import kotlinx.coroutines.tasks.await
  *  - Reservas
  *  - Invitaciones
  *  - Eventos
- *  - Inscripciones
+ *  - Solicitudes de inscripción
  * ============================================================
  */
 class FirebaseRepo(
@@ -53,7 +54,6 @@ class FirebaseRepo(
 
     fun logout() = auth.signOut()
 
-
     // ============================================================
     // 🧍 JUGADORES
     // ============================================================
@@ -76,7 +76,6 @@ class FirebaseRepo(
 
         return snap.documents.mapNotNull { it.toObject(Jugadores::class.java) }
     }
-
 
     // ============================================================
     // 🏌️ TORNEOS
@@ -111,11 +110,9 @@ class FirebaseRepo(
         awaitClose { listener.remove() }
     }
 
-
-    /* ============================================================
-       🔹 RESERVAS
-       ============================================================ */
-
+    // ============================================================
+    // 📅 RESERVAS
+    // ============================================================
     suspend fun crearReserva(reserva: Reserva): String {
         val docRef = db.collection("reservas").document()
         val reservaConId = reserva.copy(id = docRef.id)
@@ -137,7 +134,7 @@ class FirebaseRepo(
             .await()
     }
 
-    // 👀 IMPORTANTE: solo reservas donde el usuario SEA PARTICIPANTE
+    // Solo reservas donde el usuario sea PARTICIPANTE
     suspend fun getReservasPorJugador(uid: String): List<Reserva> {
         val snap = db.collection("reservas")
             .whereArrayContains("participantesIds", uid)
@@ -161,10 +158,9 @@ class FirebaseRepo(
         }.await()
     }
 
-    /* ============================================================
-       🔹 INVITACIONES
-       ============================================================ */
-
+    // ============================================================
+    // 💌 INVITACIONES
+    // ============================================================
     suspend fun crearInvitacion(
         de: String,
         para: String,
@@ -182,7 +178,7 @@ class FirebaseRepo(
             "deId" to de,
             "paraId" to para,
             "reservaId" to reservaId,
-            "nombreDe" to nombreDe,   // 👈 AQUÍ guardamos el nombre
+            "nombreDe" to nombreDe,
             "fecha" to fecha,
             "estado" to "pendiente",
             "creadaEn" to Timestamp.now()
@@ -190,7 +186,6 @@ class FirebaseRepo(
         docRef.set(invitacion).await()
         return docRef.id
     }
-
 
     suspend fun getInvitacionesPendientes(paraId: String): List<Invitacion> {
         val snap = db.collection("invitaciones")
@@ -212,90 +207,36 @@ class FirebaseRepo(
             .await()
     }
 
-
-
     // ============================================================
     // 🏆 EVENTOS
     // ============================================================
+    private val eventosRef = db.collection("eventos")
+
     suspend fun getEventos(): List<Evento> {
-        return try {
-            db.collection("eventos")
-                .get()
-                .await()
-                .documents
-                .mapNotNull { it.toObject(Evento::class.java)?.copy(id = it.id) }
-        } catch (e: Exception) {
-            emptyList()
+        return eventosRef.get().await().documents.mapNotNull { doc ->
+            doc.toObject(Evento::class.java)?.copy(id = doc.id)
         }
     }
 
     suspend fun addEvento(evento: Evento) {
-        val currentUser = auth.currentUser ?: throw Exception("Usuario no autenticado")
-        val data = hashMapOf(
-            "nombre" to evento.nombre,
-            "tipo" to evento.tipo,
-            "plazas" to (evento.plazas ?: 0),
-            "precioSocio" to (evento.precioSocio ?: 0.0),
-            "precioNoSocio" to (evento.precioNoSocio ?: 0.0),
-            "fechaInicio" to (evento.fechaInicio ?: Timestamp.now()),
-            "fechaFin" to (evento.fechaFin ?: Timestamp.now()),
-            "organizadorId" to currentUser.uid
-        )
-        db.collection("eventos").add(data).await()
+        eventosRef.add(evento).await()
     }
 
-    suspend fun inscribirseEnEvento(evento: Evento) {
-        val eventoId = evento.id ?: throw Exception("ID del evento no válido")
-        val docRef = db.collection("eventos").document(eventoId)
-
-        db.runTransaction { tx ->
-            val snapshot = tx.get(docRef)
-            val plazasActuales = snapshot.getLong("plazas") ?: 0
-            if (plazasActuales > 0) {
-                tx.update(docRef, "plazas", plazasActuales - 1)
-            } else {
-                throw Exception("No quedan plazas disponibles para este evento.")
-            }
-        }.await()
+    // Inscribir varios usuarios: va acumulando en el array "inscritos"
+    suspend fun inscribirseEnEvento(eventoId: String, uid: String) {
+        eventosRef.document(eventoId).update(
+            "inscritos", FieldValue.arrayUnion(uid)
+        ).await()
     }
 
     suspend fun updateEvento(evento: Evento) {
-        val currentUser = auth.currentUser ?: throw Exception("Usuario no autenticado")
-        val eventoId = evento.id ?: throw Exception("ID del evento no válido")
-
-        val eventoRef = db.collection("eventos").document(eventoId)
-        val snapshot = eventoRef.get().await()
-        val organizadorId = snapshot.getString("organizadorId")
-
-        if (organizadorId != currentUser.uid) {
-            throw Exception("No tienes permisos para editar este evento.")
-        }
-
-        val updates = mapOf(
-            "nombre" to evento.nombre,
-            "tipo" to evento.tipo,
-            "plazas" to evento.plazas,
-            "precioSocio" to evento.precioSocio,
-            "precioNoSocio" to evento.precioNoSocio,
-            "fechaInicio" to evento.fechaInicio,
-            "fechaFin" to evento.fechaFin
-        )
-        eventoRef.update(updates).await()
+        val id = evento.id ?: return
+        eventosRef.document(id).set(evento).await()
     }
 
-    suspend fun deleteEvento(eventoId: String) {
-        val currentUser = auth.currentUser ?: throw Exception("Usuario no autenticado")
-        val eventoRef = db.collection("eventos").document(eventoId)
-        val snapshot = eventoRef.get().await()
-        val organizadorId = snapshot.getString("organizadorId")
-
-        if (organizadorId != currentUser.uid) {
-            throw Exception("No tienes permisos para eliminar este evento.")
-        }
-
-        eventoRef.delete().await()
+    suspend fun deleteEvento(id: String) {
+        eventosRef.document(id).delete().await()
     }
-
 
     // ============================================================
     // 📬 SOLICITUDES DE INSCRIPCIÓN (TORNEOS)

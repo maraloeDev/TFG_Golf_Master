@@ -3,6 +3,7 @@ package com.maraloedev.golfmaster.view.eventos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.model.Evento
 import com.maraloedev.golfmaster.model.FirebaseRepo
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,7 @@ class EventosViewModel(
         }
     }
 
-    // ================== 🔹 Crear nuevo evento (sin plazas) ==================
+    // ================== 🔹 Crear nuevo evento ==================
     fun crearEvento(
         nombre: String,
         tipo: String?,
@@ -60,11 +61,18 @@ class EventosViewModel(
         }
     }
 
-    // ================== 🔹 Inscribirse a un evento ==================
+    // ================== 🔹 Inscribirse a un evento (varios usuarios) ==================
     fun inscribirseEnEvento(evento: Evento) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
         viewModelScope.launch {
-            runCatching { repo.inscribirseEnEvento(evento) }
-                .onSuccess { cargarEventos() }
+            // Si ya está inscrito, no hacemos nada
+            if (evento.inscritos.contains(uid)) return@launch
+
+            val eventoId = evento.id ?: return@launch
+
+            runCatching { repo.inscribirseEnEvento(eventoId, uid) }
+                .onSuccess { cargarEventos() }   // todos verán la lista actualizada
                 .onFailure { _error.value = it.message }
         }
     }
