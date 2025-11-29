@@ -19,26 +19,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.maraloedev.golfmaster.model.Invitacion
 import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.model.Reserva
 import kotlinx.coroutines.launch
@@ -79,6 +61,8 @@ private val CardBg = Color(0xFF0D1B12)
 fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
     val reservas by vm.reservas.collectAsState()
     val loading by vm.loading.collectAsState()
+    val invitacionesPendientes by vm.invitacionesPendientes.collectAsState()
+
     val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -153,7 +137,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                 }
                             ) { _, r ->
 
-                                // Estado para mostrar el diálogo
                                 var mostrarDialogo by remember { mutableStateOf(false) }
 
                                 val dismissState = rememberSwipeToDismissBoxState(
@@ -161,7 +144,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                         if (value == SwipeToDismissBoxValue.StartToEnd ||
                                             value == SwipeToDismissBoxValue.EndToStart
                                         ) {
-                                            // 👉 No completamos el swipe, solo mostramos el diálogo
                                             mostrarDialogo = true
                                             false
                                         } else {
@@ -170,9 +152,8 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                     }
                                 )
 
-                                // 🚨 ALERTA DE CONFIRMACIÓN
                                 if (mostrarDialogo) {
-                                    androidx.compose.material3.AlertDialog(
+                                    AlertDialog(
                                         onDismissRequest = { mostrarDialogo = false },
                                         title = { Text("Eliminar reserva") },
                                         text = { Text("¿Seguro que quieres eliminar esta reserva?") },
@@ -180,9 +161,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                             TextButton(
                                                 onClick = {
                                                     scope.launch {
-                                                        // Eliminar en Firestore
                                                         r.id?.let { vm.eliminarReserva(it) }
-                                                        // Snackbar de feedback
                                                         snackbarHost.showSnackbar("Reserva eliminada")
                                                     }
                                                     mostrarDialogo = false
@@ -193,10 +172,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                         },
                                         dismissButton = {
                                             TextButton(
-                                                onClick = {
-                                                    // Cancelar: el swipe vuelve solo a Settled
-                                                    mostrarDialogo = false
-                                                }
+                                                onClick = { mostrarDialogo = false }
                                             ) {
                                                 Text("Cancelar")
                                             }
@@ -209,7 +185,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                     enableDismissFromStartToEnd = true,
                                     enableDismissFromEndToStart = true,
                                     backgroundContent = {
-                                        // 🔴 Fondo rojo con iconos distintos a izquierda y derecha
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
@@ -244,6 +219,16 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                 }
             }
         }
+    }
+
+    // 🔔 Diálogo de invitación (primera pendiente)
+    val invitacionMostrada = invitacionesPendientes.firstOrNull()
+    if (invitacionMostrada != null) {
+        InvitacionDialog(
+            invitacion = invitacionMostrada,
+            onAceptar = { vm.responderInvitacion(invitacionMostrada, true) },
+            onRechazar = { vm.responderInvitacion(invitacionMostrada, false) }
+        )
     }
 
     if (showForm) {
@@ -419,7 +404,6 @@ fun NuevaReservaSheet(
         Button(
             onClick = {
                 scope.launch {
-                    // 1️⃣ Validar que ya no tenga reserva ese día
                     val yaReservadoEseDia = reservas.any { existente ->
                         mismaFecha(existente.fecha, fecha)
                     }
@@ -431,14 +415,12 @@ fun NuevaReservaSheet(
                         return@launch
                     }
 
-                    // 2️⃣ Crear la reserva + invitaciones
                     vm.crearReservaConInvitaciones(
                         fecha = fecha,
                         hoyos = hoyos,
                         jugadores = jugadoresSeleccionados
                     )
 
-                    // 3️⃣ Snackbar de éxito
                     snackbarHostState.showSnackbar(
                         if (jugadoresSeleccionados.isEmpty())
                             "✅ Reserva creada correctamente"
@@ -567,7 +549,7 @@ fun SelectField(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { opt ->
                 val isSelected = opt == value
-                androidx.compose.material3.DropdownMenuItem(
+                DropdownMenuItem(
                     text = {
                         Text(
                             text = opt,
@@ -626,4 +608,41 @@ private fun mismaFecha(a: Timestamp?, b: Timestamp?): Boolean {
     val c2 = Calendar.getInstance().apply { time = b.toDate() }
     return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
             c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
+}
+
+/* ============================================================
+   🟩 DIALOGO DE INVITACIÓN
+   ============================================================ */
+@Composable
+fun InvitacionDialog(
+    invitacion: Invitacion,
+    onAceptar: () -> Unit,
+    onRechazar: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { /* obligamos a decidir */ },
+        title = {
+            Text("Invitación a reserva ⛳")
+        },
+        text = {
+            Column {
+                Text("Te han invitado a una reserva de golf.")
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "¿Quieres unirte a esta reserva?",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onAceptar) {
+                Text("Aceptar", color = PillUnselected)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onRechazar) {
+                Text("Rechazar", color = Color.Red)
+            }
+        }
+    )
 }

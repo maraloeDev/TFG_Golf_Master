@@ -67,13 +67,15 @@ class FirebaseRepo(
         return doc.toObject(Jugadores::class.java)
     }
 
-    suspend fun buscarJugadoresPorNombre(nombre: String): List<Jugadores> =
-        db.collection("jugadores")
+    suspend fun buscarJugadoresPorNombre(nombre: String): List<Jugadores> {
+        val snap = db.collection("jugadores")
             .whereGreaterThanOrEqualTo("nombre_jugador", nombre)
             .whereLessThanOrEqualTo("nombre_jugador", nombre + "\uf8ff")
             .get()
             .await()
-            .toObjects(Jugadores::class.java)
+
+        return snap.documents.mapNotNull { it.toObject(Jugadores::class.java) }
+    }
 
 
     // ============================================================
@@ -110,64 +112,97 @@ class FirebaseRepo(
     }
 
 
-    // ============================================================
-    // 📅 RESERVAS
-    // ============================================================
-    suspend fun crearReserva(r: Reserva): String {
-        val ref = db.collection("reservas").document()
-        val reservaFinal = r.copy(id = ref.id)
-        ref.set(reservaFinal).await()
-        return ref.id
-    }
+    /* ============================================================
+       🔹 RESERVAS
+       ============================================================ */
 
-    suspend fun getReservasPorJugador(uid: String): List<Reserva> {
-        val snapshot = db.collection("reservas")
-            .whereArrayContains("participantesIds", uid)  // 👈 AHORA POR PARTICIPANTES
-            .get()
-            .await()
-
-        return snapshot.documents.mapNotNull { doc ->
-            val reserva = doc.toObject(Reserva::class.java)
-            reserva?.copy(id = doc.id)
-        }
-    }
-
-
-    suspend fun getReservasUsuario(): List<Reserva> {
-        val snapshot = db.collection("reservas").get().await()
-        return snapshot.toObjects(Reserva::class.java)
+    suspend fun crearReserva(reserva: Reserva): String {
+        val docRef = db.collection("reservas").document()
+        val reservaConId = reserva.copy(id = docRef.id)
+        docRef.set(reservaConId).await()
+        return docRef.id
     }
 
     suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
-        if (id.isBlank()) throw Exception("ID de reserva no válido")
-        db.collection("reservas").document(id).update(nuevosDatos).await()
+        db.collection("reservas")
+            .document(id)
+            .update(nuevosDatos)
+            .await()
     }
 
     suspend fun eliminarReserva(id: String) {
-        if (id.isBlank()) throw Exception("ID de reserva no válido")
-        db.collection("reservas").document(id).delete().await()
+        db.collection("reservas")
+            .document(id)
+            .delete()
+            .await()
     }
 
+    // 👀 IMPORTANTE: solo reservas donde el usuario SEA PARTICIPANTE
+    suspend fun getReservasPorJugador(uid: String): List<Reserva> {
+        val snap = db.collection("reservas")
+            .whereArrayContains("participantesIds", uid)
+            .get()
+            .await()
 
-    // ============================================================
-    // 🟩 INVITACIONES
-    // ============================================================
-    suspend fun crearInvitacion(de: String, para: String, reservaId: String) {
-        if (de.isBlank() || para.isBlank() || reservaId.isBlank()) {
-            throw Exception("Datos de invitación inválidos.")
-        }
+        return snap.documents.mapNotNull { it.toObject(Reserva::class.java) }
+    }
 
-        val ref = db.collection("invitaciones").document()
-        val data = hashMapOf(
-            "id" to ref.id,
-            "de" to de,
-            "para" to para,
+    suspend fun anadirParticipanteAReserva(
+        reservaId: String,
+        userId: String
+    ) {
+        val reservaRef = db.collection("reservas").document(reservaId)
+        db.runTransaction { tx ->
+            val snap = tx.get(reservaRef)
+            val actuales = (snap.get("participantesIds") as? List<String>).orEmpty()
+            if (!actuales.contains(userId)) {
+                tx.update(reservaRef, "participantesIds", actuales + userId)
+            }
+        }.await()
+    }
+
+    /* ============================================================
+       🔹 INVITACIONES
+       ============================================================ */
+
+    suspend fun crearInvitacion(
+        de: String,
+        para: String,
+        reservaId: String
+    ): String {
+        val docRef = db.collection("invitaciones").document()
+        val invitacion = mapOf(
+            "id" to docRef.id,
+            "deId" to de,
+            "paraId" to para,
             "reservaId" to reservaId,
             "estado" to "pendiente",
-            "fecha" to Timestamp.now()
+            "creadaEn" to Timestamp.now()
         )
-        ref.set(data).await()
+        docRef.set(invitacion).await()
+        return docRef.id
     }
+
+    suspend fun getInvitacionesPendientes(paraId: String): List<Invitacion> {
+        val snap = db.collection("invitaciones")
+            .whereEqualTo("paraId", paraId)
+            .whereEqualTo("estado", "pendiente")
+            .get()
+            .await()
+
+        return snap.documents.mapNotNull { it.toObject(Invitacion::class.java) }
+    }
+
+    suspend fun actualizarEstadoInvitacion(
+        invitacionId: String,
+        nuevoEstado: String
+    ) {
+        db.collection("invitaciones")
+            .document(invitacionId)
+            .update("estado", nuevoEstado)
+            .await()
+    }
+
 
 
     // ============================================================

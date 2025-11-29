@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.maraloedev.golfmaster.model.FirebaseRepo
+import com.maraloedev.golfmaster.model.Invitacion
 import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.model.Reserva
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
  * Gestiona las reservas del usuario logueado:
  *  - Carga, creación, actualización y eliminación.
  *  - Búsqueda de jugadores (excluye el actual).
+ *  - Invitaciones pendientes (aceptar / rechazar).
  */
 class ReservasViewModel(
     private val repo: FirebaseRepo = FirebaseRepo(),
@@ -42,8 +44,13 @@ class ReservasViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
+    // 🔔 Invitaciones pendientes para el usuario logueado
+    private val _invitacionesPendientes = MutableStateFlow<List<Invitacion>>(emptyList())
+    val invitacionesPendientes = _invitacionesPendientes.asStateFlow()
+
     init {
         cargarReservas()
+        cargarInvitacionesPendientes()
     }
 
     // ============================================================
@@ -66,6 +73,21 @@ class ReservasViewModel(
     }
 
     // ============================================================
+    // 🔔 CARGAR INVITACIONES PENDIENTES
+    // ============================================================
+    fun cargarInvitacionesPendientes() {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            runCatching { repo.getInvitacionesPendientes(uid) }
+                .onSuccess { _invitacionesPendientes.value = it }
+                .onFailure {
+                    _invitacionesPendientes.value = emptyList()
+                    _error.value = it.message ?: "Error al cargar invitaciones"
+                }
+        }
+    }
+
+    // ============================================================
     // 🔍 BUSCAR JUGADORES (EXCLUYENDO AL USUARIO ACTUAL)
     // ============================================================
     fun buscarJugadores(nombre: String) {
@@ -79,7 +101,7 @@ class ReservasViewModel(
             _loadingJugadores.value = true
             runCatching {
                 repo.buscarJugadoresPorNombre(nombre)
-                    .filter { it.id != currentUid } // ya excluimos al actual
+                    .filter { it.id != currentUid } // excluimos al actual
             }.onSuccess {
                 _jugadores.value = it
             }.onFailure {
@@ -91,7 +113,7 @@ class ReservasViewModel(
     }
 
     // ============================================================
-    // 🟩 CREAR NUEVA RESERVA SIMPLE (si en algún sitio la usas)
+    // 🟩 CREAR NUEVA RESERVA SIMPLE (si la usas en otro sitio)
     // ============================================================
     fun crearReserva(
         fecha: Timestamp?,
@@ -116,7 +138,7 @@ class ReservasViewModel(
                 participantesIds = listOf(uid) // solo el creador
             )
             runCatching {
-                repo.crearReserva(reserva)
+                val a = repo.crearReserva(reserva)
                 cargarReservas()
             }.onFailure {
                 _error.value = it.message ?: "Error al crear reserva"
@@ -175,6 +197,8 @@ class ReservasViewModel(
 
     // ============================================================
     // 🟩 CREAR RESERVA + INVITACIONES
+    //  - La reserva se crea solo con el creador en participantesIds
+    //  - Los invitados no ven la reserva hasta que acepten
     // ============================================================
     fun crearReservaConInvitaciones(
         fecha: Timestamp?,
@@ -187,26 +211,20 @@ class ReservasViewModel(
         viewModelScope.launch {
             _loading.value = true
             try {
-                // 1️⃣ Participantes: creador + invitados
-                val participantesIds = buildList {
-                    add(uid)
-                    addAll(jugadores.map { it.id })
-                }
+                val participantesIds = listOf(uid)
 
-                // 2️⃣ Texto para mostrar en UI
                 val nombresJugadores = if (jugadores.isEmpty()) {
                     "Solo"
                 } else {
                     jugadores.joinToString { it.nombre_jugador }
                 }
 
-                // 3️⃣ Crear la reserva
                 val reserva = Reserva(
                     id = "",
                     usuarioId = uid,
                     fecha = fecha,
-                    hora = fecha,       // usas misma Timestamp para hora
-                    recorrido = hoyos,  // si luego tienes otro campo de recorrido real, se cambia aquí
+                    hora = fecha,
+                    recorrido = hoyos,
                     hoyos = hoyos,
                     jugadores = nombresJugadores,
                     participantesIds = participantesIds
@@ -214,17 +232,46 @@ class ReservasViewModel(
 
                 val idReserva = repo.crearReserva(reserva)
 
-                // 4️⃣ Crear invitaciones para los demás
+                // Crear invitaciones PENDIENTES
                 jugadores.forEach { j ->
                     repo.crearInvitacion(de = uid, para = j.id, reservaId = idReserva)
                 }
 
-                // 5️⃣ Recargar reservas del usuario
                 cargarReservas()
             } catch (e: Exception) {
                 _error.value = e.message ?: "Error al crear reserva con invitaciones"
             } finally {
                 _loading.value = false
+            }
+        }
+    }
+
+    // ============================================================
+    // ✅ RESPONDER INVITACIÓN (aceptar / rechazar)
+    // ============================================================
+    fun responderInvitacion(
+        invitacion: Invitacion,
+        aceptar: Boolean
+    ) {
+        val uid = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                if (aceptar) {
+                    // Añadir al usuario a la reserva
+                    repo.anadirParticipanteAReserva(invitacion.reservaId, uid)
+                    // Marcar invitación como aceptada
+                    repo.actualizarEstadoInvitacion(invitacion.id, "aceptada")
+                    // Recargar reservas (ya la verá)
+                    cargarReservas()
+                } else {
+                    // Solo cambiar estado a rechazada
+                    repo.actualizarEstadoInvitacion(invitacion.id, "rechazada")
+                }
+
+                // Actualizar invitaciones pendientes
+                cargarInvitacionesPendientes()
+            } catch (e: Exception) {
+                _error.value = e.message ?: "Error al responder invitación"
             }
         }
     }
