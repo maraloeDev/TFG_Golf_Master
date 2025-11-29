@@ -153,21 +153,17 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                 }
                             ) { _, r ->
 
-                                // Estado para mostrar el diálogo y recordar última dirección
+                                // Estado para mostrar el diálogo
                                 var mostrarDialogo by remember { mutableStateOf(false) }
-                                var ultimoSwipe by remember {
-                                    mutableStateOf(SwipeToDismissBoxValue.Settled)
-                                }
 
                                 val dismissState = rememberSwipeToDismissBoxState(
                                     confirmValueChange = { value ->
                                         if (value == SwipeToDismissBoxValue.StartToEnd ||
                                             value == SwipeToDismissBoxValue.EndToStart
                                         ) {
-                                            // Guardamos hacia dónde ha deslizado y mostramos diálogo
-                                            ultimoSwipe = value
+                                            // 👉 No completamos el swipe, solo mostramos el diálogo
                                             mostrarDialogo = true
-                                            false // no completamos el swipe todavía
+                                            false
                                         } else {
                                             false
                                         }
@@ -184,8 +180,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                             TextButton(
                                                 onClick = {
                                                     scope.launch {
-                                                        // Animar la tarjeta en la dirección original
-                                                        dismissState.animateTo(ultimoSwipe)
                                                         // Eliminar en Firestore
                                                         r.id?.let { vm.eliminarReserva(it) }
                                                         // Snackbar de feedback
@@ -200,10 +194,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                         dismissButton = {
                                             TextButton(
                                                 onClick = {
-                                                    scope.launch {
-                                                        // Volver al estado normal
-                                                        dismissState.animateTo(SwipeToDismissBoxValue.Settled)
-                                                    }
+                                                    // Cancelar: el swipe vuelve solo a Settled
                                                     mostrarDialogo = false
                                                 }
                                             ) {
@@ -226,18 +217,15 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                                 .padding(horizontal = 20.dp)
                                         ) {
                                             Row(
-                                                modifier = Modifier
-                                                    .fillMaxSize(),
+                                                modifier = Modifier.fillMaxSize(),
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
-                                                // Izquierda: icono distinto
                                                 Icon(
                                                     imageVector = Icons.Default.DeleteForever,
                                                     contentDescription = "Eliminar (izquierda)",
                                                     tint = Color.White
                                                 )
-                                                // Derecha: otro icono
                                                 Icon(
                                                     imageVector = Icons.Default.Delete,
                                                     contentDescription = "Eliminar (derecha)",
