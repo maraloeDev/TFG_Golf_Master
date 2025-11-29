@@ -267,21 +267,17 @@ class ReservasViewModel(
 
                 val idReserva = repo.crearReserva(reserva)
 
-                // Nombre del creador (puedes cambiar a lo que tengas guardado en jugadores)
-                val nombreCreador = auth.currentUser?.displayName ?: "Un jugador"
-
-                // Crear invitaciones PENDIENTES con nombre + fecha
+                // Crear invitaciones PENDIENTES con nombreDe + fecha
                 jugadores.forEach { j ->
                     repo.crearInvitacion(
                         de = uid,
                         para = j.id,
                         reservaId = idReserva,
-                        nombreDe = nombreCreador,
                         fecha = fecha
                     )
                 }
 
-                // Listener actualiza solo
+                // El listener actualizará la lista solo
             } catch (e: Exception) {
                 _error.value = e.message ?: "Error al crear reserva con invitaciones"
             } finally {
@@ -289,6 +285,7 @@ class ReservasViewModel(
             }
         }
     }
+
 
 
     // ============================================================

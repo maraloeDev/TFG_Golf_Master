@@ -169,16 +169,20 @@ class FirebaseRepo(
         de: String,
         para: String,
         reservaId: String,
-        nombreDe: String,
         fecha: Timestamp?
     ): String {
+        // 1️⃣ Obtener nombre del jugador que invita
+        val jugadorSnap = db.collection("jugadores").document(de).get().await()
+        val nombreDe = jugadorSnap.getString("nombre_jugador") ?: "Un jugador"
+
+        // 2️⃣ Crear doc de invitación
         val docRef = db.collection("invitaciones").document()
-        val invitacion = hashMapOf(
+        val invitacion = mapOf(
             "id" to docRef.id,
             "deId" to de,
             "paraId" to para,
             "reservaId" to reservaId,
-            "nombreDe" to nombreDe,
+            "nombreDe" to nombreDe,   // 👈 AQUÍ guardamos el nombre
             "fecha" to fecha,
             "estado" to "pendiente",
             "creadaEn" to Timestamp.now()

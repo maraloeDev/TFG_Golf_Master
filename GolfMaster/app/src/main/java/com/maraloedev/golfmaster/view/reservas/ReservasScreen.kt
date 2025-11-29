@@ -223,13 +223,6 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
 
     // 🔔 Diálogo de invitación (primera pendiente)
     val invitacionMostrada = invitacionesPendientes.firstOrNull()
-    if (invitacionMostrada != null) {
-        InvitacionDialog(
-            invitacion = invitacionMostrada,
-            onAceptar = { vm.responderInvitacion(invitacionMostrada, true) },
-            onRechazar = { vm.responderInvitacion(invitacionMostrada, false) }
-        )
-    }
 
     if (showForm) {
         ModalBottomSheet(
@@ -618,45 +611,3 @@ private fun mismaFecha(a: Timestamp?, b: Timestamp?): Boolean {
     return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) &&
             c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
 }
-
-/* ============================================================
-   🟩 DIALOGO DE INVITACIÓN
-   ============================================================ */
-@Composable
-fun InvitacionDialog(
-    invitacion: Invitacion,
-    onAceptar: () -> Unit,
-    onRechazar: () -> Unit
-) {
-    val df = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
-    val fechaTexto = invitacion.fecha?.toDate()?.let(df::format) ?: "fecha sin definir"
-    val nombre = if (invitacion.nombreDe.isNotBlank()) invitacion.nombreDe else "un jugador"
-
-    AlertDialog(
-        onDismissRequest = { /* obligamos a decidir */ },
-        title = {
-            Text("Invitación a reserva ⛳")
-        },
-        text = {
-            Column {
-                Text("Te ha invitado $nombre a una reserva de golf.")
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Fecha y hora: $fechaTexto",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onAceptar) {
-                Text("Aceptar", color = PillUnselected)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onRechazar) {
-                Text("Rechazar", color = Color.Red)
-            }
-        }
-    )
-}
-
