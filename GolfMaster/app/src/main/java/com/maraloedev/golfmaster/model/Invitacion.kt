@@ -7,6 +7,6 @@ data class Invitacion(
     val deId: String = "",
     val paraId: String = "",
     val reservaId: String = "",
-    val estado: String = "pendiente",   // "pendiente", "aceptada", "rechazada"
+    val estado: String = "pendiente",
     val creadaEn: Timestamp = Timestamp.now()
 )

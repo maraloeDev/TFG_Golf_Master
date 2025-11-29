@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.maraloedev.golfmaster.model.Invitacion
+import com.maraloedev.golfmaster.model.AlertaAmistad
 
 private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
@@ -75,7 +75,7 @@ fun AlertasScreen(vm: AlertasViewModel = viewModel()) {
 
 @Composable
 fun AmistadCard(
-    inv: Invitacion,
+    inv: AlertaAmistad,
     onAceptar: () -> Unit,
     onRechazar: () -> Unit
 ) {
