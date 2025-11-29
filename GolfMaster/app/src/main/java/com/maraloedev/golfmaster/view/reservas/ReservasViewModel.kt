@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.maraloedev.golfmaster.model.FirebaseRepo
 import com.maraloedev.golfmaster.model.Invitacion
 import com.maraloedev.golfmaster.model.Jugadores
@@ -24,6 +26,13 @@ class ReservasViewModel(
     private val repo: FirebaseRepo = FirebaseRepo(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : ViewModel() {
+
+    // ============================================================
+    // FIRESTORE + LISTENERS
+    // ============================================================
+    private val db = FirebaseFirestore.getInstance()
+    private var reservasListener: ListenerRegistration? = null
+    private var invitacionesListener: ListenerRegistration? = null
 
     // ============================================================
     // ESTADOS
@@ -49,42 +58,67 @@ class ReservasViewModel(
     val invitacionesPendientes = _invitacionesPendientes.asStateFlow()
 
     init {
+        // 👇 Se enganchan los listeners en tiempo real
         cargarReservas()
         cargarInvitacionesPendientes()
     }
 
     // ============================================================
-    // 🔄 CARGAR RESERVAS (donde el usuario participa)
+    // 🔄 CARGAR RESERVAS (en tiempo real, donde el usuario participa)
     // ============================================================
     fun cargarReservas() {
         val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            _loading.value = true
-            runCatching { repo.getReservasPorJugador(uid) }
-                .onSuccess {
-                    _reservas.value = it.sortedByDescending { r -> r.fecha?.seconds }
-                }
-                .onFailure {
+        _loading.value = true
+
+        // Quitar listener anterior si existía
+        reservasListener?.remove()
+
+        reservasListener = db.collection("reservas")
+            .whereArrayContains("participantesIds", uid)
+            .addSnapshotListener { snaps, e ->
+                if (e != null) {
+                    _error.value = e.message ?: "Error al escuchar reservas"
                     _reservas.value = emptyList()
-                    _error.value = it.message ?: "Error al cargar reservas"
+                    _loading.value = false
+                    return@addSnapshotListener
                 }
-            _loading.value = false
-        }
+
+                val lista = snaps?.documents
+                    ?.mapNotNull { it.toObject(Reserva::class.java) }
+                    .orEmpty()
+
+                _reservas.value = lista.sortedByDescending { it.fecha?.seconds ?: 0 }
+                _loading.value = false
+            }
     }
 
     // ============================================================
-    // 🔔 CARGAR INVITACIONES PENDIENTES
+    // 🔔 CARGAR INVITACIONES PENDIENTES (en tiempo real)
     // ============================================================
     fun cargarInvitacionesPendientes() {
         val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            runCatching { repo.getInvitacionesPendientes(uid) }
-                .onSuccess { _invitacionesPendientes.value = it }
-                .onFailure {
+
+        invitacionesListener?.remove()
+
+        invitacionesListener = db.collection("invitaciones")
+            .whereEqualTo("paraId", uid)
+            .whereEqualTo("estado", "pendiente")
+            .addSnapshotListener { snaps, e ->
+                if (e != null) {
+                    _error.value = e.message ?: "Error al escuchar invitaciones"
                     _invitacionesPendientes.value = emptyList()
-                    _error.value = it.message ?: "Error al cargar invitaciones"
+                    return@addSnapshotListener
                 }
-        }
+
+                val lista = snaps?.documents
+                    ?.mapNotNull { doc ->
+                        doc.toObject(Invitacion::class.java)?.copy(id = doc.id)
+                    }
+                    .orEmpty()
+
+                _invitacionesPendientes.value =
+                    lista.sortedByDescending { it.creadaEn.seconds }
+            }
     }
 
     // ============================================================
@@ -138,8 +172,9 @@ class ReservasViewModel(
                 participantesIds = listOf(uid) // solo el creador
             )
             runCatching {
-                val a = repo.crearReserva(reserva)
-                cargarReservas()
+                repo.crearReserva(reserva)
+                // ❌ ya no hace falta llamar a cargarReservas():
+                // el listener se enterará solo del cambio.
             }.onFailure {
                 _error.value = it.message ?: "Error al crear reserva"
             }
@@ -170,7 +205,7 @@ class ReservasViewModel(
 
             runCatching {
                 repo.actualizarReserva(id, nuevosDatos)
-                cargarReservas()
+                // El listener de reservas se actualiza solo
             }.onFailure {
                 _error.value = it.message ?: "Error al actualizar reserva"
             }
@@ -187,7 +222,7 @@ class ReservasViewModel(
             _loading.value = true
             runCatching {
                 repo.eliminarReserva(id)
-                cargarReservas()
+                // El listener de reservas se actualiza solo
             }.onFailure {
                 _error.value = it.message ?: "Error al eliminar reserva"
             }
@@ -232,12 +267,21 @@ class ReservasViewModel(
 
                 val idReserva = repo.crearReserva(reserva)
 
-                // Crear invitaciones PENDIENTES
+                // Nombre del creador (puedes cambiar a lo que tengas guardado en jugadores)
+                val nombreCreador = auth.currentUser?.displayName ?: "Un jugador"
+
+                // Crear invitaciones PENDIENTES con nombre + fecha
                 jugadores.forEach { j ->
-                    repo.crearInvitacion(de = uid, para = j.id, reservaId = idReserva)
+                    repo.crearInvitacion(
+                        de = uid,
+                        para = j.id,
+                        reservaId = idReserva,
+                        nombreDe = nombreCreador,
+                        fecha = fecha
+                    )
                 }
 
-                cargarReservas()
+                // Listener actualiza solo
             } catch (e: Exception) {
                 _error.value = e.message ?: "Error al crear reserva con invitaciones"
             } finally {
@@ -245,6 +289,7 @@ class ReservasViewModel(
             }
         }
     }
+
 
     // ============================================================
     // ✅ RESPONDER INVITACIÓN (aceptar / rechazar)
@@ -261,18 +306,27 @@ class ReservasViewModel(
                     repo.anadirParticipanteAReserva(invitacion.reservaId, uid)
                     // Marcar invitación como aceptada
                     repo.actualizarEstadoInvitacion(invitacion.id, "aceptada")
-                    // Recargar reservas (ya la verá)
-                    cargarReservas()
+                    // El listener de reservas traerá la nueva reserva al usuario
                 } else {
                     // Solo cambiar estado a rechazada
                     repo.actualizarEstadoInvitacion(invitacion.id, "rechazada")
                 }
 
-                // Actualizar invitaciones pendientes
-                cargarInvitacionesPendientes()
+                // El listener de invitaciones actualizará _invitacionesPendientes solo
+                // pero si quieres forzar, puedes volver a llamar:
+                // cargarInvitacionesPendientes()
             } catch (e: Exception) {
                 _error.value = e.message ?: "Error al responder invitación"
             }
         }
+    }
+
+    // ============================================================
+    // 🔚 LIMPIAR LISTENERS
+    // ============================================================
+    override fun onCleared() {
+        reservasListener?.remove()
+        invitacionesListener?.remove()
+        super.onCleared()
     }
 }

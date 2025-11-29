@@ -168,20 +168,25 @@ class FirebaseRepo(
     suspend fun crearInvitacion(
         de: String,
         para: String,
-        reservaId: String
+        reservaId: String,
+        nombreDe: String,
+        fecha: Timestamp?
     ): String {
         val docRef = db.collection("invitaciones").document()
-        val invitacion = mapOf(
+        val invitacion = hashMapOf(
             "id" to docRef.id,
             "deId" to de,
             "paraId" to para,
             "reservaId" to reservaId,
+            "nombreDe" to nombreDe,
+            "fecha" to fecha,
             "estado" to "pendiente",
             "creadaEn" to Timestamp.now()
         )
         docRef.set(invitacion).await()
         return docRef.id
     }
+
 
     suspend fun getInvitacionesPendientes(paraId: String): List<Invitacion> {
         val snap = db.collection("invitaciones")

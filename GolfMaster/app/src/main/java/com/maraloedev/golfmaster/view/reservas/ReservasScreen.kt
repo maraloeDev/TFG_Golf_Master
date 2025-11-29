@@ -250,13 +250,21 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
 private fun ReservaCard(r: Reserva) {
     val df = remember { SimpleDateFormat("dd MMMM yyyy - HH:mm", Locale("es", "ES")) }
 
+    // Evitar "9 hoyos Hoyos"
+    val textoHoyosBruto = r.hoyos?.trim().orEmpty()
+    val textoHoyos = when {
+        textoHoyosBruto.isBlank() -> "-- hoyos"
+        textoHoyosBruto.contains("hoyo", ignoreCase = true) -> textoHoyosBruto
+        else -> "$textoHoyosBruto hoyos"
+    }
+
     Surface(
         color = CardBg,
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text("⛳ ${r.hoyos ?: "--"} Hoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text("⛳ $textoHoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
             Text(
                 r.fecha?.toDate()?.let(df::format) ?: "Sin fecha",
                 color = Color.White.copy(alpha = .8f)
@@ -269,6 +277,7 @@ private fun ReservaCard(r: Reserva) {
         }
     }
 }
+
 
 /* ============================================================
    🟩 PILLS
@@ -619,6 +628,10 @@ fun InvitacionDialog(
     onAceptar: () -> Unit,
     onRechazar: () -> Unit
 ) {
+    val df = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
+    val fechaTexto = invitacion.fecha?.toDate()?.let(df::format) ?: "fecha sin definir"
+    val nombre = if (invitacion.nombreDe.isNotBlank()) invitacion.nombreDe else "un jugador"
+
     AlertDialog(
         onDismissRequest = { /* obligamos a decidir */ },
         title = {
@@ -626,10 +639,10 @@ fun InvitacionDialog(
         },
         text = {
             Column {
-                Text("Te han invitado a una reserva de golf.")
+                Text("Te ha invitado $nombre a una reserva de golf.")
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "¿Quieres unirte a esta reserva?",
+                    text = "Fecha y hora: $fechaTexto",
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -646,3 +659,4 @@ fun InvitacionDialog(
         }
     )
 }
+
