@@ -63,11 +63,6 @@ fun EventosScreen(vm: EventosViewModel = viewModel()) {
 
     val focusManager = LocalFocusManager.current
 
-    // ✅ Solo cargar una vez, no en cada recomposición
-    LaunchedEffect(Unit) {
-        vm.cargarEventos()
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = {
@@ -168,7 +163,7 @@ fun BigPillsEventos(left: String, right: String, selected: String, onSelect: (St
     }
 }
 
-/* ===== 🟩 Card de evento (ACTUALIZADA) ===== */
+/* ===== 🟩 Card de evento con AlertDialog ===== */
 @Composable
 fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState) {
     val df = remember { SimpleDateFormat("dd MMMM, yyyy - HH:mm", Locale("es", "ES")) }
@@ -181,12 +176,10 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
     val uid = FirebaseAuth.getInstance().currentUser?.uid
     val yaInscrito = uid != null && e.inscritos.contains(uid)
 
-    // 🔹 Evento pasado (usamos fechaFin, y si no tiene, fechaInicio)
     val ahora = remember { Timestamp.now() }
     val baseSeconds = e.fechaFin?.seconds ?: e.fechaInicio?.seconds ?: 0
     val eventoPasado = baseSeconds < ahora.seconds
 
-    // 🔹 Estado para el diálogo de confirmación
     var showConfirmDialog by remember { mutableStateOf(false) }
 
     Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
@@ -196,7 +189,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                 .padding(14.dp)
         ) {
 
-            // Cabecera con nombre y botón eliminar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -210,10 +202,7 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
 
                 if (e.id != null) {
                     IconButton(
-                        onClick = {
-                            // 👉 Primero mostramos el diálogo
-                            showConfirmDialog = true
-                        }
+                        onClick = { showConfirmDialog = true }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -285,7 +274,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
         }
     }
 
-    // 🛑 AlertDialog de confirmación
     if (showConfirmDialog && e.id != null) {
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
@@ -297,8 +285,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                         showConfirmDialog = false
                         scope.launch {
                             vm.eliminarEvento(e.id)
-                            // 🔄 Esto dispara cargarEventos() en el ViewModel
-                            // y la lista se actualiza "en tiempo real"
                             snackbarHost.showSnackbar("🗑️ Evento eliminado")
                         }
                     }
@@ -315,7 +301,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
     }
 }
 
-
 /* ===== 🟩 Nuevo evento ===== */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -327,7 +312,6 @@ fun NuevoEventoSheet(
     var nombre by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf<String?>(null) }
 
-    // 🔹 Solo precios, sin plazas (por ahora)
     val precioSocio = 5
     val precioNoSocio = 22
 

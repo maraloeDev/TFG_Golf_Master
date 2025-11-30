@@ -23,7 +23,27 @@ class EventosViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    // ================== 🔹 Cargar eventos ==================
+    init {
+        observarEventosTiempoReal()
+    }
+
+    // ✅ Escuchar Firestore en tiempo real
+    private fun observarEventosTiempoReal() {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                repo.getEventosFlow().collect { lista ->
+                    _eventos.value = lista.sortedBy { it.fechaInicio?.seconds }
+                    _loading.value = false
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+                _loading.value = false
+            }
+        }
+    }
+
+    // (Opcional) por si quieres usarlo en algún momento
     fun cargarEventos() {
         viewModelScope.launch {
             _loading.value = true
@@ -56,23 +76,21 @@ class EventosViewModel(
             )
 
             runCatching { repo.addEvento(nuevo) }
-                .onSuccess { cargarEventos() }
                 .onFailure { _error.value = it.message }
+            // No llamamos a cargarEventos(): el Flow actualiza solo
         }
     }
 
-    // ================== 🔹 Inscribirse a un evento (varios usuarios) ==================
+    // ================== 🔹 Inscribirse a un evento ==================
     fun inscribirseEnEvento(evento: Evento) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
         viewModelScope.launch {
-            // Si ya está inscrito, no hacemos nada
             if (evento.inscritos.contains(uid)) return@launch
 
             val eventoId = evento.id ?: return@launch
 
             runCatching { repo.inscribirseEnEvento(eventoId, uid) }
-                .onSuccess { cargarEventos() }   // todos verán la lista actualizada
                 .onFailure { _error.value = it.message }
         }
     }
@@ -81,7 +99,6 @@ class EventosViewModel(
     fun actualizarEvento(evento: Evento) {
         viewModelScope.launch {
             runCatching { repo.updateEvento(evento) }
-                .onSuccess { cargarEventos() }
                 .onFailure { _error.value = it.message }
         }
     }
@@ -90,7 +107,6 @@ class EventosViewModel(
     fun eliminarEvento(id: String) {
         viewModelScope.launch {
             runCatching { repo.deleteEvento(id) }
-                .onSuccess { cargarEventos() }
                 .onFailure { _error.value = it.message }
         }
     }

@@ -6,6 +6,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -208,35 +209,60 @@ class FirebaseRepo(
     }
 
     // ============================================================
-    // 🏆 EVENTOS
-    // ============================================================
-    private val eventosRef = db.collection("eventos")
+// 📡 EVENTOS (tiempo real)
+// ============================================================
 
+    // Ya lo tendrás: obtener eventos una sola vez
     suspend fun getEventos(): List<Evento> {
-        return eventosRef.get().await().documents.mapNotNull { doc ->
+        val snap = db.collection("eventos").get().await()
+        return snap.documents.mapNotNull { doc ->
             doc.toObject(Evento::class.java)?.copy(id = doc.id)
         }
     }
 
-    suspend fun addEvento(evento: Evento) {
-        eventosRef.add(evento).await()
+    // 🔴 NUEVO: flujo en tiempo real
+    fun getEventosFlow(): Flow<List<Evento>> = callbackFlow {
+        val listener: ListenerRegistration = db.collection("eventos")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val lista = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Evento::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+
+                trySend(lista)
+            }
+
+        awaitClose { listener.remove() }
     }
 
-    // Inscribir varios usuarios: va acumulando en el array "inscritos"
+    suspend fun addEvento(evento: Evento) {
+        db.collection("eventos").add(evento).await()
+    }
+
     suspend fun inscribirseEnEvento(eventoId: String, uid: String) {
-        eventosRef.document(eventoId).update(
-            "inscritos", FieldValue.arrayUnion(uid)
-        ).await()
+        val ref = db.collection("eventos").document(eventoId)
+        db.runTransaction { tx ->
+            val snap = tx.get(ref)
+            val actuales = (snap.get("inscritos") as? List<String>) ?: emptyList()
+            if (!actuales.contains(uid)) {
+                tx.update(ref, "inscritos", actuales + uid)
+            }
+        }.await()
     }
 
     suspend fun updateEvento(evento: Evento) {
         val id = evento.id ?: return
-        eventosRef.document(id).set(evento).await()
+        db.collection("eventos").document(id).set(evento).await()
     }
 
     suspend fun deleteEvento(id: String) {
-        eventosRef.document(id).delete().await()
+        db.collection("eventos").document(id).delete().await()
     }
+
 
     // ============================================================
     // 📬 SOLICITUDES DE INSCRIPCIÓN (TORNEOS)
