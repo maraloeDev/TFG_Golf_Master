@@ -73,7 +73,7 @@ fun AgregarAmigoScreen(
                     // 🔍 BÚSQUEDA AUTOMÁTICA
                     vm.buscarJugador(it.trim())
                 },
-                placeholder = { Text("Ej. Eduardo Martín", color = TextMuted) },
+                placeholder = { Text("Ej. Víctor García", color = TextMuted) },
                 singleLine = true,
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null, tint = Accent)

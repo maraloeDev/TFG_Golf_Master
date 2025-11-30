@@ -285,9 +285,9 @@ private fun BigPills(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding( 16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
             .clip(RoundedCornerShape(14.dp))
-            .padding(10.dp),
+            .background(CardBg),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         @Composable
