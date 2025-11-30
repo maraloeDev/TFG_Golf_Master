@@ -186,6 +186,9 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
     val baseSeconds = e.fechaFin?.seconds ?: e.fechaInicio?.seconds ?: 0
     val eventoPasado = baseSeconds < ahora.seconds
 
+    // 🔹 Estado para el diálogo de confirmación
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
     Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
         Column(
             Modifier
@@ -205,14 +208,11 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                     modifier = Modifier.weight(1f)
                 )
 
-                // 🔴 Botón eliminar evento
                 if (e.id != null) {
                     IconButton(
                         onClick = {
-                            scope.launch {
-                                vm.eliminarEvento(e.id)
-                                snackbarHost.showSnackbar("🗑️ Evento eliminado")
-                            }
+                            // 👉 Primero mostramos el diálogo
+                            showConfirmDialog = true
                         }
                     ) {
                         Icon(
@@ -255,11 +255,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
 
             Spacer(Modifier.height(10.dp))
 
-            // 🔹 Solo permitir inscribirse si:
-            // - hay usuario
-            // - no está inscrito
-            // - no está completo
-            // - NO ha pasado
             val botonHabilitado = uid != null && !yaInscrito && !completo && !eventoPasado
 
             Button(
@@ -271,10 +266,7 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                 },
                 enabled = botonHabilitado,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = when {
-                        botonHabilitado -> PillUnselected
-                        else -> Color.Gray
-                    }
+                    containerColor = if (botonHabilitado) PillUnselected else Color.Gray
                 ),
                 shape = RoundedCornerShape(50),
                 modifier = Modifier.fillMaxWidth()
@@ -292,7 +284,37 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
             }
         }
     }
+
+    // 🛑 AlertDialog de confirmación
+    if (showConfirmDialog && e.id != null) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Eliminar evento") },
+            text = { Text("¿Desea eliminar el evento?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showConfirmDialog = false
+                        scope.launch {
+                            vm.eliminarEvento(e.id)
+                            // 🔄 Esto dispara cargarEventos() en el ViewModel
+                            // y la lista se actualiza "en tiempo real"
+                            snackbarHost.showSnackbar("🗑️ Evento eliminado")
+                        }
+                    }
+                ) {
+                    Text("Eliminar", color = Color(0xFFFF5555))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
 }
+
 
 /* ===== 🟩 Nuevo evento ===== */
 @OptIn(ExperimentalMaterial3Api::class)
