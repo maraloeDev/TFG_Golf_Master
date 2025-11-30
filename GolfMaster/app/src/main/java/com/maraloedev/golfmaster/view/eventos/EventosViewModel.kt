@@ -23,17 +23,20 @@ class EventosViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    // ================== 🔹 Cargar eventos ==================
+    // ================== 🔹 Cargar eventos (sólo del usuario) ==================
     fun cargarEventos() {
+        val uid = repo.currentUid ?: return   // 👈 sin usuario logueado, no cargamos nada
+
         viewModelScope.launch {
             _loading.value = true
-            runCatching { repo.getEventos() }
-                .onSuccess { _eventos.value = it.sortedBy { e -> e.fechaInicio?.seconds } }
+            runCatching { repo.getEventosDeUsuario(uid) }   // 👈 usamos el nuevo método
+                .onSuccess { lista ->
+                    _eventos.value = lista.sortedBy { e -> e.fechaInicio?.seconds }
+                }
                 .onFailure { _error.value = it.message }
             _loading.value = false
         }
     }
-
 
     // ================== 🔹 Crear nuevo evento ==================
     fun crearEvento(
@@ -54,6 +57,7 @@ class EventosViewModel(
                 precioNoSocio = precioNoSocio.toDoubleOrNull(),
                 fechaInicio = fechaInicio,
                 fechaFin = fechaFin
+                // 👈 creadorId se setea en el repo, no aquí
             )
 
             runCatching { repo.addEvento(nuevo) }
@@ -72,11 +76,10 @@ class EventosViewModel(
             val eventoId = evento.id ?: return@launch
 
             runCatching { repo.inscribirseEnEvento(eventoId, uid) }
-                .onSuccess { cargarEventos() }   // todos verán la lista actualizada cuando entren
+                .onSuccess { cargarEventos() }
                 .onFailure { _error.value = it.message }
         }
     }
-x
 
     // 🔹 Editar evento
     fun actualizarEvento(evento: Evento) {
