@@ -60,7 +60,7 @@ fun EventosScreen(vm: EventosViewModel = viewModel()) {
         prox to fin
     }
     val focusManager = LocalFocusManager.current
-
+vm.cargarEventos()
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = {
