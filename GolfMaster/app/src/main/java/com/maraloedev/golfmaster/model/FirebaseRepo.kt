@@ -208,33 +208,18 @@ class FirebaseRepo(
     }
 
     // ============================================================
-// 🏆 EVENTOS
-// ============================================================
+    // 🏆 EVENTOS
+    // ============================================================
     private val eventosRef = db.collection("eventos")
 
-    suspend fun getEventosDeUsuario(uid: String): List<Evento> {
-        return eventosRef
-            .whereEqualTo("creadorId", uid)  // 👈 sólo eventos creados por ese usuario
-            .get()
-            .await()
-            .documents
-            .mapNotNull { doc ->
-                doc.toObject(Evento::class.java)?.copy(id = doc.id)
-            }
-    }
-
     suspend fun getEventos(): List<Evento> {
-        // Si aún quieres tener un "get all" genérico, lo dejas aquí
         return eventosRef.get().await().documents.mapNotNull { doc ->
             doc.toObject(Evento::class.java)?.copy(id = doc.id)
         }
     }
 
     suspend fun addEvento(evento: Evento) {
-        val uid = auth.currentUser?.uid ?: throw Exception("Usuario no autenticado")
-
-        val eventoConCreador = evento.copy(creadorId = uid)
-        eventosRef.add(eventoConCreador).await()
+        eventosRef.add(evento).await()
     }
 
     // Inscribir varios usuarios: va acumulando en el array "inscritos"
@@ -252,7 +237,6 @@ class FirebaseRepo(
     suspend fun deleteEvento(id: String) {
         eventosRef.document(id).delete().await()
     }
-
 
     // ============================================================
     // 📬 SOLICITUDES DE INSCRIPCIÓN (TORNEOS)

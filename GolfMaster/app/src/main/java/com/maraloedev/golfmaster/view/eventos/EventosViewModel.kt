@@ -23,16 +23,12 @@ class EventosViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
-    // ================== 🔹 Cargar eventos (sólo del usuario) ==================
+    // ================== 🔹 Cargar eventos ==================
     fun cargarEventos() {
-        val uid = repo.currentUid ?: return   // 👈 sin usuario logueado, no cargamos nada
-
         viewModelScope.launch {
             _loading.value = true
-            runCatching { repo.getEventosDeUsuario(uid) }   // 👈 usamos el nuevo método
-                .onSuccess { lista ->
-                    _eventos.value = lista.sortedBy { e -> e.fechaInicio?.seconds }
-                }
+            runCatching { repo.getEventos() }
+                .onSuccess { _eventos.value = it.sortedBy { e -> e.fechaInicio?.seconds } }
                 .onFailure { _error.value = it.message }
             _loading.value = false
         }
@@ -57,7 +53,6 @@ class EventosViewModel(
                 precioNoSocio = precioNoSocio.toDoubleOrNull(),
                 fechaInicio = fechaInicio,
                 fechaFin = fechaFin
-                // 👈 creadorId se setea en el repo, no aquí
             )
 
             runCatching { repo.addEvento(nuevo) }
@@ -71,12 +66,13 @@ class EventosViewModel(
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
         viewModelScope.launch {
+            // Si ya está inscrito, no hacemos nada
             if (evento.inscritos.contains(uid)) return@launch
 
             val eventoId = evento.id ?: return@launch
 
             runCatching { repo.inscribirseEnEvento(eventoId, uid) }
-                .onSuccess { cargarEventos() }
+                .onSuccess { cargarEventos() }   // todos verán la lista actualizada
                 .onFailure { _error.value = it.message }
         }
     }
