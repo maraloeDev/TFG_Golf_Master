@@ -281,8 +281,6 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             ciudad_jugador = comunidad, // de momento comunidad aquí
                             password_jugador = passwordHasheada   // 🔐 guardamos el hash, no la contraseña
                         )
-
-
                         vm.registerJugador(
                             email = correo,
                             password = password,
