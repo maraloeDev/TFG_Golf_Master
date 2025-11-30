@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.model.Jugadores
+import com.maraloedev.golfmaster.view.auth.passEncrypt.hashPassword
 import com.maraloedev.golfmaster.vm.AuthViewModel
 
 /* ============================================================
@@ -264,6 +265,8 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                         }
 
                         loading = true
+                        val passwordHasheada = hashPassword(password)
+
                         val jugador = Jugadores(
                             nombre_jugador = nombre,
                             apellido_jugador = apellido,
@@ -276,8 +279,9 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             handicap_jugador = handicap ?: 0.0,
                             provincia_jugador = provincia,
                             ciudad_jugador = comunidad, // de momento comunidad aquí
-                            password_jugador = password
+                            password_jugador = passwordHasheada   // 🔐 guardamos el hash, no la contraseña
                         )
+
 
                         vm.registerJugador(
                             email = correo,
