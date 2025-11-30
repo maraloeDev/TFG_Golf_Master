@@ -61,7 +61,6 @@ class EventosViewModel(
         }
     }
 
-
     // ================== 🔹 Inscribirse a un evento (varios usuarios) ==================
     fun inscribirseEnEvento(evento: Evento) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return

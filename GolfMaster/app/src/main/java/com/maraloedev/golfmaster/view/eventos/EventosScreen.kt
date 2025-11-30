@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,8 +60,14 @@ fun EventosScreen(vm: EventosViewModel = viewModel()) {
         val fin = eventos.filter { (it.fechaFin?.seconds ?: 0) <= ahora.seconds }
         prox to fin
     }
+
     val focusManager = LocalFocusManager.current
-vm.cargarEventos()
+
+    // ✅ Solo cargar una vez, no en cada recomposición
+    LaunchedEffect(Unit) {
+        vm.cargarEventos()
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = {
@@ -174,13 +181,49 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
     val uid = FirebaseAuth.getInstance().currentUser?.uid
     val yaInscrito = uid != null && e.inscritos.contains(uid)
 
+    // 🔹 Evento pasado (usamos fechaFin, y si no tiene, fechaInicio)
+    val ahora = remember { Timestamp.now() }
+    val baseSeconds = e.fechaFin?.seconds ?: e.fechaInicio?.seconds ?: 0
+    val eventoPasado = baseSeconds < ahora.seconds
+
     Card(colors = CardDefaults.cardColors(containerColor = CardBg)) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
-            Text("🏌️ ${e.nombre ?: "--"}", color = Color.White, fontWeight = FontWeight.Bold)
+
+            // Cabecera con nombre y botón eliminar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "🏌️ ${e.nombre ?: "--"}",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // 🔴 Botón eliminar evento
+                if (e.id != null) {
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                vm.eliminarEvento(e.id)
+                                snackbarHost.showSnackbar("🗑️ Evento eliminado")
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Eliminar evento",
+                            tint = Color(0xFFFF5555)
+                        )
+                    }
+                }
+            }
+
             Text(
                 "${e.fechaInicio?.toDate()?.let(df::format)} → ${e.fechaFin?.toDate()?.let(df::format)}",
                 color = Color.White.copy(alpha = .8f)
@@ -194,7 +237,6 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
 
             Spacer(Modifier.height(6.dp))
 
-            // 👥 Info de inscritos visible para todos los usuarios
             val plazasTexto = if (plazasTotales > 0) " / $plazasTotales plazas" else ""
             Text(
                 text = "👥 $numInscritos inscritos$plazasTexto",
@@ -202,9 +244,23 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                 fontWeight = FontWeight.SemiBold
             )
 
+            if (eventoPasado) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "⏰ Evento finalizado",
+                    color = Color(0xFFFFC107),
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
             Spacer(Modifier.height(10.dp))
 
-            val botonHabilitado = uid != null && !yaInscrito && !completo
+            // 🔹 Solo permitir inscribirse si:
+            // - hay usuario
+            // - no está inscrito
+            // - no está completo
+            // - NO ha pasado
+            val botonHabilitado = uid != null && !yaInscrito && !completo && !eventoPasado
 
             Button(
                 onClick = {
@@ -215,13 +271,17 @@ fun EventoCard(e: Evento, vm: EventosViewModel, snackbarHost: SnackbarHostState)
                 },
                 enabled = botonHabilitado,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (botonHabilitado) PillUnselected else Color.Gray
+                    containerColor = when {
+                        botonHabilitado -> PillUnselected
+                        else -> Color.Gray
+                    }
                 ),
                 shape = RoundedCornerShape(50),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     when {
+                        eventoPasado -> "Evento finalizado"
                         yaInscrito -> "Ya estás inscrito"
                         completo -> "Evento completo"
                         else -> "Inscribirse"
@@ -245,7 +305,7 @@ fun NuevoEventoSheet(
     var nombre by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf<String?>(null) }
 
-    // 🔹 Solo precios, sin plazas
+    // 🔹 Solo precios, sin plazas (por ahora)
     val precioSocio = 5
     val precioNoSocio = 22
 
