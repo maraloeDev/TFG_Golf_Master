@@ -34,6 +34,7 @@ class EventosViewModel(
         }
     }
 
+
     // ================== 🔹 Crear nuevo evento ==================
     fun crearEvento(
         nombre: String,
@@ -66,16 +67,16 @@ class EventosViewModel(
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
         viewModelScope.launch {
-            // Si ya está inscrito, no hacemos nada
             if (evento.inscritos.contains(uid)) return@launch
 
             val eventoId = evento.id ?: return@launch
 
             runCatching { repo.inscribirseEnEvento(eventoId, uid) }
-                .onSuccess { cargarEventos() }   // todos verán la lista actualizada
+                .onSuccess { cargarEventos() }   // todos verán la lista actualizada cuando entren
                 .onFailure { _error.value = it.message }
         }
     }
+x
 
     // 🔹 Editar evento
     fun actualizarEvento(evento: Evento) {
