@@ -20,6 +20,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+/**
+ * Pantalla de “Información” del menú lateral.
+ *
+ * Agrupa distintos bloques (Reservas, Campos, Torneos) con tarjetas
+ * que navegan a pantallas de detalle (informativa, solo lectura).
+ */
 @Composable
 fun InformacionScreen(
     navController: NavController,
@@ -36,10 +42,10 @@ fun InformacionScreen(
             title = "Reservas",
             cards = listOf(
                 InfoCardData(
-                    "Reservas de Equipamiento",
-                    "Reserva de buggies, palos y carros",
-                    Icons.Default.GolfCourse,
-                    route = "detalle_reservas" // ✅ Ruta
+                    title = "Reservas de Equipamiento",
+                    subtitle = "Reserva de buggies, palos y carros",
+                    icon = Icons.Default.GolfCourse,
+                    route = "detalle_reservas"
                 )
             ),
             navController = navController
@@ -49,15 +55,15 @@ fun InformacionScreen(
             title = "Campos",
             cards = listOf(
                 InfoCardData(
-                    "Correspondencia de Campos",
-                    "Información de contacto y ubicación",
-                    Icons.Default.Map,
+                    title = "Correspondencia de Campos",
+                    subtitle = "Información de contacto y ubicación",
+                    icon = Icons.Default.Map,
                     route = "detalle_campos"
                 ),
                 InfoCardData(
-                    "Reglas Locales",
-                    "Reglas locales de los campos de golf",
-                    Icons.Default.Rule,
+                    title = "Reglas Locales",
+                    subtitle = "Reglas locales de los campos de golf",
+                    icon = Icons.Default.Rule,
                     route = "detalle_reglas"
                 )
             ),
@@ -68,9 +74,9 @@ fun InformacionScreen(
             title = "Torneos",
             cards = listOf(
                 InfoCardData(
-                    "Términos y Condiciones",
-                    "Términos y condiciones de los torneos",
-                    Icons.Default.EmojiEvents,
+                    title = "Términos y Condiciones",
+                    subtitle = "Términos y condiciones de los torneos",
+                    icon = Icons.Default.EmojiEvents,
                     route = "detalle_torneos"
                 )
             ),
@@ -79,6 +85,9 @@ fun InformacionScreen(
     }
 }
 
+/**
+ * Sección con título + lista de tarjetas de navegación.
+ */
 @Composable
 private fun Section(
     title: String,
@@ -86,41 +95,76 @@ private fun Section(
     navController: NavController
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Text(
+            text = title,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
         cards.forEach { card ->
             InfoCard(data = card, navController = navController)
         }
     }
 }
 
+/**
+ * Tarjeta reutilizable de “información + navegación”.
+ *
+ * Muestra icono, título y subtítulo, y navega a la ruta especificada.
+ */
 @Composable
-private fun InfoCard(data: InfoCardData, navController: NavController) {
+private fun InfoCard(
+    data: InfoCardData,
+    navController: NavController
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0C3C2C)),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                // ✅ NAVEGACIÓN SIMPLE: deja "informacion" debajo en el back stack
+                // Navegación simple: se apila sobre la pantalla de información.
                 navController.navigate(data.route)
             }
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(data.icon, contentDescription = null, tint = Color(0xFF00FF77), modifier = Modifier.size(30.dp))
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = data.icon,
+                contentDescription = null,
+                tint = Color(0xFF00FF77),
+                modifier = Modifier.size(30.dp)
+            )
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(data.title, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(data.subtitle, color = Color.LightGray, fontSize = 13.sp)
+                Text(
+                    text = data.title,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = data.subtitle,
+                    color = Color.LightGray,
+                    fontSize = 13.sp
+                )
             }
         }
     }
 }
 
-
-
+/**
+ * Modelo de datos para cada tarjeta de información.
+ *
+ * @param title      Título principal de la tarjeta.
+ * @param subtitle   Descripción breve del contenido.
+ * @param icon       Icono asociado.
+ * @param route      Ruta de navegación dentro del NavHost.
+ */
 data class InfoCardData(
     val title: String,
     val subtitle: String,
     val icon: ImageVector,
-    val route: String // ✅ añadimos la ruta
+    val route: String
 )

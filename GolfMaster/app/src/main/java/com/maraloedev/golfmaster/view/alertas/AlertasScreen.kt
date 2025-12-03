@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.maraloedev.golfmaster.view.alertas
 
 import androidx.compose.foundation.background
@@ -20,10 +22,22 @@ import com.maraloedev.golfmaster.view.reservas.ReservasViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+// ============================================================
+// 🎨 Colores de la pantalla (podrían ir en un Theme)
+// ============================================================
 private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
 private val Accent = Color(0xFF00FF77)
 
+/**
+ * Pantalla de alertas:
+ *  - Solicitudes de amistad
+ *  - Invitaciones a reservas
+ *
+ * Se apoya en:
+ *  - AlertasViewModel → amistad
+ *  - ReservasViewModel → invitaciones a reserva
+ */
 @Composable
 fun AlertasScreen(
     vmAlertas: AlertasViewModel = viewModel(),
@@ -37,12 +51,29 @@ fun AlertasScreen(
     // ⛳ Invitaciones a reserva
     val invitacionesReserva by vmReservas.invitacionesPendientes.collectAsState()
 
+    // Lanzamos la observación de datos una vez al entrar en la pantalla
     LaunchedEffect(Unit) {
         vmAlertas.observarInvitaciones()
         vmReservas.cargarInvitacionesPendientes()
     }
 
-    Scaffold(containerColor = ScreenBg) { pad ->
+    Scaffold(
+        containerColor = ScreenBg,
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Alertas",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = ScreenBg
+                )
+            )
+        }
+    ) { pad ->
         Box(
             modifier = Modifier
                 .padding(pad)
@@ -50,12 +81,26 @@ fun AlertasScreen(
                 .background(ScreenBg)
         ) {
             when {
-                loadingAmistad -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                // ⏳ Cargando solicitudes de amistad
+                loadingAmistad -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = Accent)
                 }
 
-                errorAmistad != null -> Text("Error: $errorAmistad", color = Color.Red)
+                // ❌ Error en la carga (solo de amistad, pero puede bastar para la pantalla)
+                errorAmistad != null -> Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Error al cargar alertas:\n$errorAmistad",
+                        color = Color.Red
+                    )
+                }
 
+                // ✅ Sin alertas de ningún tipo
                 invitacionesAmistad.isEmpty() && invitacionesReserva.isEmpty() -> Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -74,6 +119,7 @@ fun AlertasScreen(
                     }
                 }
 
+                // 📋 Hay alguna alerta
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -84,8 +130,16 @@ fun AlertasScreen(
                     items(invitacionesAmistad, key = { it.id }) { inv ->
                         AmistadCard(
                             inv = inv,
-                            onAceptar = { vmAlertas.aceptarAmistad(inv.id, inv.de, inv.nombreDe) },
-                            onRechazar = { vmAlertas.rechazarAmistad(inv.id) }
+                            onAceptar = {
+                                vmAlertas.aceptarAmistad(
+                                    alertaId = inv.id,
+                                    deUid = inv.de,
+                                    nombreDe = inv.nombreDe
+                                )
+                            },
+                            onRechazar = {
+                                vmAlertas.rechazarAmistad(inv.id)
+                            }
                         )
                     }
 
@@ -94,10 +148,16 @@ fun AlertasScreen(
                         InvitacionReservaCard(
                             inv = invReserva,
                             onAceptar = {
-                                vmReservas.responderInvitacion(invReserva, aceptar = true)
+                                vmReservas.responderInvitacion(
+                                    invitacion = invReserva,
+                                    aceptar = true
+                                )
                             },
                             onRechazar = {
-                                vmReservas.responderInvitacion(invReserva, aceptar = false)
+                                vmReservas.responderInvitacion(
+                                    invitacion = invReserva,
+                                    aceptar = false
+                                )
                             }
                         )
                     }
@@ -107,6 +167,9 @@ fun AlertasScreen(
     }
 }
 
+/**
+ * Tarjeta que representa una solicitud de amistad individual.
+ */
 @Composable
 fun AmistadCard(
     inv: AlertaAmistad,
@@ -136,7 +199,9 @@ fun AmistadCard(
                 }
                 OutlinedButton(
                     onClick = onRechazar,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.White
+                    )
                 ) {
                     Text("Rechazar")
                 }
@@ -145,14 +210,21 @@ fun AmistadCard(
     }
 }
 
+/**
+ * Tarjeta que representa una invitación a una reserva.
+ */
 @Composable
 fun InvitacionReservaCard(
     inv: Invitacion,
     onAceptar: () -> Unit,
     onRechazar: () -> Unit
 ) {
-    val df = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
-    val fechaTexto = inv.fecha?.toDate()?.let(df::format) ?: "fecha sin definir"
+    // Formateador de fecha recordado para no recrearlo en cada recomposición
+    val df = remember {
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES"))
+    }
+
+    val fechaTexto = inv.fecha?.toDate()?.let(df::format) ?: "Fecha sin definir"
     val nombre = if (inv.nombreDe.isNotBlank()) inv.nombreDe else "un jugador"
 
     ElevatedCard(
@@ -183,7 +255,9 @@ fun InvitacionReservaCard(
                 }
                 OutlinedButton(
                     onClick = onRechazar,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.White
+                    )
                 ) {
                     Text("Rechazar")
                 }

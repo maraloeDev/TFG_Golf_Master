@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,7 +31,10 @@ fun AgregarAmigoScreen(
 ) {
     val resultados by vm.resultados.collectAsState()
     val buscando by vm.buscando.collectAsState()
-    var searchText by remember { mutableStateOf("") }
+
+    // Mejor con rememberSaveable para sobrevivir a cambios de configuración
+    var searchText by rememberSaveable { mutableStateOf("") }
+
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -40,7 +44,11 @@ fun AgregarAmigoScreen(
                 title = { Text("Añadir amigo", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onFinish) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Volver",
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = ScreenBg)
@@ -67,14 +75,18 @@ fun AgregarAmigoScreen(
 
             OutlinedTextField(
                 value = searchText,
-                onValueChange = {
-                    searchText = it
-                    vm.buscarJugador(it.trim())
+                onValueChange = { nuevo ->
+                    searchText = nuevo
+                    vm.buscarJugador(nuevo.trim())
                 },
                 placeholder = { Text("Ej. Eduardo Martín", color = TextMuted) },
                 singleLine = true,
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Accent)
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = Accent
+                    )
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
@@ -88,16 +100,28 @@ fun AgregarAmigoScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            if (buscando) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when {
+                // ⏳ Buscando jugadores
+                buscando -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = Accent)
                 }
-            } else if (searchText.isBlank()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+
+                // ✏️ Aún no se ha escrito nada
+                searchText.isBlank() -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text("Empieza a escribir para buscar 👇", color = TextMuted)
                 }
-            } else if (resultados.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+
+                // 🚫 No hay resultados
+                resultados.isEmpty() -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.PersonAdd,
@@ -109,8 +133,9 @@ fun AgregarAmigoScreen(
                         Text("No hay jugadores que coincidan.", color = TextMuted)
                     }
                 }
-            } else {
-                LazyColumn(
+
+                // ✅ Hay resultados
+                else -> LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -130,6 +155,9 @@ fun AgregarAmigoScreen(
     }
 }
 
+/**
+ * Tarjeta de resultado de búsqueda de jugador.
+ */
 @Composable
 private fun ResultadoJugadorCardMini(
     nombre: String,

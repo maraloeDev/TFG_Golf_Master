@@ -2,11 +2,14 @@ package com.maraloedev.golfmaster.model
 
 import com.google.firebase.Timestamp
 
-data class AlertaAmistad (
+/**
+ * Representa una alerta de petición de amistad entre jugadores.
+ */
+data class AlertaAmistad(
     val id: String = "",
-    val de: String = "",
-    val para: String = "",
-    val nombreDe: String = "",
-    val estado: String = "pendiente",
+    val de: String = "",                // UID del jugador que envía la solicitud
+    val para: String = "",             // UID del jugador que la recibe
+    val nombreDe: String = "",         // Nombre del jugador que envía la solicitud
+    val estado: String = "pendiente",  // pendiente | aceptada | rechazada
     val fecha: Timestamp = Timestamp.now()
 )

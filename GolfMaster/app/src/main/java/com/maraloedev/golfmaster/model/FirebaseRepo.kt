@@ -11,15 +11,45 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-
+/**
+ * Repositorio central para operaciones con Firebase:
+ *  - Autenticación
+ *  - Jugadores
+ *  - Reservas
+ *  - Invitaciones
+ *  - Eventos
+ *
+ * Se podría separar en varios repos (AuthRepo, EventosRepo, ReservasRepo…), pero para tu TFG
+ * mantenerlo unido simplifica bastante.
+ */
 class FirebaseRepo(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
     // ============================================================
-    //  AUTENTICACIÓN
+    // 🔧 Constantes de colecciones
     // ============================================================
+
+    private companion object {
+        const val COL_JUGADORES = "jugadores"
+        const val COL_RESERVAS = "reservas"
+        const val COL_INVITACIONES = "invitaciones"
+        const val COL_EVENTOS = "eventos"
+    }
+
+    // Acceso rápido al UID actual (null si no hay sesión)
+    val currentUid: String?
+        get() = auth.currentUser?.uid
+
+    // ============================================================
+    // 🔐 AUTENTICACIÓN
+    // ============================================================
+
+    /**
+     * Inicia sesión con email y contraseña usando FirebaseAuth.
+     * Lanza excepción con mensaje claro en caso de error.
+     */
     suspend fun login(email: String, pass: String) {
         try {
             auth.signInWithEmailAndPassword(email, pass).await()
@@ -33,58 +63,117 @@ class FirebaseRepo(
     }
 
     // ============================================================
-    //  JUGADORES
+    // 🏌️‍♂️ JUGADORES
     // ============================================================
+
+    /**
+     * Busca jugadores cuyo nombre comience por el texto indicado.
+     * Usa un "like" con rango [nombre, nombre+\uf8ff].
+     */
     suspend fun buscarJugadoresPorNombre(nombre: String): List<Jugadores> {
-        val snap = db.collection("jugadores").whereGreaterThanOrEqualTo("nombre_jugador", nombre)
-            .whereLessThanOrEqualTo("nombre_jugador", nombre + "\uf8ff").get().await()
+        val snap = db.collection(COL_JUGADORES)
+            .whereGreaterThanOrEqualTo("nombre_jugador", nombre)
+            .whereLessThanOrEqualTo("nombre_jugador", nombre + "\uf8ff")
+            .get()
+            .await()
 
         return snap.documents.mapNotNull { it.toObject(Jugadores::class.java) }
     }
 
     // ============================================================
-    //  RESERVAS
+    // 📅 RESERVAS
     // ============================================================
+
+    /**
+     * Crea una nueva reserva asignándole un ID generado por Firestore.
+     * Devuelve el ID para que lo puedas usar en la UI.
+     */
     suspend fun crearReserva(reserva: Reserva): String {
-        val docRef = db.collection("reservas").document()
+        val docRef = db.collection(COL_RESERVAS).document()
         val reservaConId = reserva.copy(id = docRef.id)
         docRef.set(reservaConId).await()
         return docRef.id
     }
 
+    /**
+     * Actualiza ciertos campos de una reserva existente.
+     * Ej: mapa con "hora" -> nuevaHora, "recorrido" -> nuevoRecorrido, etc.
+     */
     suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
-        db.collection("reservas").document(id).update(nuevosDatos).await()
+        db.collection(COL_RESERVAS)
+            .document(id)
+            .update(nuevosDatos)
+            .await()
     }
 
+    /**
+     * Elimina una reserva por ID.
+     */
     suspend fun eliminarReserva(id: String) {
-        db.collection("reservas").document(id).delete().await()
+        db.collection(COL_RESERVAS)
+            .document(id)
+            .delete()
+            .await()
     }
 
+    /**
+     * Añade un participante a la lista de participantes de una reserva.
+     * Se hace mediante transacción para evitar condiciones de carrera.
+     */
     suspend fun anadirParticipanteAReserva(
-        reservaId: String, userId: String
+        reservaId: String,
+        userId: String
     ) {
-        val reservaRef = db.collection("reservas").document(reservaId)
+        val reservaRef = db.collection(COL_RESERVAS).document(reservaId)
+
         db.runTransaction { tx ->
             val snap = tx.get(reservaRef)
-            val actuales = (snap.get("participantesIds") as? List<*>).orEmpty()
+
+            // Si la reserva no existe, puedes decidir lanzar error o simplemente no hacer nada
+            if (!snap.exists()) return@runTransaction null
+
+            val actuales = (snap.get("participantesIds") as? List<*>)?.filterIsInstance<String>()
+                ?: emptyList()
+
             if (!actuales.contains(userId)) {
                 tx.update(reservaRef, "participantesIds", actuales + userId)
             }
+
+            null
         }.await()
     }
 
     // ============================================================
-    //  INVITACIONES
+    // ✉️ INVITACIONES
     // ============================================================
+
+    /**
+     * Crea una invitación de un jugador a otro para una reserva.
+     *
+     * @param de UID del jugador que invita
+     * @param para UID del jugador invitado
+     * @param reservaId ID de la reserva
+     * @param fecha Fecha/hora de la reserva (opcional)
+     * @return ID de la invitación creada
+     */
     suspend fun crearInvitacion(
-        de: String, para: String, reservaId: String, fecha: Timestamp?
+        de: String,
+        para: String,
+        reservaId: String,
+        fecha: Timestamp?
     ): String {
+
         // 1️⃣ Obtener nombre del jugador que invita
-        val jugadorSnap = db.collection("jugadores").document(de).get().await()
+        val jugadorSnap = db.collection(COL_JUGADORES)
+            .document(de)
+            .get()
+            .await()
+
         val nombreDe = jugadorSnap.getString("nombre_jugador") ?: "Un jugador"
 
-        // 2️⃣ Crear doc de invitación
-        val docRef = db.collection("invitaciones").document()
+        // 2️⃣ Crear documento de invitación
+        val docRef = db.collection(COL_INVITACIONES).document()
+
         val invitacion = mapOf(
             "id" to docRef.id,
             "deId" to de,
@@ -95,65 +184,105 @@ class FirebaseRepo(
             "estado" to "pendiente",
             "creadaEn" to Timestamp.now()
         )
+
         docRef.set(invitacion).await()
         return docRef.id
     }
 
+    /**
+     * Actualiza el estado de una invitación (pendiente/aceptada/rechazada).
+     */
     suspend fun actualizarEstadoInvitacion(
-        invitacionId: String, nuevoEstado: String
+        invitacionId: String,
+        nuevoEstado: String
     ) {
-        db.collection("invitaciones").document(invitacionId).update("estado", nuevoEstado).await()
+        db.collection(COL_INVITACIONES)
+            .document(invitacionId)
+            .update("estado", nuevoEstado)
+            .await()
     }
 
     // ============================================================
-    //  EVENTOS
+    // 🏆 EVENTOS
     // ============================================================
+
+    /**
+     * Obtiene el listado de eventos una sola vez (consulta simple).
+     */
     suspend fun getEventos(): List<Evento> {
-        val snap = db.collection("eventos").get().await()
+        val snap = db.collection(COL_EVENTOS)
+            .get()
+            .await()
+
         return snap.documents.mapNotNull { doc ->
             doc.toObject(Evento::class.java)?.copy(id = doc.id)
         }
     }
 
+    /**
+     * Devuelve un Flow que emite la lista de eventos en tiempo real.
+     * Cada cambio en la colección "eventos" provoca una nueva emisión.
+     */
     fun getEventosFlow(): Flow<List<Evento>> = callbackFlow {
-        val listener: ListenerRegistration =
-            db.collection("eventos").addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        close(error)
-                        return@addSnapshotListener
-                    }
-
-                    val lista = snapshot?.documents?.mapNotNull { doc ->
-                        doc.toObject(Evento::class.java)?.copy(id = doc.id)
-                    } ?: emptyList()
-
-                    trySend(element = lista)
+        val listener: ListenerRegistration = db.collection(COL_EVENTOS)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    // Cerramos el flow con error si algo va mal
+                    close(error)
+                    return@addSnapshotListener
                 }
 
+                val lista = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Evento::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+
+                trySend(lista).isSuccess
+            }
+
+        // Se ejecuta cuando el Flow se cancela (por ejemplo, cuando se destruye la pantalla)
         awaitClose { listener.remove() }
     }
 
+    /**
+     * Crea un evento nuevo en Firestore.
+     * Si quieres garantizar que siempre tenga ID, puedes generar document()
+     * y hacer copy(id = doc.id) como en reservas.
+     */
     suspend fun addEvento(evento: Evento) {
-        db.collection("eventos").add(evento).await()
+        db.collection(COL_EVENTOS)
+            .add(evento)
+            .await()
     }
 
+    /**
+     * Inscribe al usuario (uid) en el evento indicado.
+     * Usa transacción para evitar duplicados y condiciones de carrera.
+     */
     suspend fun inscribirseEnEvento(eventoId: String, uid: String) {
-        val ref = db.collection("eventos").document(eventoId)
+        val ref = db.collection(COL_EVENTOS).document(eventoId)
+
         db.runTransaction { tx ->
             val snap = tx.get(ref)
-            val actuales = (snap.get("inscritos") as? List<String>) ?: emptyList()
+            if (!snap.exists()) return@runTransaction null
+
+            val actuales = (snap.get("inscritos") as? List<*>)?.filterIsInstance<String>()
+                ?: emptyList()
+
             if (!actuales.contains(uid)) {
                 tx.update(ref, "inscritos", actuales + uid)
             }
+
+            null
         }.await()
     }
 
-    suspend fun updateEvento(evento: Evento) {
-        val id = evento.id ?: return
-        db.collection("eventos").document(id).set(evento).await()
-    }
-
+    /**
+     * Elimina un evento por ID.
+     */
     suspend fun deleteEvento(id: String) {
-        db.collection("eventos").document(id).delete().await()
+        db.collection(COL_EVENTOS)
+            .document(id)
+            .delete()
+            .await()
     }
 }

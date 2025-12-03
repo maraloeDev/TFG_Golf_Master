@@ -20,24 +20,44 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 
+/**
+ * Pantalla de Splash:
+ *
+ * - Muestra un logo animado y texto mientras la app "carga".
+ * - Tras un pequeño delay, comprueba si hay usuario logueado.
+ *   - Si hay usuario → navega a "home".
+ *   - Si no lo hay → navega a "login".
+ */
 @Composable
 fun SplashScreen(navController: NavController) {
+
+    // ✅ Obtenemos la instancia de FirebaseAuth solo una vez por composición
+    val auth = remember { FirebaseAuth.getInstance() }
+
+    // Efecto que se ejecuta una sola vez cuando entra la pantalla
     LaunchedEffect(Unit) {
+        // Pequeña pausa para que se vea el splash
         delay(1600)
 
-        val user = FirebaseAuth.getInstance().currentUser
+        val user = auth.currentUser
+
+        // 🚀 Navegación según si el usuario está logueado o no
         if (user != null) {
-            navController.navigate("home") {
+            navController.navigate("home") {   // aquí podrías usar Routes.HOME si tienes constantes
                 popUpTo("splash") { inclusive = true }
             }
         } else {
-            navController.navigate("login") {
+            navController.navigate("login") {  // idem con Routes.LOGIN
                 popUpTo("splash") { inclusive = true }
             }
         }
     }
 
+    // ==========================
+    // 🎨 CONTENIDO VISUAL
+    // ==========================
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -45,18 +65,26 @@ fun SplashScreen(navController: NavController) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            GlowingLogo() // 🟢 Logo animado con el icono del Home
+
+            // Logo animado
+            GlowingLogo()
+
             Spacer(Modifier.height(30.dp))
+
+            // Nombre de la app
             Text(
-                "GolfMaster",
+                text = "GolfMaster",
                 color = Color(0xFF00FF77),
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
+
             Spacer(Modifier.height(10.dp))
+
+            // Subtítulo / mensaje de carga
             Text(
-                "Cargando experiencia golfística...",
+                text = "Cargando experiencia golfística...",
                 color = Color.White.copy(alpha = 0.8f),
                 fontSize = 14.sp
             )
@@ -65,24 +93,33 @@ fun SplashScreen(navController: NavController) {
 }
 
 /* ============================================================
-   🟢 LOGO ANIMADO — igual que el de HomeLandingContent
+   🟢 LOGO ANIMADO
+   - Usa una animación infinita de escala y alpha para simular
+     un "pulso" luminoso alrededor del icono.
    ============================================================ */
 @Composable
 private fun GlowingLogo() {
+    // Transición infinita para animar valor de escala y alpha
     val infiniteTransition = rememberInfiniteTransition(label = "logoGlow")
+
+    // Animamos la escala (tamaño) del círculo exterior
     val scale by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 1.15f,
+        initialValue = 1f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
-            tween(1500, easing = EaseInOutQuad),
-            RepeatMode.Reverse
+            animation = tween(1500, easing = EaseInOutQuad),
+            repeatMode = RepeatMode.Reverse
         ),
         label = "scaleAnim"
     )
+
+    // Animamos la opacidad del brillo interior
     val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f, targetValue = 0.4f,
+        initialValue = 0.8f,
+        targetValue = 0.4f,
         animationSpec = infiniteRepeatable(
-            tween(1500, easing = EaseInOutQuad),
-            RepeatMode.Reverse
+            animation = tween(1500, easing = EaseInOutQuad),
+            repeatMode = RepeatMode.Reverse
         ),
         label = "alphaAnim"
     )
@@ -92,16 +129,20 @@ private fun GlowingLogo() {
         modifier = Modifier
             .size(130.dp)
             .clip(CircleShape)
+            // Halo exterior suave
             .background(Color(0xFF00FF77).copy(alpha = 0.1f))
-            .scale(scale)
+            .scale(scale) // aplicamos la animación de escala al conjunto
     ) {
+        // Círculo brillante interior
         Box(
             modifier = Modifier
                 .size(110.dp)
                 .clip(CircleShape)
                 .background(Color(0xFF00FF77).copy(alpha = alpha))
         )
-        androidx.compose.material3.Icon(
+
+        // Icono central (puedes cambiar MyLocation por un icono de golf si quieres)
+        Icon(
             imageVector = Icons.Filled.MyLocation,
             contentDescription = "Logo",
             tint = Color(0xFF00FF77),

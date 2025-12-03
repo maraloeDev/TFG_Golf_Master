@@ -43,13 +43,25 @@ import com.maraloedev.golfmaster.view.menuHamburguesa.preferencias.PreferenciasS
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
 import kotlinx.coroutines.launch
 
+/**
+ * Pantalla principal de la aplicación cuando el usuario ya ha iniciado sesión.
+ *
+ * - Contiene un Drawer lateral con opciones (Inicio, Información, Perfil, etc.).
+ * - Tiene una barra superior con título dinámico.
+ * - Barra inferior con navegación rápida (Reservas, Eventos, Amigos, Alertas).
+ * - El contenido central cambia según la pestaña/elemento seleccionado.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+    // Estado del Drawer lateral
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // Pestaña / sección actual (usamos String, pero podría ser un sealed class)
     var current by remember { mutableStateOf("Inicio") }
 
+    // ViewModel que carga los datos básicos del jugador
     val homeVm: HomeViewModel = viewModel()
     val jugador by homeVm.jugador.collectAsState()
 
@@ -61,11 +73,12 @@ fun HomeScreen(navController: NavController) {
                 jugadorNombre = jugador?.nombre ?: "Cargando...",
                 jugadorEmail = jugador?.correo ?: "",
                 selectedItem = current,
-                onItemClick = {
-                    current = it
+                onItemClick = { label ->
+                    current = label
                     scope.launch { drawerState.close() }
                 },
                 onLogout = {
+                    // Cierre de sesión y retorno a login
                     FirebaseAuth.getInstance().signOut()
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
@@ -75,17 +88,28 @@ fun HomeScreen(navController: NavController) {
         }
     ) {
         Scaffold(
-            /* 🔹 Barra superior con título dinámico y perfil */
+            // 🔹 Barra superior con título dinámico y acceso directo a Perfil
             topBar = {
                 TopAppBar(
                     title = {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text(current, color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = current,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Menú", tint = Color.White)
+                            Icon(
+                                Icons.Filled.Menu,
+                                contentDescription = "Menú",
+                                tint = Color.White
+                            )
                         }
                     },
                     actions = {
@@ -97,29 +121,36 @@ fun HomeScreen(navController: NavController) {
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0B3D2E))
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF0B3D2E)
+                    )
                 )
             },
-            /* 🔹 Barra inferior con iconos de navegación rápida */
-            bottomBar = { BottomNavBar(current = current, onItemSelected = { current = it }) }
+            // 🔹 Barra inferior con iconos de navegación rápida
+            bottomBar = {
+                BottomNavBar(
+                    current = current,
+                    onItemSelected = { current = it }
+                )
+            }
         ) { innerPadding ->
-            /* 🔹 Contenido central dinámico (según la pestaña actual) */
+            // 🔹 Contenido central (sección activa)
             Box(
-                Modifier
+                modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
             ) {
                 when (current) {
-                    "Inicio" -> HomeLandingContent(nombreJugador = jugador?.nombre)
-                    "Información" -> InformacionScreen(navController)
-                    "Reservas" -> ReservasScreen()
-                    "Eventos" -> EventosScreen()
-                    "Amigos" -> AmigosScreen(navController)
-                    "Alertas" -> AlertasScreen()
-                    "Mi Perfil" -> PerfilScreen(navController)
+                    "Inicio"       -> HomeLandingContent(nombreJugador = jugador?.nombre)
+                    "Información"  -> InformacionScreen(navController)
+                    "Reservas"     -> ReservasScreen()
+                    "Eventos"      -> EventosScreen()
+                    "Amigos"       -> AmigosScreen(navController)
+                    "Alertas"      -> AlertasScreen()
+                    "Mi Perfil"    -> PerfilScreen(navController)
                     "Preferencias" -> PreferenciasScreen()
-                    "Contacto" -> ContactoScreen()
-                    else -> HomeLandingContent(nombreJugador = jugador?.nombre)
+                    "Contacto"     -> ContactoScreen()
+                    else           -> HomeLandingContent(nombreJugador = jugador?.nombre)
                 }
             }
         }
@@ -127,7 +158,7 @@ fun HomeScreen(navController: NavController) {
 }
 
 /* ============================================================
- * 📋 DrawerContent — Menú lateral
+ * 📋 DrawerContent — Menú lateral con datos del jugador
  * ============================================================ */
 @Composable
 private fun DrawerContent(
@@ -138,23 +169,23 @@ private fun DrawerContent(
     onLogout: () -> Unit
 ) {
     Column(
-        Modifier
+        modifier = Modifier
             .fillMaxHeight()
             .width(270.dp)
             .background(Color(0xFF0B3D2E))
             .padding(16.dp)
     ) {
-        // 👤 Encabezado del jugador (nombre + email)
+        // 👤 Encabezado con avatar y datos del jugador
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier
+                modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF1F4D3E)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.Person,
+                    imageVector = Icons.Default.Person,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(48.dp)
@@ -162,8 +193,16 @@ private fun DrawerContent(
             }
             Spacer(Modifier.width(12.dp))
             Column {
-                Text(jugadorNombre, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(jugadorEmail, color = Color.Gray, fontSize = 13.sp)
+                Text(
+                    text = jugadorNombre,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = jugadorEmail,
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
             }
         }
 
@@ -171,20 +210,26 @@ private fun DrawerContent(
 
         // 📑 Opciones del menú lateral
         val menuItems = listOf(
-            "Inicio" to Icons.Filled.Home,
-            "Información" to Icons.Filled.Info,
-            "Contacto" to Icons.Filled.Email,
-            "Mi Perfil" to Icons.Filled.Person,
+            "Inicio"       to Icons.Filled.Home,
+            "Información"  to Icons.Filled.Info,
+            "Contacto"     to Icons.Filled.Email,
+            "Mi Perfil"    to Icons.Filled.Person,
             "Preferencias" to Icons.Filled.Settings
         )
 
-        // 🔹 Renderizado de los ítems
         menuItems.forEach { (label, icon) ->
             val selected = selectedItem == label
-            val bg by animateColorAsState(if (selected) Color(0xFF1F4D3E) else Color.Transparent)
-            val fg by animateColorAsState(if (selected) Color(0xFF00FF77) else Color.White)
+            val bg by animateColorAsState(
+                targetValue = if (selected) Color(0xFF1F4D3E) else Color.Transparent,
+                label = ""
+            )
+            val fg by animateColorAsState(
+                targetValue = if (selected) Color(0xFF00FF77) else Color.White,
+                label = ""
+            )
+
             Row(
-                Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(bg)
@@ -196,6 +241,7 @@ private fun DrawerContent(
                 Spacer(Modifier.width(12.dp))
                 Text(label, color = fg)
             }
+
             Spacer(Modifier.height(6.dp))
         }
 
@@ -214,26 +260,40 @@ private fun DrawerContent(
 }
 
 /* ============================================================
- * 🔻 Bottom Navigation Bar — Navegación inferior principal
+ * 🔻 Bottom Navigation Bar — Navegación inferior
  * ============================================================ */
 @Composable
-private fun BottomNavBar(current: String, onItemSelected: (String) -> Unit) {
+private fun BottomNavBar(
+    current: String,
+    onItemSelected: (String) -> Unit
+) {
     NavigationBar(containerColor = Color(0xFF0B3D2E)) {
         val items = listOf(
             "Reservas" to Icons.Filled.EventAvailable,
-            "Eventos" to Icons.Filled.Flag,
-            "Inicio" to Icons.Filled.Home,
-            "Amigos" to Icons.Filled.Group,
-            "Alertas" to Icons.Filled.Notifications
+            "Eventos"  to Icons.Filled.Flag,
+            "Inicio"   to Icons.Filled.Home,
+            "Amigos"   to Icons.Filled.Group,
+            "Alertas"  to Icons.Filled.Notifications
         )
+
         items.forEach { (label, icon) ->
             val selected = current == label
-            val tint by animateColorAsState(if (selected) Color(0xFF00FF77) else Color.White)
+            val tint by animateColorAsState(
+                targetValue = if (selected) Color(0xFF00FF77) else Color.White,
+                label = ""
+            )
+
             NavigationBarItem(
                 selected = selected,
                 onClick = { onItemSelected(label) },
                 icon = { Icon(icon, contentDescription = label, tint = tint) },
-                label = { Text(label, fontSize = 12.sp, color = tint) }
+                label = {
+                    Text(
+                        text = label,
+                        fontSize = 12.sp,
+                        color = tint
+                    )
+                }
             )
         }
     }
@@ -243,12 +303,19 @@ private fun BottomNavBar(current: String, onItemSelected: (String) -> Unit) {
  * 🌅 Pantalla de inicio — Mensaje de bienvenida
  * ============================================================ */
 @Composable
-private fun HomeLandingContent(nombreJugador: String?) {
-    val nombreActual by rememberUpdatedState(nombreJugador?.takeIf { it.isNotBlank() } ?: "Jugador")
+private fun HomeLandingContent(
+    nombreJugador: String?
+) {
+    // Si no hay nombre, usamos "Jugador" como fallback.
+    val nombreActual by rememberUpdatedState(
+        nombreJugador?.takeIf { it.isNotBlank() } ?: "Jugador"
+    )
+
     val painter = safePainterResource(R.drawable.logo_app)
 
     Box(Modifier.fillMaxSize()) {
-        // 🖼️ Fondo con logo o imagen
+
+        // 🖼️ Fondo con imagen (logo_app), si existe el recurso
         painter?.let {
             Image(
                 painter = it,
@@ -258,12 +325,14 @@ private fun HomeLandingContent(nombreJugador: String?) {
             )
         }
 
-        // 🟩 Capa de gradiente oscuro inferior
+        // 🟩 Gradiente oscuro en la parte inferior para mejorar legibilidad
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))
+                    Brush.verticalGradient(
+                        listOf(Color.Transparent, Color(0xCC000000))
+                    )
                 )
         )
 
@@ -278,14 +347,14 @@ private fun HomeLandingContent(nombreJugador: String?) {
             GlowingLogo()
             Spacer(Modifier.height(20.dp))
             Text(
-                "Bienvenido, $nombreActual",
+                text = "Bienvenido, $nombreActual",
                 color = Color.White,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                "“Cada golpe es una nueva oportunidad para la grandeza.”",
+                text = "“Cada golpe es una nueva oportunidad para la grandeza.”",
                 color = Color.White.copy(alpha = 0.9f),
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
@@ -296,7 +365,7 @@ private fun HomeLandingContent(nombreJugador: String?) {
 }
 
 /* ============================================================
- * 🧩 safePainterResource — Evita crashes si no hay drawable
+ * 🧩 safePainterResource — Evita crash si el drawable no existe
  * ============================================================ */
 @SuppressLint("LocalContextResourcesRead")
 @Composable
@@ -312,15 +381,17 @@ private fun safePainterResource(@DrawableRes id: Int): Painter? {
 }
 
 /* ============================================================
- * ✨ GlowingLogo — Logo animado con pulsación luminosa
+ * ✨ GlowingLogo — Logo animado (mismo estilo que en Splash)
+ *  Sería buena idea extraerlo a un archivo común si lo reutilizas.
  * ============================================================ */
 @Composable
 private fun GlowingLogo() {
     val infiniteTransition = rememberInfiniteTransition(label = "")
 
-    // 🔹 Animación de escala pulsante
+    // 🔹 Animación de escala (efecto pulsación)
     val scale by infiniteTransition.animateFloat(
-        initialValue = 1f, targetValue = 1.15f,
+        initialValue = 1f,
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
             tween(1500, easing = EaseInOutQuad),
             RepeatMode.Reverse
@@ -328,9 +399,10 @@ private fun GlowingLogo() {
         label = ""
     )
 
-    // 🔹 Animación de brillo del fondo
+    // 🔹 Animación de la opacidad del brillo
     val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.8f, targetValue = 0.4f,
+        initialValue = 0.8f,
+        targetValue = 0.4f,
         animationSpec = infiniteRepeatable(
             tween(1500, easing = EaseInOutQuad),
             RepeatMode.Reverse
@@ -338,7 +410,6 @@ private fun GlowingLogo() {
         label = ""
     )
 
-    // 🟢 Composición visual del logo con efecto Glow
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -354,7 +425,7 @@ private fun GlowingLogo() {
                 .background(Color(0xFF00FF77).copy(alpha = alpha))
         )
         Icon(
-            Icons.Filled.MyLocation,
+            imageVector = Icons.Filled.MyLocation,
             contentDescription = "Logo",
             tint = Color(0xFF00FF77),
             modifier = Modifier.size(60.dp)

@@ -16,22 +16,44 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+/**
+ * Pantalla de configuración de preferencias del jugador.
+ *
+ * Permite seleccionar:
+ *  - Días de juego habituales.
+ *  - Intereses relacionados con la actividad del club.
+ *
+ * La información se persiste en Firestore mediante PreferenciasViewModel.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
+fun PreferenciasScreen(
+    vm: PreferenciasViewModel = viewModel()
+) {
     val context = LocalContext.current
+
+    // Estado observado desde Firestore
     val preferencias by vm.preferencias.collectAsState()
 
-    var diasJuego: List<String> by remember { mutableStateOf(preferencias.dias_juego.toMutableList()) }
-    var intereses: List<String> by remember { mutableStateOf(preferencias.intereses.toMutableList()) }
+    // Estados locales que se inicializan cada vez que cambian las preferencias remotas
+    var diasJuego by remember(preferencias) { mutableStateOf(preferencias.dias_juego) }
+    var intereses by remember(preferencias) { mutableStateOf(preferencias.intereses) }
 
+    // Catálogos de opciones
     val diasSemana = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado")
-    val interesesList = listOf("Golf", "Torneos", "Pitch & Putt", "Escuela de golf", "Infantil", "Eventos")
+    val interesesList = listOf(
+        "Golf",
+        "Torneos",
+        "Pitch & Putt",
+        "Escuela de golf",
+        "Infantil",
+        "Eventos"
+    )
 
     Scaffold(
         containerColor = Color(0xFF0B3D2E),
         bottomBar = {
-            // 🔘 Botón inferior fijo
+            // 🔘 Botón inferior fijo de guardado
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -45,10 +67,18 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                             dias = diasJuego,
                             intereses = intereses,
                             onSuccess = {
-                                Toast.makeText(context, "Preferencias guardadas correctamente ✅", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Preferencias guardadas correctamente ✅",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             },
-                            onError = {
-                                Toast.makeText(context, "Error al guardar: $it", Toast.LENGTH_LONG).show()
+                            onError = { msg ->
+                                Toast.makeText(
+                                    context,
+                                    "Error al guardar: $msg",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         )
                     },
@@ -68,6 +98,8 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
+            // Título principal
             Text(
                 "Preferencias del jugador",
                 color = Color.White,
@@ -77,9 +109,16 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
 
             Spacer(Modifier.height(24.dp))
 
+            // ============================================================
             // 🏌️‍♂️ PREFERENCIAS DE JUEGO
-            Text("PREFERENCIAS DE JUEGO", color = Color(0xFF00FF77), fontWeight = FontWeight.Bold)
+            // ============================================================
+            Text(
+                "PREFERENCIAS DE JUEGO",
+                color = Color(0xFF00FF77),
+                fontWeight = FontWeight.Bold
+            )
             Spacer(Modifier.height(8.dp))
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,8 +136,12 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                         Text(dia, color = Color.White, fontSize = 16.sp)
                         Checkbox(
                             checked = dia in diasJuego,
-                            onCheckedChange = {
-                                diasJuego = if (it) diasJuego + dia else diasJuego - dia
+                            onCheckedChange = { checked ->
+                                diasJuego = if (checked) {
+                                    diasJuego + dia
+                                } else {
+                                    diasJuego - dia
+                                }
                             },
                             colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00FF77))
                         )
@@ -108,9 +151,12 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
 
             Spacer(Modifier.height(28.dp))
 
+            // ============================================================
             // 🎯 INTERESES
+            // ============================================================
             Text("INTERESES", color = Color(0xFF00FF77), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -128,8 +174,12 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                         Text(interes, color = Color.White, fontSize = 16.sp)
                         Checkbox(
                             checked = interes in intereses,
-                            onCheckedChange = {
-                                intereses = if (it) intereses + interes else intereses - interes
+                            onCheckedChange = { checked ->
+                                intereses = if (checked) {
+                                    intereses + interes
+                                } else {
+                                    intereses - interes
+                                }
                             },
                             colors = CheckboxDefaults.colors(checkedColor = Color(0xFF00FF77))
                         )
@@ -137,7 +187,8 @@ fun PreferenciasScreen(vm: PreferenciasViewModel = viewModel()) {
                 }
             }
 
-            Spacer(Modifier.height(80.dp)) // espacio para que no tape el botón inferior
+            // Espacio para que el contenido no quede tapado por el botón inferior
+            Spacer(Modifier.height(80.dp))
         }
     }
 }

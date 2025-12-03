@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -31,13 +30,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.compose.ui.graphics.Color
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.view.auth.passEncrypt.hashPassword
 import com.maraloedev.golfmaster.vm.AuthViewModel
 
 /* ============================================================
-   🎨 COLORES
+   🎨 COLORES (idealmente irían en un Theme global)
    ============================================================ */
 private val ScreenBg = Color(0xFF00281F)
 private val PillUnselected = Color(0xFF00FF77)
@@ -49,12 +49,23 @@ private val CursorColor = Color(0xFF00FF77)
 
 /* ============================================================
    🟩 REGISTER SCREEN
+   Pantalla de registro de nuevos jugadores.
+   - Recoge datos personales y de juego.
+   - Valida campos localmente.
+   - Hashea la contraseña antes de guardar.
+   - Llama al AuthViewModel para crear usuario en Firebase.
    ============================================================ */
 @Composable
-fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()) {
+fun RegisterScreen(
+    navController: NavController,
+    vm: AuthViewModel = viewModel()
+) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
-    // Campos
+    // ==========================
+    // 🧾 ESTADO DE CAMPOS
+    // ==========================
     var nombre by rememberSaveable { mutableStateOf("") }
     var apellido by rememberSaveable { mutableStateOf("") }
     var correo by rememberSaveable { mutableStateOf("") }
@@ -66,6 +77,8 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var showPassword by rememberSaveable { mutableStateOf(false) }
     var loading by rememberSaveable { mutableStateOf(false) }
     var sexo by rememberSaveable { mutableStateOf("") }
+
+    // Errores por campo: "nombre" -> "Campo vacío", etc.
     var errores by remember { mutableStateOf(mapOf<String, String>()) }
 
     // Comunidad / Provincia / CP
@@ -75,7 +88,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
     var prefijoCP by rememberSaveable { mutableStateOf("") }
 
     // ============================================================
-    // DATOS DE COMUNIDADES Y PROVINCIAS
+    // 📍 DATOS DE COMUNIDADES Y PROVINCIAS
     // ============================================================
     val provinciasPorComunidad = mapOf(
         "Andalucía" to listOf("Almería","Cádiz","Córdoba","Granada","Huelva","Jaén","Málaga","Sevilla"),
@@ -97,6 +110,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
         "La Rioja" to listOf("La Rioja"),
     )
 
+    // Prefijos de código postal por provincia (para CP coherente con la provincia)
     val prefijoPorProvincia = mapOf(
         "Álava" to "01", "Albacete" to "02", "Alicante" to "03", "Almería" to "04",
         "Ávila" to "05", "Badajoz" to "06", "Illes Balears" to "07", "Barcelona" to "08",
@@ -112,15 +126,17 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
         "Valladolid" to "47", "Bizkaia" to "48", "Zamora" to "49", "Zaragoza" to "50"
     )
 
+    // Lista de comunidades para el dropdown
+    // 🔧 OJO: "Región de Murcia" debe coincidir con la clave del mapa anterior (ya corregido)
     val comunidades = listOf(
         "Andalucía","Aragón","Principado de Asturias","Islas Baleares","Islas Canarias","Cantabria",
         "Castilla-La Mancha","Castilla y León","Cataluña","Comunidad Valenciana","Extremadura",
-        "Galicia","Comunidad de Madrid","Region de Murcia","Comunidad Foral de Navarra",
+        "Galicia","Comunidad de Madrid","Región de Murcia","Comunidad Foral de Navarra",
         "País Vasco","La Rioja"
     )
 
+    // Parseo del handicap como Double (puede ser null si el texto no es número)
     val handicap = handicapText.toDoubleOrNull()
-    val focusManager = LocalFocusManager.current
 
     Scaffold(containerColor = ScreenBg) { pv ->
         Box(
@@ -129,6 +145,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 .background(ScreenBg)
                 .padding(pv)
                 .padding(horizontal = 24.dp)
+                // Pulsar fuera de los campos → quitar foco y teclado
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 },
@@ -138,6 +155,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.verticalScroll(rememberScrollState())
             ) {
+                // Logo superior
                 Image(
                     painter = painterResource(id = R.drawable.logo_app),
                     contentDescription = "Logo GolfMaster",
@@ -145,6 +163,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                 )
 
                 Spacer(Modifier.height(16.dp))
+
                 Text(
                     "Crear cuenta",
                     color = Color.White,
@@ -152,20 +171,50 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
+
                 Spacer(Modifier.height(24.dp))
 
-                // --- CAMPOS ---
-                AnimatedTextField("Nombre", nombre, KeyboardType.Text, onChange = { nombre = it },
-                    isError = errores.containsKey("nombre"), errorMessage = errores["nombre"])
-                AnimatedTextField("Apellidos", apellido, KeyboardType.Text, onChange = { apellido = it },
-                    isError = errores.containsKey("apellido"), errorMessage = errores["apellido"])
-                AnimatedTextField("Correo electrónico", correo, KeyboardType.Email, onChange = { correo = it },
-                    isError = errores.containsKey("correo"), errorMessage = errores["correo"])
-                AnimatedTextField("Contraseña", password, KeyboardType.Password,
+                // ==========================
+                // 📝 CAMPOS DE FORMULARIO
+                // ==========================
+
+                AnimatedTextField(
+                    label = "Nombre",
+                    value = nombre,
+                    type = KeyboardType.Text,
+                    onChange = { nombre = it },
+                    isError = errores.containsKey("nombre"),
+                    errorMessage = errores["nombre"]
+                )
+
+                AnimatedTextField(
+                    label = "Apellidos",
+                    value = apellido,
+                    type = KeyboardType.Text,
+                    onChange = { apellido = it },
+                    isError = errores.containsKey("apellido"),
+                    errorMessage = errores["apellido"]
+                )
+
+                AnimatedTextField(
+                    label = "Correo electrónico",
+                    value = correo,
+                    type = KeyboardType.Email,
+                    onChange = { correo = it },
+                    isError = errores.containsKey("correo"),
+                    errorMessage = errores["correo"]
+                )
+
+                AnimatedTextField(
+                    label = "Contraseña",
+                    value = password,
+                    type = KeyboardType.Password,
                     onChange = { password = it },
-                    isPassword = true, showPassword = showPassword,
+                    isPassword = true,
+                    showPassword = showPassword,
                     onTogglePassword = { showPassword = !showPassword },
-                    isError = errores.containsKey("password"), errorMessage = errores["password"]
+                    isError = errores.containsKey("password"),
+                    errorMessage = errores["password"]
                 )
 
                 SexoDropdown(
@@ -183,7 +232,7 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     value = comunidad,
                     onValueChange = {
                         comunidad = it
-                        provincia = ""
+                        provincia = ""        // Reiniciamos provincia al cambiar comunidad
                     },
                     isError = errores.containsKey("comunidad"),
                     errorMessage = errores["comunidad"]
@@ -194,76 +243,153 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     comunidad = comunidad,
                     provinciasPorComunidad = provinciasPorComunidad,
                     value = provincia,
-                    onValueChange = {
-                        provincia = it
-                        val pref = prefijoPorProvincia[it] ?: ""
+                    onValueChange = { nuevaProvincia ->
+                        provincia = nuevaProvincia
+                        val pref = prefijoPorProvincia[nuevaProvincia] ?: ""
                         prefijoCP = pref
-                        codigoPostal = if (codigoPostal.length >= 2)
+
+                        // Reconstruimos el CP respetando los 2 primeros dígitos de la provincia
+                        codigoPostal = if (codigoPostal.length >= 2) {
                             pref + codigoPostal.drop(2)
-                        else pref
+                        } else {
+                            pref
+                        }
                     },
                     isError = errores.containsKey("provincia"),
                     errorMessage = errores["provincia"]
                 )
 
-                AnimatedTextField("Código Postal", codigoPostal, KeyboardType.Number, onChange = { nuevo ->
-                    if (prefijoCP.isNotEmpty()) {
-                        codigoPostal = if (!nuevo.startsWith(prefijoCP)) {
-                            val resto = nuevo.filter { it.isDigit() }.drop(prefijoCP.length)
-                            prefijoCP + resto.take(3)
+                AnimatedTextField(
+                    label = "Código Postal",
+                    value = codigoPostal,
+                    type = KeyboardType.Number,
+                    onChange = { nuevo ->
+                        // Lógica para forzar CP a 5 dígitos, empezando por el prefijo de provincia
+                        if (prefijoCP.isNotEmpty()) {
+                            codigoPostal = if (!nuevo.startsWith(prefijoCP)) {
+                                val soloNumeros = nuevo.filter { it.isDigit() }
+                                val resto = soloNumeros.drop(prefijoCP.length)
+                                prefijoCP + resto.take(3)
+                            } else {
+                                prefijoCP + nuevo
+                                    .drop(prefijoCP.length)
+                                    .filter { it.isDigit() }
+                                    .take(3)
+                            }
                         } else {
-                            prefijoCP + nuevo.drop(prefijoCP.length).filter { it.isDigit() }.take(3)
+                            codigoPostal = nuevo
+                                .filter { it.isDigit() }
+                                .take(5)
                         }
-                    } else {
-                        codigoPostal = nuevo.filter { it.isDigit() }.take(5)
-                    }
-                },
-                    isError = errores.containsKey("codigoPostal"), errorMessage = errores["codigoPostal"]
+                    },
+                    isError = errores.containsKey("codigoPostal"),
+                    errorMessage = errores["codigoPostal"]
                 )
 
-                AnimatedTextField("Dirección", direccion, KeyboardType.Text, onChange = { direccion = it },
-                    isError = errores.containsKey("direccion"), errorMessage = errores["direccion"]
+                AnimatedTextField(
+                    label = "Dirección",
+                    value = direccion,
+                    type = KeyboardType.Text,
+                    onChange = { direccion = it },
+                    isError = errores.containsKey("direccion"),
+                    errorMessage = errores["direccion"]
                 )
-                AnimatedTextField("Teléfono", telefono, KeyboardType.Phone, onChange = { telefono = it },
-                    isError = errores.containsKey("telefono"), errorMessage = errores["telefono"]
+
+                AnimatedTextField(
+                    label = "Teléfono",
+                    value = telefono,
+                    type = KeyboardType.Phone,
+                    onChange = { telefono = it },
+                    isError = errores.containsKey("telefono"),
+                    errorMessage = errores["telefono"]
                 )
-                AnimatedTextField("Handicap", handicapText, KeyboardType.Number, onChange = { handicapText = it },
-                    isError = errores.containsKey("handicap"), errorMessage = errores["handicap"]
+
+                AnimatedTextField(
+                    label = "Handicap",
+                    value = handicapText,
+                    type = KeyboardType.Number,
+                    onChange = { handicapText = it },
+                    isError = errores.containsKey("handicap"),
+                    errorMessage = errores["handicap"]
                 )
 
                 Spacer(Modifier.height(8.dp))
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = socio, onCheckedChange = { socio = it })
+                    Checkbox(
+                        checked = socio,
+                        onCheckedChange = { socio = it }
+                    )
                     Text("¿Es socio?", color = Color.White)
                 }
 
                 Spacer(Modifier.height(24.dp))
 
+                // ==========================
+                // ✅ BOTÓN REGISTRAR
+                // ==========================
                 Button(
                     onClick = {
+                        // 1️⃣ Validación local de todos los campos
                         val nuevosErrores = mutableMapOf<String, String>()
+
                         if (nombre.isBlank()) nuevosErrores["nombre"] = "Campo vacío"
                         if (apellido.isBlank()) nuevosErrores["apellido"] = "Campo vacío"
-                        if (!correo.contains("@")) nuevosErrores["correo"] = "Formato incorrecto"
-                        if (password.isBlank()) nuevosErrores["password"] = "Campo vacío"
-                        if (sexo.isBlank()) nuevosErrores["sexo"] = "Seleccione un sexo"
-                        if (comunidad.isBlank()) nuevosErrores["comunidad"] = "Seleccione una comunidad"
-                        if (provincia.isBlank()) nuevosErrores["provincia"] = "Seleccione una provincia"
-                        if (codigoPostal.length != 5) nuevosErrores["codigoPostal"] = "Debe tener 5 números"
-                        if (direccion.isBlank()) nuevosErrores["direccion"] = "Campo vacío"
-                        if (telefono.isBlank()) nuevosErrores["telefono"] = "Campo vacío"
-                        else if (telefono.length != 9 || telefono.any { !it.isDigit() })
+
+                        if (!correo.contains("@")) {
+                            nuevosErrores["correo"] = "Formato incorrecto"
+                        }
+
+                        if (password.isBlank()) {
+                            nuevosErrores["password"] = "Campo vacío"
+                        }
+
+                        if (sexo.isBlank()) {
+                            nuevosErrores["sexo"] = "Seleccione un sexo"
+                        }
+
+                        if (comunidad.isBlank()) {
+                            nuevosErrores["comunidad"] = "Seleccione una comunidad"
+                        }
+
+                        if (provincia.isBlank()) {
+                            nuevosErrores["provincia"] = "Seleccione una provincia"
+                        }
+
+                        if (codigoPostal.length != 5) {
+                            nuevosErrores["codigoPostal"] = "Debe tener 5 números"
+                        }
+
+                        if (direccion.isBlank()) {
+                            nuevosErrores["direccion"] = "Campo vacío"
+                        }
+
+                        if (telefono.isBlank()) {
+                            nuevosErrores["telefono"] = "Campo vacío"
+                        } else if (telefono.length != 9 || telefono.any { !it.isDigit() }) {
                             nuevosErrores["telefono"] = "Debe tener 9 dígitos"
-                        if (handicap == null || handicap < 0.0 || handicap > 36.0)
+                        }
+
+                        if (handicap == null || handicap < 0.0 || handicap > 36.0) {
                             nuevosErrores["handicap"] = "Debe estar entre 0 y 36"
+                        }
 
                         errores = nuevosErrores
+
+                        // Si hay errores → mensaje y no seguimos
                         if (errores.isNotEmpty()) {
-                            Toast.makeText(context, "Corrige los campos marcados en rojo", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                context,
+                                "Corrige los campos marcados en rojo",
+                                Toast.LENGTH_LONG
+                            ).show()
                             return@Button
                         }
 
+                        // 2️⃣ Si todo está bien → preparar alta en Firebase
                         loading = true
+
+                        // Hash de la contraseña para guardar en Firestore
                         val passwordHasheada = hashPassword(password)
 
                         val jugador = Jugadores(
@@ -281,14 +407,21 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             password_jugador = passwordHasheada
                         )
 
+                        // 3️⃣ Llamada al ViewModel: crea usuario en Auth + Firestore
                         vm.registerJugador(
                             email = correo,
                             password = password,
                             jugador = jugador,
                             onSuccess = {
                                 loading = false
-                                Toast.makeText(context, "Registrado correctamente ✅", Toast.LENGTH_SHORT).show()
-                                navController.navigate("login") { popUpTo("register") { inclusive = true } }
+                                Toast.makeText(
+                                    context,
+                                    "Registrado correctamente ✅",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                navController.navigate("login") {
+                                    popUpTo("register") { inclusive = true }
+                                }
                             },
                             onError = {
                                 loading = false
@@ -299,22 +432,38 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                     enabled = !loading,
                     colors = ButtonDefaults.buttonColors(containerColor = PillUnselected),
                     shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 ) {
-                    Text("Registrar", color = Color.Black, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Registrar",
+                        color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
+                // Indicador de carga simple mientras se registra
                 if (loading) {
                     Spacer(Modifier.height(16.dp))
                     CircularProgressIndicator(color = PillUnselected)
                 }
 
                 Spacer(Modifier.height(20.dp))
-                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+
+                // Link a pantalla de login
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("¿Ya tienes cuenta?", color = Color.White)
                     Spacer(Modifier.width(6.dp))
                     TextButton(onClick = { navController.navigate("login") }) {
-                        Text("Inicia sesión", color = PillUnselected, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Inicia sesión",
+                            color = PillUnselected,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -323,9 +472,13 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
 }
 
 /* ============================================================
-   🧩 COMPONENTES DE FORMULARIO
+   🧩 COMPONENTES DE FORMULARIO REUTILIZABLES
    ============================================================ */
 
+/**
+ * TextField animado con borde que cambia de color según error,
+ * opción de comportamiento de contraseña y texto de error debajo.
+ */
 @Composable
 fun AnimatedTextField(
     label: String,
@@ -338,20 +491,33 @@ fun AnimatedTextField(
     isError: Boolean = false,
     errorMessage: String? = null
 ) {
-    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
+    val borderColor by animateColorAsState(
+        targetValue = if (isError) BorderError else BorderNormal,
+        label = ""
+    )
+
     Column {
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
             label = { Text(label, color = LabelColor) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            visualTransformation = if (isPassword && !showPassword) PasswordVisualTransformation() else VisualTransformation.None,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            visualTransformation = if (isPassword && !showPassword) {
+                PasswordVisualTransformation()
+            } else {
+                VisualTransformation.None
+            },
             trailingIcon = {
                 if (isPassword && onTogglePassword != null) {
                     IconButton(onClick = onTogglePassword) {
                         Icon(
-                            painter = painterResource(if (showPassword) R.drawable.ic_ojo_abierto else R.drawable.ic_ojo_cerrado),
+                            painter = painterResource(
+                                if (showPassword) R.drawable.ic_ojo_abierto
+                                else R.drawable.ic_ojo_cerrado
+                            ),
                             contentDescription = "Mostrar contraseña",
                             tint = BorderNormal
                         )
@@ -370,11 +536,19 @@ fun AnimatedTextField(
             )
         )
         if (isError && !errorMessage.isNullOrBlank()) {
-            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
+            Text(
+                text = errorMessage,
+                color = BorderError,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+            )
         }
     }
 }
 
+/**
+ * Dropdown para seleccionar sexo (u otra lista sencilla de opciones).
+ */
 @Composable
 fun SexoDropdown(
     label: String,
@@ -385,16 +559,28 @@ fun SexoDropdown(
     errorMessage: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
+    val borderColor by animateColorAsState(
+        targetValue = if (isError) BorderError else BorderNormal,
+        label = ""
+    )
+
     Column {
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
             OutlinedTextField(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(label, color = LabelColor) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth().padding(vertical = 4.dp),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = borderColor,
                     unfocusedBorderColor = borderColor,
@@ -405,21 +591,35 @@ fun SexoDropdown(
                     unfocusedTextColor = TextColor
                 )
             )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 opciones.forEach { opcion ->
-                    DropdownMenuItem(text = { Text(opcion) }, onClick = {
-                        onValueChange(opcion)
-                        expanded = false
-                    })
+                    DropdownMenuItem(
+                        text = { Text(opcion) },
+                        onClick = {
+                            onValueChange(opcion)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
         if (isError && !errorMessage.isNullOrBlank()) {
-            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
+            Text(
+                text = errorMessage,
+                color = BorderError,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+            )
         }
     }
 }
 
+/**
+ * Dropdown para seleccionar Comunidad Autónoma.
+ */
 @Composable
 fun ComunidadDropdown(
     label: String,
@@ -430,16 +630,28 @@ fun ComunidadDropdown(
     errorMessage: String? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
+    val borderColor by animateColorAsState(
+        targetValue = if (isError) BorderError else BorderNormal,
+        label = ""
+    )
+
     Column {
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
             OutlinedTextField(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(label, color = LabelColor) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth().padding(vertical = 4.dp),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = borderColor,
                     unfocusedBorderColor = borderColor,
@@ -450,21 +662,36 @@ fun ComunidadDropdown(
                     unfocusedTextColor = TextColor
                 )
             )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 opciones.forEach { opcion ->
-                    DropdownMenuItem(text = { Text(opcion) }, onClick = {
-                        onValueChange(opcion)
-                        expanded = false
-                    })
+                    DropdownMenuItem(
+                        text = { Text(opcion) },
+                        onClick = {
+                            onValueChange(opcion)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
         if (isError && !errorMessage.isNullOrBlank()) {
-            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
+            Text(
+                text = errorMessage,
+                color = BorderError,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+            )
         }
     }
 }
 
+/**
+ * Dropdown de provincia dependiente de la comunidad seleccionada.
+ * - Si no hay comunidad, el campo aparece deshabilitado con placeholder.
+ */
 @Composable
 fun ProvinciaDependienteDropdown(
     label: String,
@@ -477,11 +704,16 @@ fun ProvinciaDependienteDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val provincias = provinciasPorComunidad[comunidad] ?: emptyList()
-    val borderColor by animateColorAsState(targetValue = if (isError) BorderError else BorderNormal, label = "")
+    val borderColor by animateColorAsState(
+        targetValue = if (isError) BorderError else BorderNormal,
+        label = ""
+    )
+
     Column {
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = {
+                // Solo permitimos desplegar si hay comunidad seleccionada
                 if (comunidad.isNotBlank()) expanded = !expanded
             }
         ) {
@@ -490,11 +722,20 @@ fun ProvinciaDependienteDropdown(
                 onValueChange = {},
                 readOnly = true,
                 label = { Text(label, color = LabelColor) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth().padding(vertical = 4.dp),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 placeholder = {
-                    if (comunidad.isBlank())
-                        Text("Selecciona primero la Comunidad Autónoma", color = LabelColor.copy(alpha = 0.6f))
+                    if (comunidad.isBlank()) {
+                        Text(
+                            "Selecciona primero la Comunidad Autónoma",
+                            color = LabelColor.copy(alpha = 0.6f)
+                        )
+                    }
                 },
                 enabled = comunidad.isNotBlank(),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -510,17 +751,28 @@ fun ProvinciaDependienteDropdown(
                     disabledTextColor = TextColor.copy(alpha = 0.6f)
                 )
             )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 provincias.forEach { p ->
-                    DropdownMenuItem(text = { Text(p) }, onClick = {
-                        onValueChange(p)
-                        expanded = false
-                    })
+                    DropdownMenuItem(
+                        text = { Text(p) },
+                        onClick = {
+                            onValueChange(p)
+                            expanded = false
+                        }
+                    )
                 }
             }
         }
         if (isError && !errorMessage.isNullOrBlank()) {
-            Text(text = errorMessage, color = BorderError, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp, bottom = 2.dp))
+            Text(
+                text = errorMessage,
+                color = BorderError,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
+            )
         }
     }
 }

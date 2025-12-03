@@ -19,14 +19,29 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
-import com.maraloedev.golfmaster.model.Invitacion
 import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.model.Reserva
 import kotlinx.coroutines.launch
@@ -47,7 +61,7 @@ import java.util.Locale
 import java.util.UUID
 
 /* ============================================================
-   🎨 COLORES
+   🎨 PALETA DE COLORES PARA LA PANTALLA DE RESERVAS
    ============================================================ */
 private val PillSelected = Color(0xFF1F4D3E)
 private val PillUnselected = Color(0xFF00FF77)
@@ -56,9 +70,15 @@ private val CardBg = Color(0xFF0D1B12)
 
 /* ============================================================
    🟩 PANTALLA PRINCIPAL DE RESERVAS
+   ------------------------------------------------------------
+   - Muestra reservas próximas y pasadas.
+   - Permite crear nuevas reservas mediante un BottomSheet.
+   - Permite eliminar reservas con gesto de swipe + confirmación.
    ============================================================ */
 @Composable
-fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
+fun ReservasScreen(
+    vm: ReservasViewModel = viewModel()
+) {
     val reservas by vm.reservas.collectAsState()
     val loading by vm.loading.collectAsState()
     val invitacionesPendientes by vm.invitacionesPendientes.collectAsState()
@@ -69,8 +89,10 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
     var showForm by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf("Próximas") }
 
+    // Punto de referencia temporal para clasificar reservas
     val ahora = remember { Timestamp.now() }
 
+    // Clasificación de reservas según fecha
     val (proximas, pasadas) = remember(reservas) {
         val prox = reservas.filter { (it.fecha?.seconds ?: 0) > ahora.seconds }
         val pas = reservas.filter { (it.fecha?.seconds ?: 0) <= ahora.seconds }
@@ -84,7 +106,11 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                 onClick = { showForm = true },
                 containerColor = PillUnselected
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Nueva reserva", tint = Color.Black)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Nueva reserva",
+                    tint = Color.Black
+                )
             }
         },
         containerColor = ScreenBg
@@ -94,6 +120,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                 .padding(pad)
                 .fillMaxSize()
         ) {
+            // Selector tipo “pill” entre próximas y pasadas
             BigPills(
                 left = "Próximas",
                 right = "Pasadas",
@@ -102,20 +129,23 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
             )
 
             if (loading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = PillUnselected)
                 }
             } else {
                 Crossfade(targetState = selectedTab, label = "reservasCrossfade") { tab ->
                     val lista = if (tab == "Próximas") proximas else pasadas
 
-                    // 🔧 Elimina duplicados por id + fecha.seconds
+                    // Eliminación de posibles duplicados (por id + timestamp)
                     val listaUnica = lista.distinctBy { "${it.id}_${it.fecha?.seconds}" }
 
                     if (listaUnica.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
-                                "No hay reservas ${tab.lowercase()}",
+                                text = "No hay reservas ${tab.lowercase()}",
                                 color = Color.White.copy(alpha = .7f)
                             )
                         }
@@ -135,33 +165,38 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                             index.toString()
                                     base.ifBlank { UUID.randomUUID().toString() }
                                 }
-                            ) { _, r ->
+                            ) { _, reserva ->
 
                                 var mostrarDialogo by remember { mutableStateOf(false) }
 
+                                // Estado del swipe con confirmación de borrado
                                 val dismissState = rememberSwipeToDismissBoxState(
                                     confirmValueChange = { value ->
-                                        if (value == SwipeToDismissBoxValue.StartToEnd ||
+                                        if (
+                                            value == SwipeToDismissBoxValue.StartToEnd ||
                                             value == SwipeToDismissBoxValue.EndToStart
                                         ) {
                                             mostrarDialogo = true
-                                            false
+                                            false // No se elimina automáticamente; esperamos confirmación
                                         } else {
                                             false
                                         }
                                     }
                                 )
 
+                                // Diálogo de confirmación de borrado
                                 if (mostrarDialogo) {
                                     AlertDialog(
                                         onDismissRequest = { mostrarDialogo = false },
                                         title = { Text("Eliminar reserva") },
-                                        text = { Text("¿Seguro que quieres eliminar esta reserva?") },
+                                        text = {
+                                            Text("¿Seguro que quieres eliminar esta reserva?")
+                                        },
                                         confirmButton = {
                                             TextButton(
                                                 onClick = {
                                                     scope.launch {
-                                                        r.id?.let { vm.eliminarReserva(it) }
+                                                        reserva.id?.let { vm.eliminarReserva(it) }
                                                         snackbarHost.showSnackbar("Reserva eliminada")
                                                     }
                                                     mostrarDialogo = false
@@ -180,6 +215,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                     )
                                 }
 
+                                // Componente de swipe con contenido de la reserva
                                 SwipeToDismissBox(
                                     state = dismissState,
                                     enableDismissFromStartToEnd = true,
@@ -210,7 +246,7 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
                                         }
                                     },
                                     content = {
-                                        ReservaCard(r)
+                                        ReservaCard(reserva)
                                     }
                                 )
                             }
@@ -221,15 +257,21 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
         }
     }
 
-    // 🔔 Diálogo de invitación (primera pendiente)
+    // Ejemplo de posible ampliación con invitaciones pendientes
     val invitacionMostrada = invitacionesPendientes.firstOrNull()
+    // TODO: mostrar un AlertDialog con invitación cuando invitacionMostrada != null
 
+    // Hoja inferior (BottomSheet) para crear nueva reserva
     if (showForm) {
         ModalBottomSheet(
             onDismissRequest = { showForm = false },
             containerColor = ScreenBg
         ) {
-            NuevaReservaSheet(vm = vm, snackbarHostState = snackbarHost) {
+            NuevaReservaSheet(
+                vm = vm,
+                snackbarHostState = snackbarHost
+            ) {
+                // Callback onClose → cierra el formulario
                 showForm = false
             }
         }
@@ -237,13 +279,18 @@ fun ReservasScreen(vm: ReservasViewModel = viewModel()) {
 }
 
 /* ============================================================
-   🟩 CARD DE RESERVA
+   🟩 TARJETA DE RESERVA
+   ------------------------------------------------------------
+   Muestra información resumida de la reserva: hoyos, fecha,
+   recorrido y número de jugadores.
    ============================================================ */
 @Composable
-private fun ReservaCard(r: Reserva) {
+private fun ReservaCard(
+    r: Reserva
+) {
     val df = remember { SimpleDateFormat("dd MMMM yyyy - HH:mm", Locale("es", "ES")) }
 
-    // Evitar "9 hoyos Hoyos"
+    // Evitar textos redundantes tipo "9 hoyos Hoyos"
     val textoHoyosBruto = r.hoyos?.trim().orEmpty()
     val textoHoyos = when {
         textoHoyosBruto.isBlank() -> "-- hoyos"
@@ -259,21 +306,22 @@ private fun ReservaCard(r: Reserva) {
         Column(Modifier.padding(14.dp)) {
             Text("⛳ $textoHoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
             Text(
-                r.fecha?.toDate()?.let(df::format) ?: "Sin fecha",
+                text = r.fecha?.toDate()?.let(df::format) ?: "Sin fecha",
                 color = Color.White.copy(alpha = .8f)
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                "Recorrido: ${r.recorrido ?: "--"}  ·  Jugadores: ${r.jugadores ?: "Solo"}",
+                text = "Recorrido: ${r.recorrido ?: "--"}  ·  Jugadores: ${r.jugadores ?: "Solo"}",
                 color = Color.White.copy(alpha = .8f)
             )
         }
     }
 }
 
-
 /* ============================================================
-   🟩 PILLS
+   🟩 COMPONENTE DE PESTAÑAS TIPO "PILL"
+   ------------------------------------------------------------
+   Se utiliza para alternar entre reservas próximas y pasadas.
    ============================================================ */
 @Composable
 private fun BigPills(
@@ -285,7 +333,7 @@ private fun BigPills(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding( 16.dp)
+            .padding(16.dp)
             .clip(RoundedCornerShape(14.dp))
             .padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -314,7 +362,12 @@ private fun BigPills(
 }
 
 /* ============================================================
-   🟩 NUEVA RESERVA (Sheet)
+   🟩 HOJA INFERIOR: CREACIÓN DE NUEVA RESERVA
+   ------------------------------------------------------------
+   - Selección de fecha y hora.
+   - Selección de recorrido (9 / 18 hoyos).
+   - Búsqueda y selección de otros jugadores a invitar.
+   - Validación para evitar dos reservas el mismo día.
    ============================================================ */
 @Composable
 fun NuevaReservaSheet(
@@ -349,14 +402,30 @@ fun NuevaReservaSheet(
         )
         Spacer(Modifier.height(14.dp))
 
-        DateTimePickerField("Fecha y hora del juego", fecha) { fecha = it }
+        // Selección de fecha y hora
+        DateTimePickerField(
+            label = "Fecha y hora del juego",
+            value = fecha
+        ) { fecha = it }
+
         Spacer(Modifier.height(12.dp))
 
-        SelectField("Recorrido", hoyos, listOf("9 hoyos", "18 hoyos")) { hoyos = it }
+        // Selección de recorrido (9 / 18 hoyos)
+        SelectField(
+            label = "Recorrido",
+            value = hoyos,
+            options = listOf("9 hoyos", "18 hoyos")
+        ) { hoyos = it }
+
         Spacer(Modifier.height(20.dp))
 
-        Text("Seleccionar jugadores", color = Color.White, fontWeight = FontWeight.SemiBold)
+        Text(
+            "Seleccionar jugadores",
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold
+        )
 
+        // Buscador de jugadores
         OutlinedTextField(
             value = search,
             onValueChange = {
@@ -376,6 +445,7 @@ fun NuevaReservaSheet(
         )
         Spacer(Modifier.height(8.dp))
 
+        // Lista de jugadores sugeridos
         if (loadingJugadores) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = PillUnselected)
@@ -393,9 +463,13 @@ fun NuevaReservaSheet(
                     key = { it.id.ifBlank { UUID.randomUUID().toString() } }
                 ) { jugador ->
                     val seleccionado = jugadoresSeleccionados.contains(jugador)
-                    JugadorCard(jugador = jugador, seleccionado = seleccionado) {
+                    JugadorCard(
+                        jugador = jugador,
+                        seleccionado = seleccionado
+                    ) {
                         jugadoresSeleccionados =
-                            if (seleccionado) jugadoresSeleccionados - jugador else jugadoresSeleccionados + jugador
+                            if (seleccionado) jugadoresSeleccionados - jugador
+                            else jugadoresSeleccionados + jugador
                     }
                 }
             }
@@ -403,9 +477,11 @@ fun NuevaReservaSheet(
 
         Spacer(Modifier.height(20.dp))
 
+        // Botón principal: crea la reserva y envía invitaciones
         Button(
             onClick = {
                 scope.launch {
+                    // Regla de negocio: no más de una reserva por día
                     val yaReservadoEseDia = reservas.any { existente ->
                         mismaFecha(existente.fecha, fecha)
                     }
@@ -451,7 +527,7 @@ fun NuevaReservaSheet(
 }
 
 /* ============================================================
-   🟩 PICKER DE FECHA Y HORA
+   🟩 PICKER DE FECHA Y HORA (nativo Android)
    ============================================================ */
 @Composable
 fun DateTimePickerField(
@@ -512,7 +588,7 @@ fun DateTimePickerField(
 }
 
 /* ============================================================
-   🟩 SELECT FIELD
+   🟩 SELECTOR GENÉRICO (Drop-down simple)
    ============================================================ */
 @Composable
 fun SelectField(
@@ -573,10 +649,14 @@ fun SelectField(
 }
 
 /* ============================================================
-   🟩 JUGADOR CARD
+   🟩 CARD DE JUGADOR SELECCIONABLE
    ============================================================ */
 @Composable
-fun JugadorCard(jugador: Jugadores, seleccionado: Boolean, onClick: () -> Unit) {
+fun JugadorCard(
+    jugador: Jugadores,
+    seleccionado: Boolean,
+    onClick: () -> Unit
+) {
     val bg = if (seleccionado) PillUnselected else PillSelected
     Row(
         Modifier
@@ -602,7 +682,10 @@ fun JugadorCard(jugador: Jugadores, seleccionado: Boolean, onClick: () -> Unit) 
 }
 
 /* ============================================================
-   🟩 HELPER: MISMO DÍA
+   🟩 FUNCIÓN AUXILIAR: MISMO DÍA
+   ------------------------------------------------------------
+   Compara dos Timestamp y devuelve true si pertenecen al mismo
+   día natural (año y día del año).
    ============================================================ */
 private fun mismaFecha(a: Timestamp?, b: Timestamp?): Boolean {
     if (a == null || b == null) return false

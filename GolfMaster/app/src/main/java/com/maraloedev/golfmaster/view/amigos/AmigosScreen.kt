@@ -24,11 +24,12 @@ import androidx.navigation.NavController
 import com.maraloedev.golfmaster.model.Amigo
 import kotlinx.coroutines.launch
 
+// 🎨 Colores de esta sección (idealmente irían en tu tema global)
 val ScreenBg = Color(0xFF02140D)
 val CardBg = Color(0xFF11261B)
 val Accent = Color(0xFF00FF77)
 val Danger = Color(0xFFE53935)
-val TextMuted= Color.White.copy(alpha = 0.7f)
+val TextMuted = Color.White.copy(alpha = 0.7f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +49,11 @@ fun AmigosScreen(
                 onClick = { navController.navigate("amigosAgregar") },
                 containerColor = Accent
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir amigo", tint = Color.Black)
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Añadir amigo",
+                    tint = Color.Black
+                )
             }
         },
         containerColor = ScreenBg
@@ -77,11 +82,19 @@ fun AmigosScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             when {
-                loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                // ⏳ Cargando
+                loading -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = Accent)
                 }
 
-                amigos.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                // 🚫 Lista vacía
+                amigos.isEmpty() -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.People,
@@ -91,10 +104,15 @@ fun AmigosScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text("Todavía no tienes amigos añadidos.", color = TextMuted)
-                        Text("Pulsa en el botón + para empezar 🟢", color = TextMuted, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            "Pulsa en el botón + para empezar 🟢",
+                            color = TextMuted,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
 
+                // ✅ Hay amigos
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -104,6 +122,7 @@ fun AmigosScreen(
                     items(amigos, key = { it.id }) { amigo ->
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = {
+                                // En lugar de borrar directamente, mostramos diálogo de confirmación
                                 amigoAEliminar = amigo
                                 false
                             }
@@ -122,7 +141,11 @@ fun AmigosScreen(
                                     contentAlignment = Alignment.CenterEnd
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Eliminar", color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            "Eliminar",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                         Spacer(Modifier.width(6.dp))
                                         Icon(
                                             Icons.Default.Delete,
@@ -142,11 +165,17 @@ fun AmigosScreen(
         }
     }
 
+    // 🧾 Diálogo de confirmación de borrado
     amigoAEliminar?.let { amigo ->
         AlertDialog(
             onDismissRequest = { amigoAEliminar = null },
             title = { Text("Eliminar amigo", color = Color.White) },
-            text  = { Text("¿Seguro que quieres eliminar a ${amigo.nombre}?", color = TextMuted) },
+            text = {
+                Text(
+                    "¿Seguro que quieres eliminar a ${amigo.nombre}?",
+                    color = TextMuted
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -167,6 +196,9 @@ fun AmigosScreen(
     }
 }
 
+/**
+ * Tarjeta mini para cada amigo.
+ */
 @Composable
 private fun AmigoCardMini(amigo: Amigo) {
     val inicial = amigo.nombre.trim().take(1).uppercase()

@@ -4,57 +4,96 @@ import android.util.Patterns
 import androidx.compose.runtime.*
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 
+/**
+ * Contenedor de la pantalla de login.
+ *
+ * Aquí se maneja:
+ *  - Estado de errores de campo.
+ *  - Error general.
+ *  - Llamada a FirebaseAuth.
+ *  - Navegación a otras pantallas.
+ *
+ * La UI pura está en [LoginScreen].
+ */
 @Composable
 fun LoginScreenContainer(navController: NavController) {
-    val auth = FirebaseAuth.getInstance()
+    // ✅ Mejor obtener la instancia una sola vez por composición
+    val auth = remember { FirebaseAuth.getInstance() }
+
+    // Error general (mensaje arriba o debajo del botón, no ligado a un campo concreto)
     var errorGeneral by remember { mutableStateOf<String?>(null) }
+
+    // Errores específicos por campo: "email" -> "obligatorio", "password" -> "..."
     var erroresCampo by remember { mutableStateOf(mapOf<String, String>()) }
 
     LoginScreen(
         erroresCampo = erroresCampo,
         errorMessage = errorGeneral,
         onLogin = { email, password ->
-            // --- Validación local ---
-            val nuevos = mutableMapOf<String, String>()
+            // ====================================================
+            // 1) ✅ Validación local antes de ir a Firebase
+            // ====================================================
+            val nuevosErrores = mutableMapOf<String, String>()
+
             if (email.isBlank()) {
-                nuevos["email"] = "Campo obligatorio"
+                nuevosErrores["email"] = "Campo obligatorio"
             } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                nuevos["email"] = "Formato de correo no válido"
-            }
-            if (password.isBlank()) {
-                nuevos["password"] = "Campo obligatorio"
+                nuevosErrores["email"] = "Formato de correo no válido"
             }
 
-            erroresCampo = nuevos
+            if (password.isBlank()) {
+                nuevosErrores["password"] = "Campo obligatorio"
+            }
+
+            erroresCampo = nuevosErrores
+
             if (erroresCampo.isNotEmpty()) {
+                // Si hay errores de campo, mostramos un mensaje general y no llamamos a Firebase
                 errorGeneral = "Corrige los campos marcados en rojo"
                 return@LoginScreen
             }
 
-            // --- Firebase Auth ---
-            auth.signInWithEmailAndPassword(email, password)
+            // ====================================================
+            // 2) 🔐 Login con Firebase Auth
+            // ====================================================
+            auth
+                .signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
+                        // Login correcto → limpiamos errores y navegamos
                         errorGeneral = null
+                        erroresCampo = emptyMap()
+
                         navController.navigate("home") {
+                            // Eliminamos la pantalla de login del back stack
                             popUpTo("login") { inclusive = true }
                         }
                     } else {
+                        // Error en Firebase → mapeamos a mensaje legible
                         val mapped = mapFirebaseLoginError(task.exception)
                         erroresCampo = mapped.first
                         errorGeneral = mapped.second
                     }
                 }
         },
-        onRegisterClick = { navController.navigate("register") }
+        onRegisterClick = {
+            navController.navigate("register")
+        }
     )
 }
 
+/**
+ * Mapea las excepciones de FirebaseAuth a:
+ *  - Errores por campo (Map<String, String>)
+ *  - Mensaje general para mostrar en la pantalla.
+ */
 private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, String> {
     val campo = mutableMapOf<String, String>()
+
     val mensajeGeneral: String = when (ex) {
-        is com.google.firebase.auth.FirebaseAuthException -> {
+        is FirebaseAuthException -> {
             when (ex.errorCode) {
                 "ERROR_USER_NOT_FOUND" -> {
                     campo["email"] = "El usuario no existe o el correo no está registrado"
@@ -76,12 +115,19 @@ private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, Str
                     campo["email"] = "Demasiados intentos fallidos"
                     "Demasiados intentos. Intenta más tarde"
                 }
-                else -> "Error al iniciar sesión. Verifica tus datos."
+                else -> {
+                    "Error al iniciar sesión. Verifica tus datos."
+                }
             }
         }
-        else -> "No se pudo conectar con el servidor. Inténtalo de nuevo."
+        else -> {
+            // Por ejemplo, problemas de red, timeout, etc.
+            "No se pudo conectar con el servidor. Inténtalo de nuevo."
+        }
     }
 
+    // Si no hemos marcado ningún campo concreto pero hay mensaje general,
+    // asociamos el error al email para que se vea en algún sitio.
     if (campo.isEmpty() && mensajeGeneral.isNotBlank()) {
         campo["email"] = mensajeGeneral
     }
