@@ -3,7 +3,7 @@ package com.maraloedev.golfmaster.model
 import com.google.firebase.Timestamp
 
 /**
- * Evento (torneo, clinic, etc.) creado por el club o un organizador.
+ * Evento creado por un organizador.
  */
 data class Evento(
     val id: String? = null,            // ID de Firestore (se rellena tras crear/leer)

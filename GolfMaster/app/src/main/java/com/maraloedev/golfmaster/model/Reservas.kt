@@ -10,7 +10,7 @@ data class Reserva(
     val usuarioId: String = "",                // UID del creador de la reserva
     val fecha: Timestamp? = null,              // Fecha de juego
     val hora: Timestamp? = null,               // Hora de salida
-    val recorrido: String? = null,             // Ej: "Recorrido 18 hoyos", "Pitch & Putt"
+    val recorrido: String? = null,             // Ej: "18 hoyos", "Pitch & Putt"
     val hoyos: String? = null,                 // Ej: "9", "18"
     val jugadores: String? = null,             // Descripción libre de jugadores (opcional)
     val participantesIds: List<String> = emptyList() // UIDs de jugadores apuntados

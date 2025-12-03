@@ -26,7 +26,7 @@ class AmigosViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
 
     // ============================================================
-    // 🔧 Constantes de colecciones y campos
+    // Constantes de colecciones y campos
     // ============================================================
     private companion object {
         const val COL_JUGADORES = "jugadores"
@@ -60,13 +60,9 @@ class AmigosViewModel : ViewModel() {
     }
 
     // ============================================================
-    // 👂 Suscripción en tiempo real a los amigos
+    //  Suscripción en tiempo real a los amigos
     // ============================================================
 
-    /**
-     * Escucha la subcolección `/jugadores/{uid}/amigos` en tiempo real
-     * y actualiza el estado de la UI cuando haya cambios.
-     */
     private fun suscribeAmigos() {
         val uid = auth.currentUser?.uid ?: run {
             _loading.value = false
@@ -98,7 +94,7 @@ class AmigosViewModel : ViewModel() {
     }
 
     // ============================================================
-    // 🧾 Utilidad privada: obtener mi nombre de la colección jugadores
+    //  Utilidad privada: obtener mi nombre de la colección jugadores
     // ============================================================
 
     /**
@@ -121,12 +117,11 @@ class AmigosViewModel : ViewModel() {
     }
 
     // ============================================================
-    // 🔍 Buscar jugadores por nombre
+    //  Buscar jugadores por nombre
     // ============================================================
 
     /**
-     * Busca jugadores cuyo nombre empiece por el texto indicado, usando
-     * un rango [texto, texto + \uf8ff] para simular un "startsWith".
+     * Busca jugadores cuyo nombre empiece por el texto indicado
      */
     fun buscarJugador(texto: String) {
         if (texto.isBlank()) {
@@ -160,7 +155,7 @@ class AmigosViewModel : ViewModel() {
     }
 
     // ============================================================
-    // 📨 Enviar solicitud de amistad
+    //  Enviar solicitud de amistad
     // ============================================================
 
     /**
@@ -181,7 +176,7 @@ class AmigosViewModel : ViewModel() {
             try {
                 val nombreActual = nombreActualDesdeJugadores()
 
-                // 1️⃣ Comprobar si ya existe una solicitud pendiente
+                //  Comprobar si ya existe una solicitud pendiente
                 val existentes = db.collection(COL_SOLICITUDES_AMIGO)
                     .whereEqualTo("de", uid)
                     .whereEqualTo("para", idDestino)
@@ -193,7 +188,7 @@ class AmigosViewModel : ViewModel() {
                     return@launch
                 }
 
-                // 2️⃣ Crear documento de solicitud
+                //  Crear documento de solicitud
                 val doc = mapOf(
                     "tipo" to "amistad",
                     "de" to uid,
@@ -205,16 +200,16 @@ class AmigosViewModel : ViewModel() {
                 )
 
                 db.collection(COL_SOLICITUDES_AMIGO).add(doc).await()
-                onDone("📩 Solicitud enviada a $nombreDestino")
+                onDone(" Solicitud enviada a $nombreDestino")
 
             } catch (e: Exception) {
-                onDone("❌ Error al enviar: ${e.message}")
+                onDone(" Error al enviar: ${e.message}")
             }
         }
     }
 
     // ============================================================
-    // 🗑️ Eliminar amigo
+    //  Eliminar amigo
     // ============================================================
 
     /**
@@ -222,9 +217,6 @@ class AmigosViewModel : ViewModel() {
      *
      *  /jugadores/{yo}/amigos/{amigoId}
      *  /jugadores/{amigoId}/amigos/{yo}
-     *
-     * IMPORTANTE: aquí se asume que `amigoId` es el UID del otro jugador,
-     * porque así estás creando los documentos (document(otroUid)).
      */
     fun eliminarAmigo(amigoId: String) = viewModelScope.launch {
         val uid = auth.currentUser?.uid ?: return@launch
@@ -246,13 +238,8 @@ class AmigosViewModel : ViewModel() {
                 .delete()
                 .await()
         } catch (_: Exception) {
-            // Para el TFG: puedes ignorar o loguear el error
         }
     }
-
-    // ============================================================
-    // 🧹 Limpieza
-    // ============================================================
 
     override fun onCleared() {
         amigosListener?.remove()

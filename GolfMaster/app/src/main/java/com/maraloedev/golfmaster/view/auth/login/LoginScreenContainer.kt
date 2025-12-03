@@ -9,7 +9,7 @@ import com.google.firebase.auth.FirebaseAuthException
 /**
  * Contenedor de la pantalla de login.
  *
- * Aquí se maneja:
+ * Aquí manejo :
  *  - Estado de errores de campo.
  *  - Error general.
  *  - Llamada a FirebaseAuth.
@@ -33,7 +33,7 @@ fun LoginScreenContainer(navController: NavController) {
         errorMessage = errorGeneral,
         onLogin = { email, password ->
             // ====================================================
-            // 1) ✅ Validación local antes de ir a Firebase
+            // 1) Validación local antes de ir a Firebase
             // ====================================================
             val nuevosErrores = mutableMapOf<String, String>()
 
@@ -56,7 +56,7 @@ fun LoginScreenContainer(navController: NavController) {
             }
 
             // ====================================================
-            // 2) 🔐 Login con Firebase Auth
+            // 2) Login con Firebase Auth
             // ====================================================
             auth
                 .signInWithEmailAndPassword(email, password)
@@ -84,11 +84,7 @@ fun LoginScreenContainer(navController: NavController) {
     )
 }
 
-/**
- * Mapea las excepciones de FirebaseAuth a:
- *  - Errores por campo (Map<String, String>)
- *  - Mensaje general para mostrar en la pantalla.
- */
+
 private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, String> {
     val campo = mutableMapOf<String, String>()
 
@@ -121,13 +117,10 @@ private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, Str
             }
         }
         else -> {
-            // Por ejemplo, problemas de red, timeout, etc.
             "No se pudo conectar con el servidor. Inténtalo de nuevo."
         }
     }
 
-    // Si no hemos marcado ningún campo concreto pero hay mensaje general,
-    // asociamos el error al email para que se vea en algún sitio.
     if (campo.isEmpty() && mensajeGeneral.isNotBlank()) {
         campo["email"] = mensajeGeneral
     }

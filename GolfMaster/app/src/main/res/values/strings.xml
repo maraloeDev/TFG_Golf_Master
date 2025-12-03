@@ -1,3 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+
     <string name="app_name">GolfMaster</string>
+
+    <!-- ===========================
+         🔐 LOGIN
+         =========================== -->
+    <string name="login_logo_cd">Logo GolfMaster</string>
+    <string name="login_email_label">Correo electrónico</string>
+    <string name="login_password_label">Contraseña</string>
+    <string name="login_button">Iniciar sesión</string>
+    <string name="login_no_account">¿No tienes cuenta? Regístrate</string>
+    <string name="login_error_email_invalid">Email inválido</string>
+    <string name="login_error_password_invalid">Contraseña inválida</string>
+    <string name="login_password_show">Mostrar contraseña</string>
+    <string name="login_password_hide">Ocultar contraseña</string>
+
+    <!-- ===========================
+         🧾 REGISTRO
+         =========================== -->
+    <string name="register_title">Crear cuenta</string>
+    <string name="register_name_label">Nombre</string>
+    <string name="register_lastname_label">Apellidos</string>
+    <string name="register_email_label">Correo electrónico</string>
+    <string name="register_password_label">Contraseña</string>
+    <string name="register_sex_label">Sexo</string>
+    <string name="register_address_label">Dirección</string>
+    <string name="register_phone_label">Teléfono</string>
+    <string name="register_handicap_label">Handicap</string>
+    <string name="register_community_label">Comunidad Autónoma</string>
+    <string name="register_province_label">Provincia</string>
+    <string name="register_postal_code_label">Código Postal</string>
+    <string name="register_is_member">¿Es socio?</string>
+    <string name="register_button">Registrar</string>
+    <string name="register_has_account">¿Ya tienes cuenta?</string>
+    <string name="register_go_to_login">Inicia sesión</string>
+
+    <!-- Errores de validación -->
+    <string name="error_field_empty">Campo vacío</string>
+    <string name="error_email_format">Formato incorrecto</string>
+    <string name="error_select_sex">Seleccione un sexo</string>
+    <string name="error_select_community">Seleccione una comunidad</string>
+    <string name="error_select_province">Seleccione una provincia</string>
+    <string name="error_postal_code_length">Debe tener 5 números</string>
+    <string name="error_phone_format">Debe tener 9 dígitos</string>
+    <string name="error_handicap_range">Debe estar entre 0 y 36</string>
+    <string name="error_fix_red_fields">Corrige los campos marcados en rojo</string>
+
+    <!-- Mensajes de registro -->
+    <string name="register_success">Registrado correctamente ✅</string>
+    <string name="register_error_generic">Error al registrar usuario</string>
+
+    <!-- Placeholders / ayudas -->
+    <string name="register_province_placeholder">
+        Selecciona primero la Comunidad Autónoma
+    </string>
+
+    <!-- ===========================
+         🧩 CAMPOS REUTILIZABLES (AnimatedTextField, dropdowns)
+         =========================== -->
+    <string name="password_eye_cd">Mostrar u ocultar contraseña</string>
+
+    <!-- ===========================
+         ⛳ RESERVAS
+         =========================== -->
+    <string name="reservas_tab_proximas">Próximas</string>
+    <string name="reservas_tab_pasadas">Pasadas</string>
+    <string name="reservas_fab_nueva">Nueva reserva</string>
+    <string name="reservas_snackbar_eliminada">Reserva eliminada</string>
+
+    <!-- Vacío (parametrizable con la pestaña) -->
+    <string name="reservas_empty_proximas">No hay reservas próximas</string>
+    <string name="reservas_empty_pasadas">No hay reservas pasadas</string>
+
+    <!-- Diálogo eliminar reserva -->
+    <string name="reservas_dialog_delete_title">Eliminar reserva</string>
+    <string name="reservas_dialog_delete_message">
+        ¿Seguro que quieres eliminar esta reserva?
+    </string>
+    <string name="reservas_dialog_delete_confirm">Sí, eliminar</string>
+    <string name="reservas_dialog_delete_cancel">Cancelar</string>
+
+    <!-- Nueva reserva -->
+    <string name="reservas_sheet_title">Nueva Reserva</string>
+    <string name="reservas_field_fecha_hora">Fecha y hora del juego</string>
+    <string name="reservas_field_recorrido">Recorrido</string>
+    <string name="reservas_field_recorrido_option_9">9 hoyos</string>
+    <string name="reservas_field_recorrido_option_18">18 hoyos</string>
+    <string name="reservas_field_select_jugadores">Seleccionar jugadores</string>
+    <string name="reservas_search_jugador_placeholder">Buscar jugador…</string>
+
+    <!-- Mensajes negocio reserva -->
+    <string name="reservas_error_dia_duplicado">
+        ⚠️ Ya tienes una reserva ese día. No puedes reservar dos veces el mismo día.
+    </string>
+    <string name="reservas_success_solo">✅ Reserva creada correctamente</string>
+    <string name="reservas_success_con_invitaciones">
+        ✅ Reserva creada e invitaciones enviadas
+    </string>
+
+    <string name="reservas_button_bloquear">Bloquear reserva</string>
+
+    <!-- DateTimePicker -->
+    <string name="reservas_field_fecha_hora_placeholder">Seleccionar fecha y hora</string>
+
+    <!-- Card de reserva -->
+    <string name="reservas_card_sin_fecha">Sin fecha</string>
+    <string name="reservas_card_recorrido_jugadores">
+        Recorrido: %1$s  ·  Jugadores: %2$s
+    </string>
+    <string name="reservas_card_hoyos_desconocidos">-- hoyos</string>
+
+    <!-- ===========================
+         👤 PERFIL
+         =========================== -->
+    <string name="perfil_cd_foto">Foto de perfil</string>
+    <string name="perfil_snackbar_cambiar_foto">
+        Función para cambiar foto próximamente 📸
+    </string>
+    <string name="perfil_nombre_por_defecto">Jugador</string>
+    <string name="perfil_correo_por_defecto">Sin correo</string>
+
+    <string name="perfil_licencia_title">LICENCIA</string>
+    <string name="perfil_licencia_placeholder">Pendiente</string>
+    <string name="perfil_licencia_value">#%1$s</string>
+
+    <string name="perfil_button_guardar">Guardar cambios</string>
+    <string name="perfil_button_editar">Editar perfil</string>
+    <string name="perfil_snackbar_actualizado">Perfil actualizado ✅</string>
+    <string name="perfil_snackbar_error">Error: %1$s</string>
+
+    <string name="perfil_field_nombre">Nombre</string>
+    <string name="perfil_field_telefono">Teléfono</string>
+    <string name="perfil_field_sexo">Sexo</string>
+    <string name="perfil_field_provincia">Provincia</string>
+    <string name="perfil_field_cp">Código Postal</string>
+    <string name="perfil_field_handicap">Handicap</string>
+
+    <!-- Eliminar cuenta -->
+    <string name="perfil_button_eliminar_cuenta">Eliminar cuenta</string>
+    <string name="perfil_dialog_eliminar_title">Eliminar cuenta</string>
+    <string name="perfil_dialog_eliminar_message">
+        ¿Seguro que deseas eliminar tu cuenta? Esta acción no se puede deshacer.
+    </string>
+    <string name="perfil_dialog_eliminar_confirm">Sí, eliminar</string>
+    <string name="perfil_dialog_eliminar_cancel">Cancelar</string>
+    <string name="perfil_snackbar_cuenta_eliminada">Cuenta eliminada 🗑️</string>
+
+    <!-- ===========================
+         ⚙️ PREFERENCIAS
+         =========================== -->
+    <string name="prefs_title">Preferencias del jugador</string>
+    <string name="prefs_section_juego">PREFERENCIAS DE JUEGO</string>
+    <string name="prefs_section_intereses">INTERESES</string>
+
+    <!-- Días de la semana -->
+    <string name="prefs_day_lunes">Lunes</string>
+    <string name="prefs_day_martes">Martes</string>
+    <string name="prefs_day_miercoles">Miércoles</string>
+    <string name="prefs_day_jueves">Jueves</string>
+    <string name="prefs_day_viernes">Viernes</string>
+    <string name="prefs_day_sabado">Sábado</string>
+    <string name="prefs_day_domingo">Domingo</string>
+
+    <!-- Intereses -->
+    <string name="prefs_interest_golf">Golf</string>
+    <string name="prefs_interest_torneos">Torneos</string>
+    <string name="prefs_interest_pitch_putt">Pitch &amp; Putt</string>
+    <string name="prefs_interest_school">Escuela de golf</string>
+    <string name="prefs_interest_kids">Infantil</string>
+    <string name="prefs_interest_events">Eventos</string>
+
+    <!-- Botón guardar -->
+    <string name="prefs_button_guardar">Guardar</string>
+    <string name="prefs_snackbar_guardado">
+        Preferencias guardadas correctamente ✅
+    </string>
+    <string name="prefs_snackbar_error">Error al guardar: %1$s</string>
+
+    <!-- ===========================
+         📚 INFORMACIÓN (menú hamburguesa)
+         =========================== -->
+    <!-- Secciones -->
+    <string name="info_section_reservas">Reservas</string>
+    <string name="info_section_campos">Campos</string>
+    <string name="info_section_torneos">Torneos</string>
+
+    <!-- Tarjetas -->
+    <string name="info_reservas_title">Reservas de Equipamiento</string>
+    <string name="info_reservas_subtitle">
+        Reserva de buggies, palos y carros
+    </string>
+
+    <string name="info_campos_title">Correspondencia de Campos</string>
+    <string name="info_campos_subtitle">
+        Información de contacto y ubicación
+    </string>
+
+    <string name="info_reglas_title">Reglas Locales</string>
+    <string name="info_reglas_subtitle">
+        Reglas locales de los campos de golf
+    </string>
+
+    <string name="info_torneos_title">Términos y Condiciones</string>
+    <string name="info_torneos_subtitle">
+        Términos y condiciones de los torneos
+    </string>
+
+    <!-- ===========================
+         📍 DETALLE CAMPOS
+         =========================== -->
+    <string name="detalle_campos_title">Correspondencia de Campos</string>
+    <string name="detalle_campos_back_cd">Volver</string>
+    <string name="detalle_campos_tel_prefix">Tel: %1$s</string>
+
+    <!-- Nombres y ubicaciones (si quieres externalizarlos también) -->
+    <string name="campo_valderrama_nombre">Real Club Valderrama</string>
+    <string name="campo_valderrama_ubicacion">Sotogrande, Cádiz</string>
+
+    <!-- (podrías añadir el resto de campos igual si quieres 100% en recursos) -->
+
+    <!-- ===========================
+         📏 DETALLE REGLAS LOCALES
+         =========================== -->
+    <string name="detalle_reglas_title">Reglas Locales</string>
+
+    <string name="detalle_regla_1">
+        1️⃣ Cada jugador puede portar un máximo de 14 palos.
+    </string>
+    <string name="detalle_regla_2">
+        2️⃣ Se debe jugar la bola como reposa en el terreno.
+    </string>
+    <string name="detalle_regla_3">
+        3️⃣ Está prohibido mejorar las condiciones del golpe alterando el campo.
+    </string>
+    <string name="detalle_regla_4">
+        4️⃣ En caso de bola perdida, se debe repetir desde el punto anterior con penalización de un golpe.
+    </string>
+    <string name="detalle_regla_5">
+        5️⃣ Los bunkers deben ser alisados después del golpe.
+    </string>
+    <string name="detalle_regla_6">
+        6️⃣ El jugador debe reparar los piques y las marcas en el green.
+    </string>
+    <string name="detalle_regla_7">
+        7️⃣ No se permite el uso de teléfonos móviles o dispositivos de audio durante la ronda.
+    </string>
+    <string name="detalle_regla_8">
+        8️⃣ Los jugadores deben mantener un ritmo adecuado de juego (máximo 4h por 18 hoyos).
+    </string>
+
+    <!-- ===========================
+         🧳 DETALLE RESERVAS EQUIPAMIENTO
+         =========================== -->
+    <string name="detalle_reservas_title">Reservas de Equipamiento</string>
+
+    <string name="equip_buggy_nombre">Buggy</string>
+    <string name="equip_buggy_desc">Vehículo eléctrico de 2 plazas</string>
+    <string name="equip_buggy_precio">25 € / ronda</string>
+
+    <string name="equip_carro_elec_nombre">Carro eléctrico</string>
+    <string name="equip_carro_elec_desc">
+        Carro motorizado para bolsas de golf
+    </string>
+    <string name="equip_carro_elec_precio">12 € / día</string>
+
+    <string name="equip_carro_manual_nombre">Carro manual</string>
+    <string name="equip_carro_manual_desc">Carro clásico sin motor</string>
+    <string name="equip_carro_manual_precio">5 € / día</string>
+
+    <string name="equip_set_palos_nombre">Set de palos completo</string>
+    <string name="equip_set_palos_desc">
+        Palos de alta gama (Callaway, TaylorMade…)
+    </string>
+    <string name="equip_set_palos_precio">20 € / día</string>
+
+    <string name="equip_bolsa_nombre">Bolsa de golf</string>
+    <string name="equip_bolsa_desc">Bolsa ligera con soporte</string>
+    <string name="equip_bolsa_precio">8 € / día</string>
+
+    <!-- ===========================
+         🏆 DETALLE TÉRMINOS TORNEOS
+         =========================== -->
+    <string name="detalle_torneos_title">Términos y Condiciones</string>
+
+    <string name="torneo_term_1">
+        1️⃣ Los jugadores deben tener licencia federativa en vigor.
+    </string>
+    <string name="torneo_term_2">
+        2️⃣ La inscripción se considera definitiva una vez realizado el pago.
+    </string>
+    <string name="torneo_term_3">
+        3️⃣ El jugador debe estar presente en el tee de salida 10 minutos antes del turno.
+    </string>
+    <string name="torneo_term_4">
+        4️⃣ En caso de empate, se aplicará el hándicap más bajo o la mejor vuelta.
+    </string>
+    <string name="torneo_term_5">
+        5️⃣ El Comité de Competición podrá modificar horarios por causas meteorológicas.
+    </string>
+    <string name="torneo_term_6">
+        6️⃣ La organización no se hace responsable de pérdidas o daños en material personal.
+    </string>
+    <string name="torneo_term_7">
+        7️⃣ La participación implica la aceptación de las normas del torneo y del club.
+    </string>
+
 </resources>

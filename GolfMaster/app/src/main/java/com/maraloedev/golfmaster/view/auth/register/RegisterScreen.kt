@@ -30,36 +30,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.compose.ui.graphics.Color
 import com.maraloedev.golfmaster.R
 import com.maraloedev.golfmaster.model.Jugadores
 import com.maraloedev.golfmaster.view.auth.passEncrypt.hashPassword
 import com.maraloedev.golfmaster.vm.AuthViewModel
 
 /* ============================================================
-   🎨 COLORES (idealmente irían en un Theme global)
-   ============================================================ */
-private val ScreenBg = Color(0xFF00281F)
-private val PillUnselected = Color(0xFF00FF77)
-private val BorderNormal = Color(0xFF00FF77)
-private val BorderError = Color(0xFFFF4444)
-private val LabelColor = Color.White
-private val TextColor = Color.White
-private val CursorColor = Color(0xFF00FF77)
-
-/* ============================================================
    🟩 REGISTER SCREEN
-   Pantalla de registro de nuevos jugadores.
-   - Recoge datos personales y de juego.
-   - Valida campos localmente.
-   - Hashea la contraseña antes de guardar.
-   - Llama al AuthViewModel para crear usuario en Firebase.
    ============================================================ */
 @Composable
 fun RegisterScreen(
     navController: NavController,
     vm: AuthViewModel = viewModel()
 ) {
+    val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
@@ -126,8 +110,6 @@ fun RegisterScreen(
         "Valladolid" to "47", "Bizkaia" to "48", "Zamora" to "49", "Zaragoza" to "50"
     )
 
-    // Lista de comunidades para el dropdown
-    // 🔧 OJO: "Región de Murcia" debe coincidir con la clave del mapa anterior (ya corregido)
     val comunidades = listOf(
         "Andalucía","Aragón","Principado de Asturias","Islas Baleares","Islas Canarias","Cantabria",
         "Castilla-La Mancha","Castilla y León","Cataluña","Comunidad Valenciana","Extremadura",
@@ -135,17 +117,15 @@ fun RegisterScreen(
         "País Vasco","La Rioja"
     )
 
-    // Parseo del handicap como Double (puede ser null si el texto no es número)
     val handicap = handicapText.toDoubleOrNull()
 
-    Scaffold(containerColor = ScreenBg) { pv ->
+    Scaffold(containerColor = colors.background) { pv ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(ScreenBg)
+                .background(colors.background)
                 .padding(pv)
                 .padding(horizontal = 24.dp)
-                // Pulsar fuera de los campos → quitar foco y teclado
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 },
@@ -166,7 +146,7 @@ fun RegisterScreen(
 
                 Text(
                     "Crear cuenta",
-                    color = Color.White,
+                    color = colors.onBackground,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
@@ -232,7 +212,7 @@ fun RegisterScreen(
                     value = comunidad,
                     onValueChange = {
                         comunidad = it
-                        provincia = ""        // Reiniciamos provincia al cambiar comunidad
+                        provincia = ""
                     },
                     isError = errores.containsKey("comunidad"),
                     errorMessage = errores["comunidad"]
@@ -248,7 +228,6 @@ fun RegisterScreen(
                         val pref = prefijoPorProvincia[nuevaProvincia] ?: ""
                         prefijoCP = pref
 
-                        // Reconstruimos el CP respetando los 2 primeros dígitos de la provincia
                         codigoPostal = if (codigoPostal.length >= 2) {
                             pref + codigoPostal.drop(2)
                         } else {
@@ -264,7 +243,6 @@ fun RegisterScreen(
                     value = codigoPostal,
                     type = KeyboardType.Number,
                     onChange = { nuevo ->
-                        // Lógica para forzar CP a 5 dígitos, empezando por el prefijo de provincia
                         if (prefijoCP.isNotEmpty()) {
                             codigoPostal = if (!nuevo.startsWith(prefijoCP)) {
                                 val soloNumeros = nuevo.filter { it.isDigit() }
@@ -318,19 +296,19 @@ fun RegisterScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = socio,
-                        onCheckedChange = { socio = it }
+                        onCheckedChange = { socio = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = colors.primary,
+                            uncheckedColor = colors.onBackground
+                        )
                     )
-                    Text("¿Es socio?", color = Color.White)
+                    Text("¿Es socio?", color = colors.onBackground)
                 }
 
                 Spacer(Modifier.height(24.dp))
 
-                // ==========================
-                // ✅ BOTÓN REGISTRAR
-                // ==========================
                 Button(
                     onClick = {
-                        // 1️⃣ Validación local de todos los campos
                         val nuevosErrores = mutableMapOf<String, String>()
 
                         if (nombre.isBlank()) nuevosErrores["nombre"] = "Campo vacío"
@@ -376,7 +354,6 @@ fun RegisterScreen(
 
                         errores = nuevosErrores
 
-                        // Si hay errores → mensaje y no seguimos
                         if (errores.isNotEmpty()) {
                             Toast.makeText(
                                 context,
@@ -386,10 +363,8 @@ fun RegisterScreen(
                             return@Button
                         }
 
-                        // 2️⃣ Si todo está bien → preparar alta en Firebase
                         loading = true
 
-                        // Hash de la contraseña para guardar en Firestore
                         val passwordHasheada = hashPassword(password)
 
                         val jugador = Jugadores(
@@ -407,7 +382,6 @@ fun RegisterScreen(
                             password_jugador = passwordHasheada
                         )
 
-                        // 3️⃣ Llamada al ViewModel: crea usuario en Auth + Firestore
                         vm.registerJugador(
                             email = correo,
                             password = password,
@@ -430,7 +404,10 @@ fun RegisterScreen(
                         )
                     },
                     enabled = !loading,
-                    colors = ButtonDefaults.buttonColors(containerColor = PillUnselected),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary
+                    ),
                     shape = RoundedCornerShape(50),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -438,30 +415,27 @@ fun RegisterScreen(
                 ) {
                     Text(
                         "Registrar",
-                        color = Color.Black,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                // Indicador de carga simple mientras se registra
                 if (loading) {
                     Spacer(Modifier.height(16.dp))
-                    CircularProgressIndicator(color = PillUnselected)
+                    CircularProgressIndicator(color = colors.primary)
                 }
 
                 Spacer(Modifier.height(20.dp))
 
-                // Link a pantalla de login
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("¿Ya tienes cuenta?", color = Color.White)
+                    Text("¿Ya tienes cuenta?", color = colors.onBackground)
                     Spacer(Modifier.width(6.dp))
                     TextButton(onClick = { navController.navigate("login") }) {
                         Text(
                             "Inicia sesión",
-                            color = PillUnselected,
+                            color = colors.primary,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -472,13 +446,9 @@ fun RegisterScreen(
 }
 
 /* ============================================================
-   🧩 COMPONENTES DE FORMULARIO REUTILIZABLES
+   🧩 COMPONENTES REUTILIZABLES
    ============================================================ */
 
-/**
- * TextField animado con borde que cambia de color según error,
- * opción de comportamiento de contraseña y texto de error debajo.
- */
 @Composable
 fun AnimatedTextField(
     label: String,
@@ -491,8 +461,9 @@ fun AnimatedTextField(
     isError: Boolean = false,
     errorMessage: String? = null
 ) {
+    val colors = MaterialTheme.colorScheme
     val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
+        targetValue = if (isError) colors.error else colors.primary,
         label = ""
     )
 
@@ -500,7 +471,7 @@ fun AnimatedTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onChange,
-            label = { Text(label, color = LabelColor) },
+            label = { Text(label, color = colors.onSurface) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -519,7 +490,7 @@ fun AnimatedTextField(
                                 else R.drawable.ic_ojo_cerrado
                             ),
                             contentDescription = "Mostrar contraseña",
-                            tint = BorderNormal
+                            tint = colors.primary
                         )
                     }
                 }
@@ -528,17 +499,17 @@ fun AnimatedTextField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = borderColor,
                 unfocusedBorderColor = borderColor,
-                cursorColor = CursorColor,
-                focusedLabelColor = BorderNormal,
-                unfocusedLabelColor = LabelColor,
-                focusedTextColor = TextColor,
-                unfocusedTextColor = TextColor
+                cursorColor = colors.primary,
+                focusedLabelColor = colors.primary,
+                unfocusedLabelColor = colors.onSurface.copy(alpha = 0.8f),
+                focusedTextColor = colors.onBackground,
+                unfocusedTextColor = colors.onBackground
             )
         )
         if (isError && !errorMessage.isNullOrBlank()) {
             Text(
                 text = errorMessage,
-                color = BorderError,
+                color = colors.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
             )
@@ -546,9 +517,6 @@ fun AnimatedTextField(
     }
 }
 
-/**
- * Dropdown para seleccionar sexo (u otra lista sencilla de opciones).
- */
 @Composable
 fun SexoDropdown(
     label: String,
@@ -558,9 +526,10 @@ fun SexoDropdown(
     isError: Boolean = false,
     errorMessage: String? = null
 ) {
+    val colors = MaterialTheme.colorScheme
     var expanded by remember { mutableStateOf(false) }
     val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
+        targetValue = if (isError) colors.error else colors.primary,
         label = ""
     )
 
@@ -573,7 +542,7 @@ fun SexoDropdown(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text(label, color = LabelColor) },
+                label = { Text(label, color = colors.onSurface) },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
@@ -584,11 +553,11 @@ fun SexoDropdown(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = borderColor,
                     unfocusedBorderColor = borderColor,
-                    cursorColor = CursorColor,
-                    focusedLabelColor = BorderNormal,
-                    unfocusedLabelColor = LabelColor,
-                    focusedTextColor = TextColor,
-                    unfocusedTextColor = TextColor
+                    cursorColor = colors.primary,
+                    focusedLabelColor = colors.primary,
+                    unfocusedLabelColor = colors.onSurface.copy(alpha = 0.8f),
+                    focusedTextColor = colors.onBackground,
+                    unfocusedTextColor = colors.onBackground
                 )
             )
             ExposedDropdownMenu(
@@ -609,7 +578,7 @@ fun SexoDropdown(
         if (isError && !errorMessage.isNullOrBlank()) {
             Text(
                 text = errorMessage,
-                color = BorderError,
+                color = colors.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
             )
@@ -617,9 +586,6 @@ fun SexoDropdown(
     }
 }
 
-/**
- * Dropdown para seleccionar Comunidad Autónoma.
- */
 @Composable
 fun ComunidadDropdown(
     label: String,
@@ -629,9 +595,10 @@ fun ComunidadDropdown(
     isError: Boolean = false,
     errorMessage: String? = null
 ) {
+    val colors = MaterialTheme.colorScheme
     var expanded by remember { mutableStateOf(false) }
     val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
+        targetValue = if (isError) colors.error else colors.primary,
         label = ""
     )
 
@@ -644,7 +611,7 @@ fun ComunidadDropdown(
                 value = value,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text(label, color = LabelColor) },
+                label = { Text(label, color = colors.onSurface) },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
@@ -655,11 +622,11 @@ fun ComunidadDropdown(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = borderColor,
                     unfocusedBorderColor = borderColor,
-                    cursorColor = CursorColor,
-                    focusedLabelColor = BorderNormal,
-                    unfocusedLabelColor = LabelColor,
-                    focusedTextColor = TextColor,
-                    unfocusedTextColor = TextColor
+                    cursorColor = colors.primary,
+                    focusedLabelColor = colors.primary,
+                    unfocusedLabelColor = colors.onSurface.copy(alpha = 0.8f),
+                    focusedTextColor = colors.onBackground,
+                    unfocusedTextColor = colors.onBackground
                 )
             )
             ExposedDropdownMenu(
@@ -680,7 +647,7 @@ fun ComunidadDropdown(
         if (isError && !errorMessage.isNullOrBlank()) {
             Text(
                 text = errorMessage,
-                color = BorderError,
+                color = colors.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
             )
@@ -688,10 +655,6 @@ fun ComunidadDropdown(
     }
 }
 
-/**
- * Dropdown de provincia dependiente de la comunidad seleccionada.
- * - Si no hay comunidad, el campo aparece deshabilitado con placeholder.
- */
 @Composable
 fun ProvinciaDependienteDropdown(
     label: String,
@@ -702,10 +665,11 @@ fun ProvinciaDependienteDropdown(
     isError: Boolean = false,
     errorMessage: String? = null
 ) {
+    val colors = MaterialTheme.colorScheme
     var expanded by remember { mutableStateOf(false) }
     val provincias = provinciasPorComunidad[comunidad] ?: emptyList()
     val borderColor by animateColorAsState(
-        targetValue = if (isError) BorderError else BorderNormal,
+        targetValue = if (isError) colors.error else colors.primary,
         label = ""
     )
 
@@ -713,7 +677,6 @@ fun ProvinciaDependienteDropdown(
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = {
-                // Solo permitimos desplegar si hay comunidad seleccionada
                 if (comunidad.isNotBlank()) expanded = !expanded
             }
         ) {
@@ -721,7 +684,7 @@ fun ProvinciaDependienteDropdown(
                 value = if (comunidad.isBlank()) "" else value,
                 onValueChange = {},
                 readOnly = true,
-                label = { Text(label, color = LabelColor) },
+                label = { Text(label, color = colors.onSurface) },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
@@ -733,7 +696,7 @@ fun ProvinciaDependienteDropdown(
                     if (comunidad.isBlank()) {
                         Text(
                             "Selecciona primero la Comunidad Autónoma",
-                            color = LabelColor.copy(alpha = 0.6f)
+                            color = colors.onSurface.copy(alpha = 0.6f)
                         )
                     }
                 },
@@ -741,14 +704,14 @@ fun ProvinciaDependienteDropdown(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = borderColor,
                     unfocusedBorderColor = borderColor,
-                    disabledBorderColor = BorderNormal.copy(alpha = 0.4f),
-                    cursorColor = CursorColor,
-                    focusedLabelColor = BorderNormal,
-                    unfocusedLabelColor = LabelColor,
-                    disabledLabelColor = LabelColor.copy(alpha = 0.6f),
-                    focusedTextColor = TextColor,
-                    unfocusedTextColor = TextColor,
-                    disabledTextColor = TextColor.copy(alpha = 0.6f)
+                    disabledBorderColor = colors.primary.copy(alpha = 0.4f),
+                    cursorColor = colors.primary,
+                    focusedLabelColor = colors.primary,
+                    unfocusedLabelColor = colors.onSurface.copy(alpha = 0.8f),
+                    disabledLabelColor = colors.onSurface.copy(alpha = 0.6f),
+                    focusedTextColor = colors.onBackground,
+                    unfocusedTextColor = colors.onBackground,
+                    disabledTextColor = colors.onBackground.copy(alpha = 0.6f)
                 )
             )
             ExposedDropdownMenu(
@@ -769,7 +732,7 @@ fun ProvinciaDependienteDropdown(
         if (isError && !errorMessage.isNullOrBlank()) {
             Text(
                 text = errorMessage,
-                color = BorderError,
+                color = colors.error,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(start = 8.dp, bottom = 2.dp)
             )

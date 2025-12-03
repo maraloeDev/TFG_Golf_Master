@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,19 +23,15 @@ import androidx.navigation.NavController
 import com.maraloedev.golfmaster.model.Amigo
 import kotlinx.coroutines.launch
 
-// 🎨 Colores de esta sección (idealmente irían en tu tema global)
-val ScreenBg = Color(0xFF02140D)
-val CardBg = Color(0xFF11261B)
-val Accent = Color(0xFF00FF77)
-val Danger = Color(0xFFE53935)
-val TextMuted = Color.White.copy(alpha = 0.7f)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AmigosScreen(
     navController: NavController,
     vm: AmigosViewModel = viewModel()
 ) {
+    val colors = MaterialTheme.colorScheme
+    val textMuted = colors.onBackground.copy(alpha = 0.7f)
+
     val amigos by vm.amigos.collectAsState()
     val loading by vm.loading.collectAsState()
 
@@ -47,35 +42,35 @@ fun AmigosScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { navController.navigate("amigosAgregar") },
-                containerColor = Accent
+                containerColor = colors.primary,
+                contentColor = colors.onPrimary
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Añadir amigo",
-                    tint = Color.Black
+                    contentDescription = "Añadir amigo"
                 )
             }
         },
-        containerColor = ScreenBg
+        containerColor = colors.background
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(ScreenBg)
+                .background(colors.background)
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
 
             Text(
                 text = "Tus amigos 👥",
-                color = Color.White,
+                color = colors.onBackground,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Desliza a la izquierda para eliminar",
-                color = TextMuted,
+                color = textMuted,
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -87,7 +82,7 @@ fun AmigosScreen(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Accent)
+                    CircularProgressIndicator(color = colors.primary)
                 }
 
                 // 🚫 Lista vacía
@@ -99,14 +94,14 @@ fun AmigosScreen(
                         Icon(
                             Icons.Default.People,
                             contentDescription = null,
-                            tint = TextMuted,
+                            tint = textMuted,
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text("Todavía no tienes amigos añadidos.", color = TextMuted)
+                        Text("Todavía no tienes amigos añadidos.", color = textMuted)
                         Text(
                             "Pulsa en el botón + para empezar 🟢",
-                            color = TextMuted,
+                            color = textMuted,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -136,21 +131,21 @@ fun AmigosScreen(
                                 Box(
                                     Modifier
                                         .fillMaxSize()
-                                        .background(Danger)
+                                        .background(colors.error)
                                         .padding(horizontal = 18.dp),
                                     contentAlignment = Alignment.CenterEnd
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             "Eliminar",
-                                            color = Color.White,
+                                            color = colors.onError,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Spacer(Modifier.width(6.dp))
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = null,
-                                            tint = Color.White
+                                            tint = colors.onError
                                         )
                                     }
                                 }
@@ -169,11 +164,16 @@ fun AmigosScreen(
     amigoAEliminar?.let { amigo ->
         AlertDialog(
             onDismissRequest = { amigoAEliminar = null },
-            title = { Text("Eliminar amigo", color = Color.White) },
+            title = {
+                Text(
+                    "Eliminar amigo",
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
             text = {
                 Text(
                     "¿Seguro que quieres eliminar a ${amigo.nombre}?",
-                    color = TextMuted
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                 )
             },
             confirmButton = {
@@ -184,14 +184,16 @@ fun AmigosScreen(
                             amigoAEliminar = null
                         }
                     }
-                ) { Text("Eliminar", color = Danger) }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
             },
             dismissButton = {
                 TextButton(onClick = { amigoAEliminar = null }) {
-                    Text("Cancelar", color = Color.White)
+                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurface)
                 }
             },
-            containerColor = CardBg
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -201,13 +203,15 @@ fun AmigosScreen(
  */
 @Composable
 private fun AmigoCardMini(amigo: Amigo) {
+    val colors = MaterialTheme.colorScheme
+    val textMuted = colors.onSurface.copy(alpha = 0.7f)
     val inicial = amigo.nombre.trim().take(1).uppercase()
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBg),
+        colors = CardDefaults.cardColors(containerColor = colors.surface),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
@@ -221,12 +225,12 @@ private fun AmigoCardMini(amigo: Amigo) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Accent.copy(alpha = 0.18f)),
+                    .background(colors.primary.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = inicial,
-                    color = Accent,
+                    color = colors.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -238,14 +242,14 @@ private fun AmigoCardMini(amigo: Amigo) {
             ) {
                 Text(
                     text = "🏌️ ${amigo.nombre}",
-                    color = Color.White,
+                    color = colors.onSurface,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "Amigo en GolfMaster",
-                    color = TextMuted,
+                    color = textMuted,
                     style = MaterialTheme.typography.bodySmall
                 )
             }

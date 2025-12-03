@@ -19,35 +19,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,25 +38,12 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.UUID
 
-/* ============================================================
-   🎨 PALETA DE COLORES PARA LA PANTALLA DE RESERVAS
-   ============================================================ */
-private val PillSelected = Color(0xFF1F4D3E)
-private val PillUnselected = Color(0xFF00FF77)
-private val ScreenBg = Color(0xFF00281F)
-private val CardBg = Color(0xFF0D1B12)
-
-/* ============================================================
-   🟩 PANTALLA PRINCIPAL DE RESERVAS
-   ------------------------------------------------------------
-   - Muestra reservas próximas y pasadas.
-   - Permite crear nuevas reservas mediante un BottomSheet.
-   - Permite eliminar reservas con gesto de swipe + confirmación.
-   ============================================================ */
 @Composable
 fun ReservasScreen(
     vm: ReservasViewModel = viewModel()
 ) {
+    val colors = MaterialTheme.colorScheme
+
     val reservas by vm.reservas.collectAsState()
     val loading by vm.loading.collectAsState()
     val invitacionesPendientes by vm.invitacionesPendientes.collectAsState()
@@ -91,10 +54,8 @@ fun ReservasScreen(
     var showForm by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf("Próximas") }
 
-    // Punto de referencia temporal para clasificar reservas
     val ahora = remember { Timestamp.now() }
 
-    // Clasificación de reservas según fecha
     val (proximas, pasadas) = remember(reservas) {
         val prox = reservas.filter { (it.fecha?.seconds ?: 0) > ahora.seconds }
         val pas = reservas.filter { (it.fecha?.seconds ?: 0) <= ahora.seconds }
@@ -106,23 +67,22 @@ fun ReservasScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showForm = true },
-                containerColor = PillUnselected
+                containerColor = colors.primary,
+                contentColor = colors.onPrimary
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Nueva reserva",
-                    tint = Color.Black
+                    contentDescription = "Nueva reserva"
                 )
             }
         },
-        containerColor = ScreenBg
+        containerColor = colors.background
     ) { pad ->
         Column(
             Modifier
                 .padding(pad)
                 .fillMaxSize()
         ) {
-            // Selector tipo “pill” entre próximas y pasadas
             BigPills(
                 left = "Próximas",
                 right = "Pasadas",
@@ -135,20 +95,19 @@ fun ReservasScreen(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = PillUnselected)
+                    CircularProgressIndicator(color = colors.primary)
                 }
             } else {
                 Crossfade(targetState = selectedTab, label = "reservasCrossfade") { tab ->
                     val lista = if (tab == "Próximas") proximas else pasadas
 
-                    // Eliminación de posibles duplicados (por id + timestamp)
                     val listaUnica = lista.distinctBy { "${it.id}_${it.fecha?.seconds}" }
 
                     if (listaUnica.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(
                                 text = "No hay reservas ${tab.lowercase()}",
-                                color = Color.White.copy(alpha = .7f)
+                                color = colors.onBackground.copy(alpha = .7f)
                             )
                         }
                     } else {
@@ -171,7 +130,6 @@ fun ReservasScreen(
 
                                 var mostrarDialogo by remember { mutableStateOf(false) }
 
-                                // Estado del swipe con confirmación de borrado
                                 val dismissState = rememberSwipeToDismissBoxState(
                                     confirmValueChange = { value ->
                                         if (
@@ -179,14 +137,13 @@ fun ReservasScreen(
                                             value == SwipeToDismissBoxValue.EndToStart
                                         ) {
                                             mostrarDialogo = true
-                                            false // No se elimina automáticamente; esperamos confirmación
+                                            false
                                         } else {
                                             false
                                         }
                                     }
                                 )
 
-                                // Diálogo de confirmación de borrado
                                 if (mostrarDialogo) {
                                     AlertDialog(
                                         onDismissRequest = { mostrarDialogo = false },
@@ -204,7 +161,7 @@ fun ReservasScreen(
                                                     mostrarDialogo = false
                                                 }
                                             ) {
-                                                Text("Sí, eliminar", color = Color.Red)
+                                                Text("Sí, eliminar", color = colors.error)
                                             }
                                         },
                                         dismissButton = {
@@ -217,7 +174,6 @@ fun ReservasScreen(
                                     )
                                 }
 
-                                // Componente de swipe con contenido de la reserva
                                 SwipeToDismissBox(
                                     state = dismissState,
                                     enableDismissFromStartToEnd = true,
@@ -226,7 +182,7 @@ fun ReservasScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(Color(0xFF8B0000))
+                                                .background(colors.error)
                                                 .padding(horizontal = 20.dp)
                                         ) {
                                             Row(
@@ -237,12 +193,12 @@ fun ReservasScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.DeleteForever,
                                                     contentDescription = "Eliminar (izquierda)",
-                                                    tint = Color.White
+                                                    tint = colors.onError
                                                 )
                                                 Icon(
                                                     imageVector = Icons.Default.Delete,
                                                     contentDescription = "Eliminar (derecha)",
-                                                    tint = Color.White
+                                                    tint = colors.onError
                                                 )
                                             }
                                         }
@@ -259,40 +215,30 @@ fun ReservasScreen(
         }
     }
 
-    // Ejemplo de posible ampliación con invitaciones pendientes
     val invitacionMostrada = invitacionesPendientes.firstOrNull()
-    // TODO: mostrar un AlertDialog con invitación cuando invitacionMostrada != null
 
-    // Hoja inferior (BottomSheet) para crear nueva reserva
     if (showForm) {
         ModalBottomSheet(
             onDismissRequest = { showForm = false },
-            containerColor = ScreenBg
+            containerColor = colors.background
         ) {
             NuevaReservaSheet(
                 vm = vm,
                 snackbarHostState = snackbarHost
             ) {
-                // Callback onClose → cierra el formulario
                 showForm = false
             }
         }
     }
 }
 
-/* ============================================================
-   🟩 TARJETA DE RESERVA
-   ------------------------------------------------------------
-   Muestra información resumida de la reserva: hoyos, fecha,
-   recorrido y número de jugadores.
-   ============================================================ */
 @Composable
 private fun ReservaCard(
     r: Reserva
 ) {
+    val colors = MaterialTheme.colorScheme
     val df = remember { SimpleDateFormat("dd MMMM yyyy - HH:mm", Locale("es", "ES")) }
 
-    // Evitar textos redundantes tipo "9 hoyos Hoyos"
     val textoHoyosBruto = r.hoyos?.trim().orEmpty()
     val textoHoyos = when {
         textoHoyosBruto.isBlank() -> "-- hoyos"
@@ -301,30 +247,25 @@ private fun ReservaCard(
     }
 
     Surface(
-        color = CardBg,
+        color = colors.surface,
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text("⛳ $textoHoyos", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text("⛳ $textoHoyos", color = colors.onSurface, fontWeight = FontWeight.SemiBold)
             Text(
                 text = r.fecha?.toDate()?.let(df::format) ?: "Sin fecha",
-                color = Color.White.copy(alpha = .8f)
+                color = colors.onSurfaceVariant
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Recorrido: ${r.recorrido ?: "--"}  ·  Jugadores: ${r.jugadores ?: "Solo"}",
-                color = Color.White.copy(alpha = .8f)
+                color = colors.onSurfaceVariant
             )
         }
     }
 }
 
-/* ============================================================
-   🟩 COMPONENTE DE PESTAÑAS TIPO "PILL"
-   ------------------------------------------------------------
-   Se utiliza para alternar entre reservas próximas y pasadas.
-   ============================================================ */
 @Composable
 private fun BigPills(
     left: String,
@@ -332,6 +273,8 @@ private fun BigPills(
     selected: String,
     onSelect: (String) -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
+
     Row(
         Modifier
             .fillMaxWidth()
@@ -347,13 +290,16 @@ private fun BigPills(
                     .weight(1f)
                     .height(44.dp)
                     .clip(RoundedCornerShape(100))
-                    .background(if (isSelected) PillUnselected else PillSelected)
+                    .background(
+                        if (isSelected) colors.primary
+                        else colors.secondaryContainer
+                    )
                     .clickable { onSelect(text) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = text,
-                    color = if (isSelected) Color.Black else Color.White,
+                    color = if (isSelected) colors.onPrimary else colors.onSecondaryContainer,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -363,23 +309,17 @@ private fun BigPills(
     }
 }
 
-/* ============================================================
-   🟩 HOJA INFERIOR: CREACIÓN DE NUEVA RESERVA
-   ------------------------------------------------------------
-   - Selección de fecha y hora.
-   - Selección de recorrido (9 / 18 hoyos).
-   - Búsqueda y selección de otros jugadores a invitar.
-   - Validación para evitar dos reservas el mismo día.
-   ============================================================ */
 @Composable
 fun NuevaReservaSheet(
     vm: ReservasViewModel,
     snackbarHostState: SnackbarHostState,
     onClose: () -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
+
     val jugadores by vm.jugadores.collectAsState()
     val loadingJugadores by vm.loadingJugadores.collectAsState()
-    val reservas by vm.reservas.collectAsState()   // para validar días repetidos
+    val reservas by vm.reservas.collectAsState()
 
     var fecha by remember { mutableStateOf<Timestamp?>(null) }
     var hoyos by remember { mutableStateOf<String?>(null) }
@@ -394,17 +334,16 @@ fun NuevaReservaSheet(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .background(ScreenBg)
+            .background(colors.background)
     ) {
         Text(
             "Nueva Reserva",
-            color = Color.White,
+            color = colors.onBackground,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleLarge
         )
         Spacer(Modifier.height(14.dp))
 
-        // Selección de fecha y hora
         DateTimePickerField(
             label = "Fecha y hora del juego",
             value = fecha
@@ -412,7 +351,6 @@ fun NuevaReservaSheet(
 
         Spacer(Modifier.height(12.dp))
 
-        // Selección de recorrido (9 / 18 hoyos)
         SelectField(
             label = "Recorrido",
             value = hoyos,
@@ -423,34 +361,32 @@ fun NuevaReservaSheet(
 
         Text(
             "Seleccionar jugadores",
-            color = Color.White,
+            color = colors.onBackground,
             fontWeight = FontWeight.SemiBold
         )
 
-        // Buscador de jugadores
         OutlinedTextField(
             value = search,
             onValueChange = {
                 search = it
                 vm.buscarJugadores(it)
             },
-            placeholder = { Text("Buscar jugador...", color = Color.Gray) },
+            placeholder = { Text("Buscar jugador...", color = colors.onBackground.copy(alpha = 0.5f)) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = PillUnselected,
-                unfocusedBorderColor = Color.DarkGray,
-                cursorColor = PillUnselected,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+                focusedBorderColor = colors.primary,
+                unfocusedBorderColor = colors.outline,
+                cursorColor = colors.primary,
+                focusedTextColor = colors.onBackground,
+                unfocusedTextColor = colors.onBackground
             ),
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(8.dp))
 
-        // Lista de jugadores sugeridos
         if (loadingJugadores) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PillUnselected)
+                CircularProgressIndicator(color = colors.primary)
             }
         } else {
             LazyColumn(
@@ -479,11 +415,9 @@ fun NuevaReservaSheet(
 
         Spacer(Modifier.height(20.dp))
 
-        // Botón principal: crea la reserva y envía invitaciones
         Button(
             onClick = {
                 scope.launch {
-                    // Regla de negocio: no más de una reserva por día
                     val yaReservadoEseDia = reservas.any { existente ->
                         mismaFecha(existente.fecha, fecha)
                     }
@@ -513,13 +447,13 @@ fun NuevaReservaSheet(
             enabled = botonActivo,
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (botonActivo) PillUnselected else Color.Gray
+                containerColor = if (botonActivo) colors.primary else colors.outline,
+                contentColor = if (botonActivo) colors.onPrimary else colors.onSurface
             ),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 "Bloquear reserva",
-                color = if (botonActivo) Color.Black else Color.White,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -528,21 +462,19 @@ fun NuevaReservaSheet(
     }
 }
 
-/* ============================================================
-   🟩 PICKER DE FECHA Y HORA (nativo Android)
-   ============================================================ */
 @Composable
 fun DateTimePickerField(
     label: String,
     value: Timestamp?,
     onPicked: (Timestamp) -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
     val ctx = LocalContext.current
     val cal = remember { Calendar.getInstance() }
     val df = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
 
     Column(Modifier.fillMaxWidth()) {
-        Text(label, color = Color.White, modifier = Modifier.padding(bottom = 6.dp))
+        Text(label, color = colors.onBackground, modifier = Modifier.padding(bottom = 6.dp))
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -570,7 +502,7 @@ fun DateTimePickerField(
                         cal.get(Calendar.DAY_OF_MONTH)
                     ).show()
                 },
-            color = CardBg
+            color = colors.surface
         ) {
             Row(
                 Modifier
@@ -580,18 +512,15 @@ fun DateTimePickerField(
             ) {
                 Text(
                     text = value?.toDate()?.let(df::format) ?: "Seleccionar fecha y hora",
-                    color = if (value == null) Color.Gray else Color.White,
+                    color = if (value == null) colors.onSurfaceVariant else colors.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-                Icon(Icons.Default.Event, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.Event, contentDescription = null, tint = colors.onSurface)
             }
         }
     }
 }
 
-/* ============================================================
-   🟩 SELECTOR GENÉRICO (Drop-down simple)
-   ============================================================ */
 @Composable
 fun SelectField(
     label: String,
@@ -599,17 +528,18 @@ fun SelectField(
     options: List<String>,
     onSelect: (String) -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
     var expanded by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxWidth()) {
-        Text(label, color = Color.White, modifier = Modifier.padding(bottom = 6.dp))
+        Text(label, color = colors.onBackground, modifier = Modifier.padding(bottom = 6.dp))
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .clickable { expanded = true },
-            color = CardBg
+            color = colors.surface
         ) {
             Row(
                 Modifier
@@ -619,10 +549,10 @@ fun SelectField(
             ) {
                 Text(
                     text = value ?: "Seleccionar",
-                    color = if (value == null) Color.Gray else Color.White,
+                    color = if (value == null) colors.onSurfaceVariant else colors.onSurface,
                     modifier = Modifier.weight(1f)
                 )
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colors.onSurface)
             }
         }
 
@@ -633,7 +563,7 @@ fun SelectField(
                     text = {
                         Text(
                             text = opt,
-                            color = if (isSelected) Color.Black else Color.White,
+                            color = if (isSelected) colors.onPrimary else colors.onSurface,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
                     },
@@ -641,7 +571,10 @@ fun SelectField(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) PillUnselected else PillSelected)
+                        .background(
+                            if (isSelected) colors.primary
+                            else colors.surfaceVariant
+                        )
                         .padding(vertical = 4.dp, horizontal = 6.dp)
                 )
                 Spacer(Modifier.height(4.dp))
@@ -650,16 +583,16 @@ fun SelectField(
     }
 }
 
-/* ============================================================
-   🟩 CARD DE JUGADOR SELECCIONABLE
-   ============================================================ */
 @Composable
 fun JugadorCard(
     jugador: Jugadores,
     seleccionado: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (seleccionado) PillUnselected else PillSelected
+    val colors = MaterialTheme.colorScheme
+    val bg = if (seleccionado) colors.primary else colors.secondaryContainer
+    val fg = if (seleccionado) colors.onPrimary else colors.onSecondaryContainer
+
     Row(
         Modifier
             .fillMaxWidth()
@@ -672,23 +605,17 @@ fun JugadorCard(
         Icon(
             Icons.Default.Person,
             contentDescription = null,
-            tint = if (seleccionado) Color.Black else Color.White
+            tint = fg
         )
         Spacer(Modifier.width(10.dp))
         Text(
             jugador.nombre_jugador,
-            color = if (seleccionado) Color.Black else Color.White,
+            color = fg,
             fontWeight = FontWeight.Bold
         )
     }
 }
 
-/* ============================================================
-   🟩 FUNCIÓN AUXILIAR: MISMO DÍA
-   ------------------------------------------------------------
-   Compara dos Timestamp y devuelve true si pertenecen al mismo
-   día natural (año y día del año).
-   ============================================================ */
 private fun mismaFecha(a: Timestamp?, b: Timestamp?): Boolean {
     if (a == null || b == null) return false
     val c1 = Calendar.getInstance().apply { time = a.toDate() }

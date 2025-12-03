@@ -15,10 +15,6 @@ import kotlinx.coroutines.tasks.await
  * ViewModel responsable de:
  *  - Escuchar en tiempo real las solicitudes de amistad dirigidas al usuario actual.
  *  - Aceptar o rechazar solicitudes.
- *
- * Nota:
- *  Para un proyecto grande, esto podría usar un repositorio (FriendRepo),
- *  pero para el TFG es aceptable acceder aquí directamente a Firebase.
  */
 class AlertasViewModel : ViewModel() {
 

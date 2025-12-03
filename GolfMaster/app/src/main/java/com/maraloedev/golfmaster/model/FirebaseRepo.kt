@@ -18,9 +18,6 @@ import kotlinx.coroutines.tasks.await
  *  - Reservas
  *  - Invitaciones
  *  - Eventos
- *
- * Se podría separar en varios repos (AuthRepo, EventosRepo, ReservasRepo…), pero para tu TFG
- * mantenerlo unido simplifica bastante.
  */
 class FirebaseRepo(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -68,7 +65,6 @@ class FirebaseRepo(
 
     /**
      * Busca jugadores cuyo nombre comience por el texto indicado.
-     * Usa un "like" con rango [nombre, nombre+\uf8ff].
      */
     suspend fun buscarJugadoresPorNombre(nombre: String): List<Jugadores> {
         val snap = db.collection(COL_JUGADORES)
@@ -93,17 +89,6 @@ class FirebaseRepo(
         val reservaConId = reserva.copy(id = docRef.id)
         docRef.set(reservaConId).await()
         return docRef.id
-    }
-
-    /**
-     * Actualiza ciertos campos de una reserva existente.
-     * Ej: mapa con "hora" -> nuevaHora, "recorrido" -> nuevoRecorrido, etc.
-     */
-    suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
-        db.collection(COL_RESERVAS)
-            .document(id)
-            .update(nuevosDatos)
-            .await()
     }
 
     /**
@@ -207,19 +192,6 @@ class FirebaseRepo(
     // ============================================================
 
     /**
-     * Obtiene el listado de eventos una sola vez (consulta simple).
-     */
-    suspend fun getEventos(): List<Evento> {
-        val snap = db.collection(COL_EVENTOS)
-            .get()
-            .await()
-
-        return snap.documents.mapNotNull { doc ->
-            doc.toObject(Evento::class.java)?.copy(id = doc.id)
-        }
-    }
-
-    /**
      * Devuelve un Flow que emite la lista de eventos en tiempo real.
      * Cada cambio en la colección "eventos" provoca una nueva emisión.
      */
@@ -227,7 +199,6 @@ class FirebaseRepo(
         val listener: ListenerRegistration = db.collection(COL_EVENTOS)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    // Cerramos el flow con error si algo va mal
                     close(error)
                     return@addSnapshotListener
                 }

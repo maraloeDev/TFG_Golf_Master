@@ -22,8 +22,6 @@ import com.maraloedev.golfmaster.view.menuHamburguesa.preferencias.PreferenciasS
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
 
 /**
- * Punto central de navegación de la app.
- *
  * Aquí se definen todas las rutas (pantallas) y cómo se conectan entre sí:
  *  - Splash
  *  - Login / Register
@@ -45,14 +43,14 @@ fun MainNavHost(navController: NavHostController) {
     ) {
 
         // ============================================================
-        //  ⚪ SPLASH / ARRANQUE
+        //  SPLASH / ARRANQUE
         // ============================================================
         composable("splash") {
             SplashScreen(navController = navController)
         }
 
         // ============================================================
-        //  🔐 AUTENTICACIÓN
+        //  AUTENTICACIÓN
         // ============================================================
 
         // Pantalla de login (contenedor con lógica + UI)
@@ -66,14 +64,14 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        //  🏠 HOME PRINCIPAL (Drawer con secciones)
+        // HOME PRINCIPAL (Drawer con secciones)
         // ============================================================
         composable("home") {
             HomeScreen(navController = navController)
         }
 
         // ============================================================
-        //  ℹ️ INFORMACIÓN Y DETALLES
+        //   INFORMACIÓN Y DETALLES
         // ============================================================
         composable("informacion") {
             InformacionScreen(navController = navController)
@@ -96,7 +94,7 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        //  ✉️ CONTACTO, 👤 PERFIL Y ⚙️ PREFERENCIAS
+        //   CONTACTO, 👤 PERFIL Y ⚙️ PREFERENCIAS
         // ============================================================
 
         // Formulario de contacto
@@ -115,21 +113,21 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        //  ⛳ RESERVAS
+        //  RESERVAS
         // ============================================================
         composable("reservas") {
             ReservasScreen()
         }
 
         // ============================================================
-        //  🔔 ALERTAS (invitaciones y solicitudes)
+        //  ALERTAS (invitaciones y solicitudes)
         // ============================================================
         composable("alertas") {
             AlertasScreen()
         }
 
         // ============================================================
-        //  🧑‍🤝‍🧑 AMIGOS
+        //   AMIGOS
         // ============================================================
 
         // Lista de amigos + swipe to delete + FAB para agregar

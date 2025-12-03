@@ -1,56 +1,54 @@
 package com.maraloedev.golfmaster.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// =============================
+// 🎨 ESQUEMA DE COLOR OSCURO
+// =============================
+
+private val DarkColors = darkColorScheme(
+    primary = GolfPrimary,
+    onPrimary = Color.Black,
+
+    secondary = GolfPrimaryDark,
+    onSecondary = Color.Black,
+
+    secondaryContainer = GolfSecondaryContainer,
+    onSecondaryContainer = GolfOnSecondaryContainer,
+
+    background = GolfBackgroundDark,
+    onBackground = GolfTextPrimary,
+
+    surface = GolfSurfaceDark,
+    onSurface = GolfTextPrimary,
+    onSurfaceVariant = GolfTextSecondary,
+
+    error = GolfError,
+    onError = GolfErrorOn
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+// =============================
+// ☀️ ESQUEMA DE COLOR CLARO (opcional)
+// =============================
+// (Se deja igual que dark para mantener identidad visual,
+//  ya que tu diseño es totalmente dark-themed)
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+private val LightColors = DarkColors
+
+// =============================
+// 🎨 THEME PRINCIPAL
+// =============================
 
 @Composable
 fun GolfMasterTheme(
-    darkTheme: Boolean = true ,
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = Typography,
         content = content
     )

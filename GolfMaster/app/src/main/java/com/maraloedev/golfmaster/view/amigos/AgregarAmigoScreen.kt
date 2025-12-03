@@ -23,6 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
+// 🎨 Colores locales (como los tenías antes)
+private val ScreenBg = Color(0xFF02140D)
+private val CardBg = Color(0xFF11261B)
+private val Accent = Color(0xFF00FF77)
+private val TextMuted = Color.White.copy(alpha = 0.7f)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgregarAmigoScreen(
@@ -32,7 +38,6 @@ fun AgregarAmigoScreen(
     val resultados by vm.resultados.collectAsState()
     val buscando by vm.buscando.collectAsState()
 
-    // Mejor con rememberSaveable para sobrevivir a cambios de configuración
     var searchText by rememberSaveable { mutableStateOf("") }
 
     val snackbar = remember { SnackbarHostState() }
