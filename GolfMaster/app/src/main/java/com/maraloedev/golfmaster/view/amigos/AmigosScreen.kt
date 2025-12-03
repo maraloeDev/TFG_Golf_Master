@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.*
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,11 +24,11 @@ import androidx.navigation.NavController
 import com.maraloedev.golfmaster.model.Amigo
 import kotlinx.coroutines.launch
 
-public val ScreenBg = Color(0xFF02140D)
-public val CardBg   = Color(0xFF11261B)
-public val Accent   = Color(0xFF00FF77)
-public val Danger   = Color(0xFFE53935)
-public val TextMuted = Color.White.copy(alpha = 0.7f)
+val ScreenBg = Color(0xFF02140D)
+val CardBg = Color(0xFF11261B)
+val Accent = Color(0xFF00FF77)
+val Danger = Color(0xFFE53935)
+val TextMuted= Color.White.copy(alpha = 0.7f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,7 +174,7 @@ private fun AmigoCardMini(amigo: Amigo) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp),         // 🔹 MÁS PEQUEÑA
+            .height(64.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         shape = RoundedCornerShape(14.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
@@ -186,7 +187,7 @@ private fun AmigoCardMini(amigo: Amigo) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)       // 🔹 AVATAR MÁS PEQUEÑO
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(Accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center

@@ -43,11 +43,6 @@ import com.maraloedev.golfmaster.view.menuHamburguesa.preferencias.PreferenciasS
 import com.maraloedev.golfmaster.view.reservas.ReservasScreen
 import kotlinx.coroutines.launch
 
-/* ============================================================
- * 🏠 HomeScreen — Pantalla principal con Drawer + BottomBar
- * ------------------------------------------------------------
- * Contiene toda la navegación central de GolfMaster.
- * ============================================================ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {

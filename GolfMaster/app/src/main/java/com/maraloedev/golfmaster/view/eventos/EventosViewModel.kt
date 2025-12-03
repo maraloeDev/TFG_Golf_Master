@@ -27,7 +27,6 @@ class EventosViewModel(
         observarEventosTiempoReal()
     }
 
-    // ✅ Escuchar Firestore en tiempo real
     private fun observarEventosTiempoReal() {
         viewModelScope.launch {
             _loading.value = true
@@ -40,17 +39,6 @@ class EventosViewModel(
                 _error.value = e.message
                 _loading.value = false
             }
-        }
-    }
-
-    // (Opcional) por si quieres usarlo en algún momento
-    fun cargarEventos() {
-        viewModelScope.launch {
-            _loading.value = true
-            runCatching { repo.getEventos() }
-                .onSuccess { _eventos.value = it.sortedBy { e -> e.fechaInicio?.seconds } }
-                .onFailure { _error.value = it.message }
-            _loading.value = false
         }
     }
 
@@ -91,14 +79,6 @@ class EventosViewModel(
             val eventoId = evento.id ?: return@launch
 
             runCatching { repo.inscribirseEnEvento(eventoId, uid) }
-                .onFailure { _error.value = it.message }
-        }
-    }
-
-    // 🔹 Editar evento
-    fun actualizarEvento(evento: Evento) {
-        viewModelScope.launch {
-            runCatching { repo.updateEvento(evento) }
                 .onFailure { _error.value = it.message }
         }
     }

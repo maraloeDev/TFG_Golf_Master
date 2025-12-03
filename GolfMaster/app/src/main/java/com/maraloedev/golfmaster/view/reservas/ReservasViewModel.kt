@@ -14,14 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel de Reservas
- * -------------------------------------------------------
- * Gestiona las reservas del usuario logueado:
- *  - Carga, creación, actualización y eliminación.
- *  - Búsqueda de jugadores (excluye el actual).
- *  - Invitaciones pendientes (aceptar / rechazar).
- */
 class ReservasViewModel(
     private val repo: FirebaseRepo = FirebaseRepo(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -143,73 +135,6 @@ class ReservasViewModel(
                 _error.value = it.message ?: "Error al buscar jugadores"
             }
             _loadingJugadores.value = false
-        }
-    }
-
-    // ============================================================
-    // 🟩 CREAR NUEVA RESERVA SIMPLE (si la usas en otro sitio)
-    // ============================================================
-    fun crearReserva(
-        fecha: Timestamp?,
-        hora: Timestamp?,
-        recorrido: String?,
-        hoyos: String?,
-        jugadores: String?
-    ) {
-        val uid = auth.currentUser?.uid ?: return
-        if (fecha == null || hora == null || recorrido.isNullOrBlank() || jugadores.isNullOrBlank()) return
-
-        viewModelScope.launch {
-            _loading.value = true
-            val reserva = Reserva(
-                id = "",
-                usuarioId = uid,
-                fecha = fecha,
-                hora = hora,
-                recorrido = recorrido,
-                hoyos = hoyos,
-                jugadores = jugadores,
-                participantesIds = listOf(uid) // solo el creador
-            )
-            runCatching {
-                repo.crearReserva(reserva)
-                // ❌ ya no hace falta llamar a cargarReservas():
-                // el listener se enterará solo del cambio.
-            }.onFailure {
-                _error.value = it.message ?: "Error al crear reserva"
-            }
-            _loading.value = false
-        }
-    }
-
-    // ============================================================
-    // ✏️ ACTUALIZAR RESERVA
-    // ============================================================
-    fun actualizarReserva(
-        id: String,
-        fecha: Timestamp?,
-        hora: Timestamp?,
-        recorrido: String?,
-        hoyos: String?,
-        jugadores: String?
-    ) {
-        if (id.isBlank()) return
-        viewModelScope.launch {
-            _loading.value = true
-            val nuevosDatos = mutableMapOf<String, Any>()
-            fecha?.let { nuevosDatos["fecha"] = it }
-            hora?.let { nuevosDatos["hora"] = it }
-            recorrido?.let { nuevosDatos["recorrido"] = it }
-            hoyos?.let { nuevosDatos["hoyos"] = it }
-            jugadores?.let { nuevosDatos["jugadores"] = it }
-
-            runCatching {
-                repo.actualizarReserva(id, nuevosDatos)
-                // El listener de reservas se actualiza solo
-            }.onFailure {
-                _error.value = it.message ?: "Error al actualizar reserva"
-            }
-            _loading.value = false
         }
     }
 

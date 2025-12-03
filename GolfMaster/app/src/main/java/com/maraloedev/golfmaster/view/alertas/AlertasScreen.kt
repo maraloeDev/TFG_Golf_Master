@@ -39,7 +39,6 @@ fun AlertasScreen(
 
     LaunchedEffect(Unit) {
         vmAlertas.observarInvitaciones()
-        // ReservasViewModel ya engancha listeners en init, pero por si acaso:
         vmReservas.cargarInvitacionesPendientes()
     }
 

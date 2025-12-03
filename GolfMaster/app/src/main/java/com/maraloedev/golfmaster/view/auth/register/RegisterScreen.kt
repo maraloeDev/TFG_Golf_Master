@@ -17,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -278,10 +277,9 @@ fun RegisterScreen(navController: NavController, vm: AuthViewModel = viewModel()
                             socio_jugador = socio,
                             handicap_jugador = handicap ?: 0.0,
                             provincia_jugador = provincia,
-                            ciudad_jugador = comunidad, // de momento comunidad aquí
-                            password_jugador = passwordHasheada   // 🔐 guardamos el hash, no la contraseña
+                            ciudad_jugador = comunidad,
+                            password_jugador = passwordHasheada
                         )
-
 
                         vm.registerJugador(
                             email = correo,

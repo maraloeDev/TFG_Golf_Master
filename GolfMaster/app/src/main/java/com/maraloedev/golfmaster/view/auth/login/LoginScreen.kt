@@ -27,7 +27,6 @@ import com.maraloedev.golfmaster.R
 /* 🎨 Colores principales */
 private val ScreenBg = Color(0xFF00281F)
 private val Accent = Color(0xFF00FF77)
-private val TextMuted = Color.White.copy(alpha = 0.8f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

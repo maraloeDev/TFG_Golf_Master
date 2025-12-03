@@ -1,6 +1,6 @@
 package com.maraloedev.golfmaster.model
 
-data class Jugadores(
+data class Jugadores (
     val id: String ="",
     val nombre_jugador: String = "",
     val apellido_jugador: String = "",

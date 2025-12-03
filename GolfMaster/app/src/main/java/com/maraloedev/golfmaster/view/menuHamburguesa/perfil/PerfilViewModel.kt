@@ -9,9 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-/**
- * Modelo de datos del jugador mostrado en el perfil.
- */
 data class JugadorPerfil(
     val id: String = "",
     val nombre_jugador: String = "",

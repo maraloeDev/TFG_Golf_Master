@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 
 /* 🎨 Paleta GolfMaster */
 private val ScreenBg = Color(0xFF00281F)
-private val CardBg = Color(0xFF0D1B12)
 private val Accent = Color(0xFF00FF77)
 
 private const val CONTACT_PHONE = "609 048 714"

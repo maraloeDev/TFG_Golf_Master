@@ -31,7 +31,6 @@ import androidx.navigation.compose.rememberNavController
 import com.maraloedev.golfmaster.R
 import kotlinx.coroutines.launch
 
-/* 🎨 PALETA DE COLORES GOLFMASTER */
 private val Fondo = Color(0xFF0B3D2E)
 private val Verde = Color(0xFF00FF77)
 private val VerdeOscuro = Color(0xFF173E34)

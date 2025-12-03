@@ -28,12 +28,12 @@ fun MainNavHost(navController: NavHostController) {
         startDestination = "splash"
     ) {
 
-        // ============================================================
-        // 🔹 AUTENTICACIÓN
-        // ============================================================
         composable("splash") {
             SplashScreen(navController = navController)
         }
+        // ============================================================
+        //  AUTENTICACIÓN
+        // ============================================================
 
         composable("login") {
             LoginScreenContainer(navController)
@@ -44,14 +44,14 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        // 🔹 HOME PRINCIPAL (Drawer con secciones)
+        //  HOME PRINCIPAL (Drawer con secciones)
         // ============================================================
         composable("home") {
             HomeScreen(navController)
         }
 
         // ============================================================
-        // 🔹 INFORMACIÓN Y DETALLES
+        //  INFORMACIÓN Y DETALLES
         // ============================================================
         composable("informacion") {
             InformacionScreen(navController = navController)
@@ -74,7 +74,7 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        // 🔹 CONTACTO, PERFIL Y PREFERENCIAS
+        //  CONTACTO, PERFIL Y PREFERENCIAS
         // ============================================================
         composable("contacto") {
             ContactoScreen()
@@ -89,21 +89,21 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        // 🔹 RESERVAS
+        //  RESERVAS
         // ============================================================
         composable("reservas") {
             ReservasScreen()
         }
 
         // ============================================================
-        // 🔹 ALERTAS (invitaciones y solicitudes)
+        //  ALERTAS (invitaciones y solicitudes)
         // ============================================================
         composable("alertas") {
             AlertasScreen()
         }
 
         // ============================================================
-        // 🔹 AMIGOS
+        //  AMIGOS
         // ============================================================
         composable("amigos") {
             AmigosScreen(navController = navController)

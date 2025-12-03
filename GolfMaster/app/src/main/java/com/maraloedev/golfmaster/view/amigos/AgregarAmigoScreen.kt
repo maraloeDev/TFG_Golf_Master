@@ -19,7 +19,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.component1
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
@@ -70,7 +69,6 @@ fun AgregarAmigoScreen(
                 value = searchText,
                 onValueChange = {
                     searchText = it
-                    // 🔍 BÚSQUEDA AUTOMÁTICA
                     vm.buscarJugador(it.trim())
                 },
                 placeholder = { Text("Ej. Eduardo Martín", color = TextMuted) },
@@ -88,7 +86,6 @@ fun AgregarAmigoScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-
             Spacer(Modifier.height(16.dp))
 
             if (buscando) {
@@ -96,7 +93,6 @@ fun AgregarAmigoScreen(
                     CircularProgressIndicator(color = Accent)
                 }
             } else if (searchText.isBlank()) {
-                // Mensaje cuando no se ha empezado a escribir
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("Empieza a escribir para buscar 👇", color = TextMuted)
                 }
@@ -144,7 +140,7 @@ private fun ResultadoJugadorCardMini(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)              // 🔹 CARD PEQUEÑA
+            .height(60.dp)
             .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = CardBg),
         shape = RoundedCornerShape(14.dp),
@@ -158,7 +154,7 @@ private fun ResultadoJugadorCardMini(
         ) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)          // 🔹 AVATAR MINI
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(Accent.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center

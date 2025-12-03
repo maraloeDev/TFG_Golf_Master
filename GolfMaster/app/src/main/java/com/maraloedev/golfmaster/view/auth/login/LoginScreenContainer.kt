@@ -51,10 +51,6 @@ fun LoginScreenContainer(navController: NavController) {
     )
 }
 
-/**
- * Mapea excepciones de Firebase a:
- *  - Pair<erroresPorCampo, mensajeGeneral>
- */
 private fun mapFirebaseLoginError(ex: Exception?): Pair<Map<String, String>, String> {
     val campo = mutableMapOf<String, String>()
     val mensajeGeneral: String = when (ex) {

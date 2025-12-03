@@ -4,7 +4,6 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
@@ -12,107 +11,39 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-/**
- * ============================================================
- * 🧩 FirebaseRepo
- * ------------------------------------------------------------
- * Repositorio central para operaciones con Firebase:
- *  - Autenticación
- *  - Jugadores
- *  - Torneos
- *  - Reservas
- *  - Invitaciones
- *  - Eventos
- *  - Solicitudes de inscripción
- * ============================================================
- */
+
 class FirebaseRepo(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
-    val currentUid get() = auth.currentUser?.uid
-
     // ============================================================
-    // 🔐 AUTENTICACIÓN
+    //  AUTENTICACIÓN
     // ============================================================
     suspend fun login(email: String, pass: String) {
         try {
             auth.signInWithEmailAndPassword(email, pass).await()
-        } catch (e: FirebaseAuthInvalidUserException) {
+        } catch (_: FirebaseAuthInvalidUserException) {
             throw Exception("El usuario no existe o ha sido eliminado.")
-        } catch (e: FirebaseAuthInvalidCredentialsException) {
+        } catch (_: FirebaseAuthInvalidCredentialsException) {
             throw Exception("La contraseña es incorrecta.")
         } catch (e: Exception) {
             throw Exception("Error al iniciar sesión: ${e.message}")
         }
     }
 
-    suspend fun register(email: String, pass: String): String {
-        val res = auth.createUserWithEmailAndPassword(email, pass).await()
-        return res.user?.uid ?: throw Exception("Error al registrar usuario.")
-    }
-
-    fun logout() = auth.signOut()
-
     // ============================================================
-    // 🧍 JUGADORES
+    //  JUGADORES
     // ============================================================
-    suspend fun createOrUpdateJugador(j: Jugadores) {
-        db.collection("jugadores").document(j.id).set(j).await()
-    }
-
-    suspend fun getJugador(uid: String): Jugadores? {
-        if (uid.isBlank()) return null
-        val doc = db.collection("jugadores").document(uid).get().await()
-        return doc.toObject(Jugadores::class.java)
-    }
-
     suspend fun buscarJugadoresPorNombre(nombre: String): List<Jugadores> {
-        val snap = db.collection("jugadores")
-            .whereGreaterThanOrEqualTo("nombre_jugador", nombre)
-            .whereLessThanOrEqualTo("nombre_jugador", nombre + "\uf8ff")
-            .get()
-            .await()
+        val snap = db.collection("jugadores").whereGreaterThanOrEqualTo("nombre_jugador", nombre)
+            .whereLessThanOrEqualTo("nombre_jugador", nombre + "\uf8ff").get().await()
 
         return snap.documents.mapNotNull { it.toObject(Jugadores::class.java) }
     }
 
     // ============================================================
-    // 🏌️ TORNEOS
-    // ============================================================
-    suspend fun getTorneos(): List<Torneos> =
-        db.collection("torneos").get().await().toObjects(Torneos::class.java)
-
-    suspend fun crearTorneo(t: Torneos): Torneos {
-        val ref = db.collection("torneos").document()
-        val torneoConId = t.copy(id = ref.id)
-        ref.set(torneoConId).await()
-        return torneoConId
-    }
-
-    suspend fun getTorneoById(id: String): Torneos? {
-        if (id.isBlank()) throw Exception("ID de torneo no válido")
-        val doc = db.collection("torneos").document(id).get().await()
-        if (!doc.exists()) throw Exception("El torneo no existe")
-        return doc.toObject(Torneos::class.java)?.copy(id = doc.id)
-    }
-
-    fun listenTorneos(): Flow<List<Torneos>> = callbackFlow {
-        val listener = db.collection("torneos")
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    close(e)
-                    return@addSnapshotListener
-                }
-                val lista = snapshot?.toObjects(Torneos::class.java) ?: emptyList()
-                trySend(lista)
-            }
-        awaitClose { listener.remove() }
-    }
-
-    // ============================================================
-    // 📅 RESERVAS
+    //  RESERVAS
     // ============================================================
     suspend fun crearReserva(reserva: Reserva): String {
         val docRef = db.collection("reservas").document()
@@ -122,37 +53,20 @@ class FirebaseRepo(
     }
 
     suspend fun actualizarReserva(id: String, nuevosDatos: Map<String, Any>) {
-        db.collection("reservas")
-            .document(id)
-            .update(nuevosDatos)
-            .await()
+        db.collection("reservas").document(id).update(nuevosDatos).await()
     }
 
     suspend fun eliminarReserva(id: String) {
-        db.collection("reservas")
-            .document(id)
-            .delete()
-            .await()
-    }
-
-    // Solo reservas donde el usuario sea PARTICIPANTE
-    suspend fun getReservasPorJugador(uid: String): List<Reserva> {
-        val snap = db.collection("reservas")
-            .whereArrayContains("participantesIds", uid)
-            .get()
-            .await()
-
-        return snap.documents.mapNotNull { it.toObject(Reserva::class.java) }
+        db.collection("reservas").document(id).delete().await()
     }
 
     suspend fun anadirParticipanteAReserva(
-        reservaId: String,
-        userId: String
+        reservaId: String, userId: String
     ) {
         val reservaRef = db.collection("reservas").document(reservaId)
         db.runTransaction { tx ->
             val snap = tx.get(reservaRef)
-            val actuales = (snap.get("participantesIds") as? List<String>).orEmpty()
+            val actuales = (snap.get("participantesIds") as? List<*>).orEmpty()
             if (!actuales.contains(userId)) {
                 tx.update(reservaRef, "participantesIds", actuales + userId)
             }
@@ -160,13 +74,10 @@ class FirebaseRepo(
     }
 
     // ============================================================
-    // 💌 INVITACIONES
+    //  INVITACIONES
     // ============================================================
     suspend fun crearInvitacion(
-        de: String,
-        para: String,
-        reservaId: String,
-        fecha: Timestamp?
+        de: String, para: String, reservaId: String, fecha: Timestamp?
     ): String {
         // 1️⃣ Obtener nombre del jugador que invita
         val jugadorSnap = db.collection("jugadores").document(de).get().await()
@@ -188,31 +99,15 @@ class FirebaseRepo(
         return docRef.id
     }
 
-    suspend fun getInvitacionesPendientes(paraId: String): List<Invitacion> {
-        val snap = db.collection("invitaciones")
-            .whereEqualTo("paraId", paraId)
-            .whereEqualTo("estado", "pendiente")
-            .get()
-            .await()
-
-        return snap.documents.mapNotNull { it.toObject(Invitacion::class.java) }
-    }
-
     suspend fun actualizarEstadoInvitacion(
-        invitacionId: String,
-        nuevoEstado: String
+        invitacionId: String, nuevoEstado: String
     ) {
-        db.collection("invitaciones")
-            .document(invitacionId)
-            .update("estado", nuevoEstado)
-            .await()
+        db.collection("invitaciones").document(invitacionId).update("estado", nuevoEstado).await()
     }
 
     // ============================================================
-// 📡 EVENTOS (tiempo real)
-// ============================================================
-
-    // Ya lo tendrás: obtener eventos una sola vez
+    //  EVENTOS
+    // ============================================================
     suspend fun getEventos(): List<Evento> {
         val snap = db.collection("eventos").get().await()
         return snap.documents.mapNotNull { doc ->
@@ -220,21 +115,20 @@ class FirebaseRepo(
         }
     }
 
-    // 🔴 NUEVO: flujo en tiempo real
     fun getEventosFlow(): Flow<List<Evento>> = callbackFlow {
-        val listener: ListenerRegistration = db.collection("eventos")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
+        val listener: ListenerRegistration =
+            db.collection("eventos").addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        close(error)
+                        return@addSnapshotListener
+                    }
+
+                    val lista = snapshot?.documents?.mapNotNull { doc ->
+                        doc.toObject(Evento::class.java)?.copy(id = doc.id)
+                    } ?: emptyList()
+
+                    trySend(element = lista)
                 }
-
-                val lista = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Evento::class.java)?.copy(id = doc.id)
-                } ?: emptyList()
-
-                trySend(lista)
-            }
 
         awaitClose { listener.remove() }
     }
@@ -261,32 +155,5 @@ class FirebaseRepo(
 
     suspend fun deleteEvento(id: String) {
         db.collection("eventos").document(id).delete().await()
-    }
-
-
-    // ============================================================
-    // 📬 SOLICITUDES DE INSCRIPCIÓN (TORNEOS)
-    // ============================================================
-    suspend fun enviarSolicitudInscripcion(torneoId: String, usuarioId: String) {
-        if (torneoId.isBlank() || usuarioId.isBlank()) throw Exception("Datos inválidos.")
-
-        val existente = db.collection("solicitudes_inscripcion")
-            .whereEqualTo("torneoId", torneoId)
-            .whereEqualTo("usuarioId", usuarioId)
-            .limit(1)
-            .get()
-            .await()
-
-        if (!existente.isEmpty) throw Exception("Ya enviaste una solicitud para este torneo.")
-
-        val ref = db.collection("solicitudes_inscripcion").document()
-        val data = mapOf(
-            "id" to ref.id,
-            "torneoId" to torneoId,
-            "usuarioId" to usuarioId,
-            "fecha" to Timestamp.now(),
-            "estado" to "pendiente"
-        )
-        ref.set(data).await()
     }
 }

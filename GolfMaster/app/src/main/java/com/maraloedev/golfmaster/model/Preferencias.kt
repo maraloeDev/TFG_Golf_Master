@@ -1,6 +1,6 @@
 package com.maraloedev.golfmaster.model
 
-data class Preferencias(
+data class Preferencias (
     val usuario: String = "",
     val idioma: String = "Español",
     val dias_juego: List<String> = emptyList(),

@@ -15,7 +15,7 @@ class AlertasViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    private val _invitaciones = MutableStateFlow<List<AlertaAmistad>>(emptyList())
+    private val _invitaciones = MutableStateFlow<List<AlertaAmistad>>(value = emptyList())
     val invitaciones = _invitaciones.asStateFlow()
 
     private val _loading = MutableStateFlow(false)
@@ -52,7 +52,6 @@ class AlertasViewModel : ViewModel() {
     fun aceptarAmistad(alertaId: String, deUid: String, nombreDe: String) = viewModelScope.launch {
         val currentUid = auth.currentUser?.uid ?: return@launch
         try {
-            // Opcional: marcar como aceptada
             db.collection("amigo").document(alertaId)
                 .update("estado", "aceptada")
                 .await()
@@ -88,14 +87,6 @@ class AlertasViewModel : ViewModel() {
             db.collection("amigo").document(alertaId)
                 .delete()
                 .await()
-        } catch (e: Exception) {
-            _error.value = e.localizedMessage
-        }
-    }
-
-    fun eliminarAlerta(alertaId: String) = viewModelScope.launch {
-        try {
-            db.collection("amigo").document(alertaId).delete().await()
         } catch (e: Exception) {
             _error.value = e.localizedMessage
         }

@@ -7,11 +7,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-
-/**
- * ViewModel principal del Home.
- * Carga la información del jugador autenticado desde Firestore.
- */
 class HomeViewModel : ViewModel() {
 
     data class Jugador(
@@ -91,13 +86,4 @@ class HomeViewModel : ViewModel() {
             }
         }
     }
-
-/*    *//** 🔹 Cierra sesión del usuario y limpia los estados *//*
-    fun cerrarSesion(onLogout: () -> Unit) {
-        viewModelScope.launch {
-            auth.signOut()
-            _jugador.value = null
-            onLogout()
-        }
-    }*/
 }

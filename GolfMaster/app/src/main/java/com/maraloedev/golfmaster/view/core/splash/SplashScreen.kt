@@ -23,9 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 
 @Composable
 fun SplashScreen(navController: NavController) {
-    // 🔹 Animación + retardo
     LaunchedEffect(Unit) {
-        delay(1600) // Tiempo visual antes de navegar
+        delay(1600)
 
         val user = FirebaseAuth.getInstance().currentUser
         if (user != null) {
@@ -39,7 +38,6 @@ fun SplashScreen(navController: NavController) {
         }
     }
 
-    // 🔹 Diseño del Splash
     Box(
         modifier = Modifier
             .fillMaxSize()
