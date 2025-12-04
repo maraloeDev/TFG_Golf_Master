@@ -28,7 +28,7 @@ private val DarkColors = darkColorScheme(
 )
 
 // =============================
-// ☀️ ESQUEMA DE COLOR CLARO (opcional)
+//  ESQUEMA DE COLOR CLARO (opcional)
 // =============================
 // (Se deja igual que dark para mantener identidad visual,
 //  ya que tu diseño es totalmente dark-themed)
@@ -36,7 +36,7 @@ private val DarkColors = darkColorScheme(
 private val LightColors = DarkColors
 
 // =============================
-// 🎨 THEME PRINCIPAL
+// THEME PRINCIPAL
 // =============================
 
 @Composable

@@ -53,7 +53,7 @@ fun PreferenciasScreen(
     Scaffold(
         containerColor = Color(0xFF0B3D2E),
         bottomBar = {
-            // 🔘 Botón inferior fijo de guardado
+            //  Botón inferior fijo de guardado
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

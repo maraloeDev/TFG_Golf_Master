@@ -62,7 +62,7 @@ fun AlertasScreen(
                 .background(colors.background)
         ) {
             when {
-                // ⏳ Cargando solicitudes de amistad
+                //  Cargando solicitudes de amistad
                 loadingAmistad -> Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

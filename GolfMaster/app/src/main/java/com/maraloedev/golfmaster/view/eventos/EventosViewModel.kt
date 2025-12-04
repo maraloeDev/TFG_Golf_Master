@@ -103,7 +103,7 @@ class EventosViewModel(
         }
     }
 
-    // ================== 🔹 Inscribirse a un evento ==================
+    // ==================  Inscribirse a un evento ==================
     /**
      * Inscribe al usuario actual en el evento indicado.
      *
@@ -127,7 +127,7 @@ class EventosViewModel(
         }
     }
 
-    // ================== 🔹 Eliminar evento ==================
+    // ==================  Eliminar evento ==================
     /**
      * Elimina un evento por su id.
      */
