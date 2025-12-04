@@ -4,7 +4,7 @@
     <string name="app_name">GolfMaster</string>
 
     <!-- ===========================
-         🔐 LOGIN
+          LOGIN
          =========================== -->
     <string name="login_logo_cd">Logo GolfMaster</string>
     <string name="login_email_label">Correo electrónico</string>
@@ -17,7 +17,7 @@
     <string name="login_password_hide">Ocultar contraseña</string>
 
     <!-- ===========================
-         🧾 REGISTRO
+          REGISTRO
          =========================== -->
     <string name="register_title">Crear cuenta</string>
     <string name="register_name_label">Nombre</string>
@@ -57,12 +57,12 @@
     </string>
 
     <!-- ===========================
-         🧩 CAMPOS REUTILIZABLES (AnimatedTextField, dropdowns)
+          CAMPOS REUTILIZABLES (AnimatedTextField, dropdowns)
          =========================== -->
     <string name="password_eye_cd">Mostrar u ocultar contraseña</string>
 
     <!-- ===========================
-         ⛳ RESERVAS
+          RESERVAS
          =========================== -->
     <string name="reservas_tab_proximas">Próximas</string>
     <string name="reservas_tab_pasadas">Pasadas</string>
@@ -92,11 +92,11 @@
 
     <!-- Mensajes negocio reserva -->
     <string name="reservas_error_dia_duplicado">
-        ⚠️ Ya tienes una reserva ese día. No puedes reservar dos veces el mismo día.
+         Ya tienes una reserva ese día. No puedes reservar dos veces el mismo día.
     </string>
     <string name="reservas_success_solo">✅ Reserva creada correctamente</string>
     <string name="reservas_success_con_invitaciones">
-        ✅ Reserva creada e invitaciones enviadas
+         Reserva creada e invitaciones enviadas
     </string>
 
     <string name="reservas_button_bloquear">Bloquear reserva</string>
@@ -112,7 +112,7 @@
     <string name="reservas_card_hoyos_desconocidos">-- hoyos</string>
 
     <!-- ===========================
-         👤 PERFIL
+          PERFIL
          =========================== -->
     <string name="perfil_cd_foto">Foto de perfil</string>
     <string name="perfil_snackbar_cambiar_foto">
@@ -148,7 +148,7 @@
     <string name="perfil_snackbar_cuenta_eliminada">Cuenta eliminada 🗑️</string>
 
     <!-- ===========================
-         ⚙️ PREFERENCIAS
+         ️ PREFERENCIAS
          =========================== -->
     <string name="prefs_title">Preferencias del jugador</string>
     <string name="prefs_section_juego">PREFERENCIAS DE JUEGO</string>
@@ -179,7 +179,7 @@
     <string name="prefs_snackbar_error">Error al guardar: %1$s</string>
 
     <!-- ===========================
-         📚 INFORMACIÓN (menú hamburguesa)
+          INFORMACIÓN (menú hamburguesa)
          =========================== -->
     <!-- Secciones -->
     <string name="info_section_reservas">Reservas</string>
@@ -208,7 +208,7 @@
     </string>
 
     <!-- ===========================
-         📍 DETALLE CAMPOS
+          DETALLE CAMPOS
          =========================== -->
     <string name="detalle_campos_title">Correspondencia de Campos</string>
     <string name="detalle_campos_back_cd">Volver</string>
@@ -221,7 +221,7 @@
     <!-- (podrías añadir el resto de campos igual si quieres 100% en recursos) -->
 
     <!-- ===========================
-         📏 DETALLE REGLAS LOCALES
+          DETALLE REGLAS LOCALES
          =========================== -->
     <string name="detalle_reglas_title">Reglas Locales</string>
 
@@ -251,7 +251,7 @@
     </string>
 
     <!-- ===========================
-         🧳 DETALLE RESERVAS EQUIPAMIENTO
+          DETALLE RESERVAS EQUIPAMIENTO
          =========================== -->
     <string name="detalle_reservas_title">Reservas de Equipamiento</string>
 
@@ -280,7 +280,7 @@
     <string name="equip_bolsa_precio">8 € / día</string>
 
     <!-- ===========================
-         🏆 DETALLE TÉRMINOS TORNEOS
+          DETALLE TÉRMINOS TORNEOS
          =========================== -->
     <string name="detalle_torneos_title">Términos y Condiciones</string>
 
