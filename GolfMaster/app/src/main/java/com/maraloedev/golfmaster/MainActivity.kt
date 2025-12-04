@@ -15,6 +15,8 @@ import com.maraloedev.golfmaster.ui.theme.GolfMasterTheme
  *   mediante NavHost dentro de Compose, evitando múltiples Activities.
  */
 class MainActivity : ComponentActivity() {
+    private lateinit var content: () -> Unit
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
