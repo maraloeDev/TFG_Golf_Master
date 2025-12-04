@@ -2,10 +2,6 @@ package com.maraloedev.golfmaster.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// =============================
-// 🎨 COLORES BASE DE LA MARCA
-// =============================
-
 // Verdes principales
 val GolfPrimary = Color(0xFF00FF77)        // Verde brillante principal
 val GolfPrimaryDark = Color(0xFF00C761)    // Variante más oscura del primary

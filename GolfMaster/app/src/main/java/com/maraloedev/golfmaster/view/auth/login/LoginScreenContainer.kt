@@ -19,13 +19,9 @@ import com.google.firebase.auth.FirebaseAuthException
  */
 @Composable
 fun LoginScreenContainer(navController: NavController) {
-    // ✅ Mejor obtener la instancia una sola vez por composición
     val auth = remember { FirebaseAuth.getInstance() }
 
-    // Error general (mensaje arriba o debajo del botón, no ligado a un campo concreto)
     var errorGeneral by remember { mutableStateOf<String?>(null) }
-
-    // Errores específicos por campo: "email" -> "obligatorio", "password" -> "..."
     var erroresCampo by remember { mutableStateOf(mapOf<String, String>()) }
 
     LoginScreen(
@@ -62,16 +58,13 @@ fun LoginScreenContainer(navController: NavController) {
                 .signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        // Login correcto → limpiamos errores y navegamos
                         errorGeneral = null
                         erroresCampo = emptyMap()
 
                         navController.navigate("home") {
-                            // Eliminamos la pantalla de login del back stack
                             popUpTo("login") { inclusive = true }
                         }
                     } else {
-                        // Error en Firebase → mapeamos a mensaje legible
                         val mapped = mapFirebaseLoginError(task.exception)
                         erroresCampo = mapped.first
                         errorGeneral = mapped.second

@@ -110,7 +110,7 @@ fun PreferenciasScreen(
             Spacer(Modifier.height(24.dp))
 
             // ============================================================
-            // 🏌️‍♂️ PREFERENCIAS DE JUEGO
+            // ️ PREFERENCIAS DE JUEGO
             // ============================================================
             Text(
                 "PREFERENCIAS DE JUEGO",
@@ -152,7 +152,7 @@ fun PreferenciasScreen(
             Spacer(Modifier.height(28.dp))
 
             // ============================================================
-            // 🎯 INTERESES
+            //  INTERESES
             // ============================================================
             Text("INTERESES", color = Color(0xFF00FF77), fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))

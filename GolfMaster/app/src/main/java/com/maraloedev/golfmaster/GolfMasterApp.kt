@@ -14,7 +14,7 @@ class GolfMasterApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // 🔹 Inicializa Firebase en toda la app (solo se ejecuta una vez)
+        //  Inicializa Firebase en toda la app (solo se ejecuta una vez)
         FirebaseApp.initializeApp(this)
     }
 }

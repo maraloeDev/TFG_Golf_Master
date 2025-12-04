@@ -30,8 +30,6 @@ import com.maraloedev.golfmaster.view.reservas.ReservasScreen
  *  - Contacto, Perfil, Preferencias
  *  - Reservas, Alertas
  *  - Amigos y Agregar amigos
- *
- * @param navController Controlador de navegación usado por NavHost.
  */
 @Composable
 fun MainNavHost(navController: NavHostController) {
@@ -94,7 +92,7 @@ fun MainNavHost(navController: NavHostController) {
         }
 
         // ============================================================
-        //   CONTACTO, 👤 PERFIL Y ⚙️ PREFERENCIAS
+        //   CONTACTO,  PERFIL Y ️ PREFERENCIAS
         // ============================================================
 
         // Formulario de contacto

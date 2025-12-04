@@ -45,9 +45,6 @@ class HomeViewModel : ViewModel() {
 
     /**
      * Carga los datos del jugador actual desde Firestore.
-     *
-     * - Si el documento existe en "jugadores", usamos sus campos.
-     * - Si no existe, se rellena con la información básica de FirebaseAuth.
      */
     fun cargarDatosJugador() {
         val user = auth.currentUser ?: return

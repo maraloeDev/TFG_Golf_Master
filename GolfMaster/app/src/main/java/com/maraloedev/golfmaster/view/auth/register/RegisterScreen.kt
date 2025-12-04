@@ -36,7 +36,7 @@ import com.maraloedev.golfmaster.view.auth.passEncrypt.hashPassword
 import com.maraloedev.golfmaster.vm.AuthViewModel
 
 /* ============================================================
-   🟩 REGISTER SCREEN
+   REGISTER SCREEN
    ============================================================ */
 @Composable
 fun RegisterScreen(
@@ -48,7 +48,7 @@ fun RegisterScreen(
     val focusManager = LocalFocusManager.current
 
     // ==========================
-    // 🧾 ESTADO DE CAMPOS
+    //  ESTADO DE CAMPOS
     // ==========================
     var nombre by rememberSaveable { mutableStateOf("") }
     var apellido by rememberSaveable { mutableStateOf("") }
@@ -72,7 +72,7 @@ fun RegisterScreen(
     var prefijoCP by rememberSaveable { mutableStateOf("") }
 
     // ============================================================
-    // 📍 DATOS DE COMUNIDADES Y PROVINCIAS
+    //  DATOS DE COMUNIDADES Y PROVINCIAS
     // ============================================================
     val provinciasPorComunidad = mapOf(
         "Andalucía" to listOf("Almería","Cádiz","Córdoba","Granada","Huelva","Jaén","Málaga","Sevilla"),
@@ -155,7 +155,7 @@ fun RegisterScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // ==========================
-                // 📝 CAMPOS DE FORMULARIO
+                //  CAMPOS DE FORMULARIO
                 // ==========================
 
                 AnimatedTextField(
@@ -446,7 +446,7 @@ fun RegisterScreen(
 }
 
 /* ============================================================
-   🧩 COMPONENTES REUTILIZABLES
+    COMPONENTES REUTILIZABLES
    ============================================================ */
 
 @Composable

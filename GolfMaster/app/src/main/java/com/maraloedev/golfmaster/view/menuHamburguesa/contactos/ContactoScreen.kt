@@ -32,11 +32,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-/* 🎨 Paleta GolfMaster (idealmente iría en un Theme común) */
 private val ScreenBg = Color(0xFF00281F)
 private val Accent = Color(0xFF00FF77)
 
-/* Datos de contacto del club / app */
 private const val CONTACT_PHONE = "609 048 714"
 private const val CONTACT_EMAIL = "martinsonsecaeduardo@gmail.com"
 
@@ -60,7 +58,7 @@ fun ContactoScreen(
     var errorMensaje by remember { mutableStateOf(false) }
 
     // ============================================================
-    // 🔹 Cargar datos del jugador actual al entrar en la pantalla
+    //  Cargar datos del jugador actual al entrar en la pantalla
     //    (nombre y correo se completan automáticamente)
     // ============================================================
     LaunchedEffect(Unit) {
@@ -78,10 +76,9 @@ fun ContactoScreen(
     }
 
     // ============================================================
-    // 🔹 Funciones de acción: abrir email / teléfono
+    //  Funciones de acción: abrir email / teléfono
     // ============================================================
 
-    // Abrir el cliente de correo con un email pre-rellenado
     fun abrirEmailCliente() {
         val uri = Uri.parse("mailto:$CONTACT_EMAIL")
         val intent = Intent(Intent.ACTION_SENDTO, uri).apply {
@@ -122,7 +119,7 @@ fun ContactoScreen(
     }
 
     // ============================================================
-    // 🔹 UI principal
+    // UI principal
     // ============================================================
     Scaffold(
         containerColor = ScreenBg,
@@ -283,13 +280,9 @@ fun ContactoScreen(
 }
 
 /* ============================================================
- * 🔹 COMPONENTES REUTILIZABLES
+ *  COMPONENTES REUTILIZABLES
  * ============================================================ */
 
-/**
- * Fila reutilizable para mostrar un dato de contacto con icono
- * (teléfono, email, etc.) que es clickable.
- */
 @Composable
 private fun ContactInfoItem(
     icon: ImageVector,
@@ -326,9 +319,6 @@ private fun ContactInfoItem(
     }
 }
 
-/**
- * Estilo común para todos los OutlinedTextField de esta pantalla.
- */
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Accent,

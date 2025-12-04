@@ -65,7 +65,7 @@ fun HomeScreen(navController: NavController) {
     val homeVm: HomeViewModel = viewModel()
     val jugador by homeVm.jugador.collectAsState()
 
-    // 🌐 Estructura principal con Drawer lateral y Scaffold
+    //  Estructura principal con Drawer lateral y Scaffold
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -88,7 +88,7 @@ fun HomeScreen(navController: NavController) {
         }
     ) {
         Scaffold(
-            // 🔹 Barra superior con título dinámico y acceso directo a Perfil
+            //  Barra superior con título dinámico y acceso directo a Perfil
             topBar = {
                 TopAppBar(
                     title = {
@@ -126,7 +126,7 @@ fun HomeScreen(navController: NavController) {
                     )
                 )
             },
-            // 🔹 Barra inferior con iconos de navegación rápida
+            //  Barra inferior con iconos de navegación rápida
             bottomBar = {
                 BottomNavBar(
                     current = current,
@@ -134,7 +134,7 @@ fun HomeScreen(navController: NavController) {
                 )
             }
         ) { innerPadding ->
-            // 🔹 Contenido central (sección activa)
+            //  Contenido central (sección activa)
             Box(
                 modifier = Modifier
                     .padding(innerPadding)
@@ -158,7 +158,7 @@ fun HomeScreen(navController: NavController) {
 }
 
 /* ============================================================
- * 📋 DrawerContent — Menú lateral con datos del jugador
+ *  DrawerContent — Menú lateral con datos del jugador
  * ============================================================ */
 @Composable
 private fun DrawerContent(
@@ -175,7 +175,7 @@ private fun DrawerContent(
             .background(Color(0xFF0B3D2E))
             .padding(16.dp)
     ) {
-        // 👤 Encabezado con avatar y datos del jugador
+        //  Encabezado con avatar y datos del jugador
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -208,7 +208,7 @@ private fun DrawerContent(
 
         Spacer(Modifier.height(24.dp))
 
-        // 📑 Opciones del menú lateral
+        //  Opciones del menú lateral
         val menuItems = listOf(
             "Inicio"       to Icons.Filled.Home,
             "Información"  to Icons.Filled.Info,
@@ -247,7 +247,7 @@ private fun DrawerContent(
 
         Spacer(Modifier.weight(1f))
 
-        // 🚪 Botón de cierre de sesión
+        //  Botón de cierre de sesión
         TextButton(
             onClick = onLogout,
             colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
@@ -260,7 +260,7 @@ private fun DrawerContent(
 }
 
 /* ============================================================
- * 🔻 Bottom Navigation Bar — Navegación inferior
+ *  Bottom Navigation Bar — Navegación inferior
  * ============================================================ */
 @Composable
 private fun BottomNavBar(
@@ -300,7 +300,7 @@ private fun BottomNavBar(
 }
 
 /* ============================================================
- * 🌅 Pantalla de inicio — Mensaje de bienvenida
+ *  Pantalla de inicio — Mensaje de bienvenida
  * ============================================================ */
 @Composable
 private fun HomeLandingContent(
@@ -325,7 +325,7 @@ private fun HomeLandingContent(
             )
         }
 
-        // 🟩 Gradiente oscuro en la parte inferior para mejorar legibilidad
+        //  Gradiente oscuro en la parte inferior para mejorar legibilidad
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -336,7 +336,7 @@ private fun HomeLandingContent(
                 )
         )
 
-        // 🏌️ Mensaje de bienvenida
+        // ️ Mensaje de bienvenida
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -365,7 +365,7 @@ private fun HomeLandingContent(
 }
 
 /* ============================================================
- * 🧩 safePainterResource — Evita crash si el drawable no existe
+ *  safePainterResource — Evita crash si el drawable no existe
  * ============================================================ */
 @SuppressLint("LocalContextResourcesRead")
 @Composable
@@ -388,7 +388,7 @@ private fun safePainterResource(@DrawableRes id: Int): Painter? {
 private fun GlowingLogo() {
     val infiniteTransition = rememberInfiniteTransition(label = "")
 
-    // 🔹 Animación de escala (efecto pulsación)
+    //  Animación de escala (efecto pulsación)
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = 1.15f,
@@ -399,7 +399,7 @@ private fun GlowingLogo() {
         label = ""
     )
 
-    // 🔹 Animación de la opacidad del brillo
+    //  Animación de la opacidad del brillo
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.8f,
         targetValue = 0.4f,

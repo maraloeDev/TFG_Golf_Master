@@ -26,8 +26,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AmigosScreen(
-    navController: NavController,
-    vm: AmigosViewModel = viewModel()
+    navController: NavController, vm: AmigosViewModel = viewModel()
 ) {
     val colors = MaterialTheme.colorScheme
     val textMuted = colors.onBackground.copy(alpha = 0.7f)
@@ -46,12 +45,10 @@ fun AmigosScreen(
                 contentColor = colors.onPrimary
             ) {
                 Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Añadir amigo"
+                    Icons.Default.Add, contentDescription = "Añadir amigo"
                 )
             }
-        },
-        containerColor = colors.background
+        }, containerColor = colors.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -77,18 +74,15 @@ fun AmigosScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             when {
-                // ⏳ Cargando
                 loading -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = colors.primary)
                 }
 
-                // 🚫 Lista vacía
+                //  Lista vacía
                 amigos.isEmpty() -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
@@ -107,7 +101,7 @@ fun AmigosScreen(
                     }
                 }
 
-                // ✅ Hay amigos
+                //  Hay amigos
                 else -> LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -120,8 +114,7 @@ fun AmigosScreen(
                                 // En lugar de borrar directamente, mostramos diálogo de confirmación
                                 amigoAEliminar = amigo
                                 false
-                            }
-                        )
+                            })
 
                         SwipeToDismissBox(
                             state = dismissState,
@@ -152,48 +145,40 @@ fun AmigosScreen(
                             },
                             content = {
                                 AmigoCardMini(amigo = amigo)
-                            }
-                        )
+                            })
                     }
                 }
             }
         }
     }
 
-    // 🧾 Diálogo de confirmación de borrado
+    //  Diálogo de confirmación de borrado
     amigoAEliminar?.let { amigo ->
         AlertDialog(
-            onDismissRequest = { amigoAEliminar = null },
-            title = {
-                Text(
-                    "Eliminar amigo",
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            },
-            text = {
-                Text(
-                    "¿Seguro que quieres eliminar a ${amigo.nombre}?",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            vm.eliminarAmigo(amigo.id)
-                            amigoAEliminar = null
-                        }
+            onDismissRequest = { amigoAEliminar = null }, title = {
+            Text(
+                "Eliminar amigo", color = MaterialTheme.colorScheme.onSurface
+            )
+        }, text = {
+            Text(
+                "¿Seguro que quieres eliminar a ${amigo.nombre}?",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+        }, confirmButton = {
+            TextButton(
+                onClick = {
+                    scope.launch {
+                        vm.eliminarAmigo(amigo.id)
+                        amigoAEliminar = null
                     }
-                ) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { amigoAEliminar = null }) {
-                    Text("Cancelar", color = MaterialTheme.colorScheme.onSurface)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
+                }) {
+                Text("Eliminar", color = MaterialTheme.colorScheme.error)
+            }
+        }, dismissButton = {
+            TextButton(onClick = { amigoAEliminar = null }) {
+                Text("Cancelar", color = MaterialTheme.colorScheme.onSurface)
+            }
+        }, containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -229,9 +214,7 @@ private fun AmigoCardMini(amigo: Amigo) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = inicial,
-                    color = colors.primary,
-                    fontWeight = FontWeight.Bold
+                    text = inicial, color = colors.primary, fontWeight = FontWeight.Bold
                 )
             }
 

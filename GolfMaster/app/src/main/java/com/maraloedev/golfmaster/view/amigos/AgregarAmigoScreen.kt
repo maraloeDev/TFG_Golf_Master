@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 
-// 🎨 Colores locales (como los tenías antes)
 private val ScreenBg = Color(0xFF02140D)
 private val CardBg = Color(0xFF11261B)
 private val Accent = Color(0xFF00FF77)
@@ -106,7 +105,7 @@ fun AgregarAmigoScreen(
             Spacer(Modifier.height(16.dp))
 
             when {
-                // ⏳ Buscando jugadores
+                //  Buscando jugadores
                 buscando -> Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -114,7 +113,7 @@ fun AgregarAmigoScreen(
                     CircularProgressIndicator(color = Accent)
                 }
 
-                // ✏️ Aún no se ha escrito nada
+                //  Aún no se ha escrito nada
                 searchText.isBlank() -> Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -122,7 +121,7 @@ fun AgregarAmigoScreen(
                     Text("Empieza a escribir para buscar 👇", color = TextMuted)
                 }
 
-                // 🚫 No hay resultados
+                //  No hay resultados
                 resultados.isEmpty() -> Box(
                     Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -139,7 +138,7 @@ fun AgregarAmigoScreen(
                     }
                 }
 
-                // ✅ Hay resultados
+                //  Hay resultados
                 else -> LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()

@@ -37,14 +37,13 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-/* ===== 🎨 Colores (podrían ir en tu Theme global) ===== */
 private val PillSelected = Color(0xFF1F4D3E)
 private val PillUnselected = Color(0xFF00FF77)
 private val ScreenBg = Color(0xFF00281F)
 private val CardBg = Color(0xFF0D1B12)
 
 /* ============================================================
-   🏆 Pantalla principal de eventos
+    Pantalla principal de eventos
    - Muestra dos pestañas: "Próximos" y "Finalizados".
    - Muestra la lista de eventos según su fecha.
    - Permite crear un nuevo evento mediante un BottomSheet.
@@ -54,21 +53,20 @@ private val CardBg = Color(0xFF0D1B12)
 fun EventosScreen(
     vm: EventosViewModel = viewModel()
 ) {
-    // Estado expuesto por el ViewModel
+
     val eventos by vm.eventos.collectAsState()
     val loading by vm.loading.collectAsState()
 
-    // Snackbar para mostrar mensajes de feedback
+
     val snackbarHost = remember { SnackbarHostState() }
 
-    // Control del formulario (bottom sheet)
+
     var showForm by remember { mutableStateOf(false) }
 
     // Pestaña seleccionada (Próximos / Finalizados)
     var selectedTab by remember { mutableStateOf("Próximos") }
 
     val ahora = remember { Timestamp.now() }
-    // Partimos la lista de eventos en próximos y finalizados
     val (proximos, finalizados) = remember(eventos) {
         val prox = eventos.filter { (it.fechaFin?.seconds ?: 0) > ahora.seconds }
         val fin = eventos.filter { (it.fechaFin?.seconds ?: 0) <= ahora.seconds }
@@ -120,7 +118,6 @@ fun EventosScreen(
                     CircularProgressIndicator(color = PillUnselected)
                 }
             } else {
-                // Animación suave entre pestañas
                 Crossfade(
                     targetState = selectedTab,
                     label = "eventosCrossfade"
@@ -173,7 +170,7 @@ fun EventosScreen(
 }
 
 /* ============================================================
-   🟩 Pills de pestañas (Próximos / Finalizados)
+    Pills de pestañas (Próximos / Finalizados)
    ============================================================ */
 @Composable
 fun BigPillsEventos(
@@ -215,7 +212,7 @@ fun BigPillsEventos(
 }
 
 /* ============================================================
-   🟩 Card de evento con botón de inscripción y AlertDialog de borrado
+    Card de evento con botón de inscripción y AlertDialog de borrado
    ============================================================ */
 @Composable
 fun EventoCard(
@@ -381,7 +378,7 @@ fun EventoCard(
 }
 
 /* ============================================================
-   🟩 BottomSheet: formulario para crear nuevo evento
+    BottomSheet: formulario para crear nuevo evento
    ============================================================ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -393,8 +390,6 @@ fun NuevoEventoSheet(
     var nombre by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf<String?>(null) }
 
-    // Por ahora son fijos, pero si más adelante quieres editables,
-    // solo tendrías que convertirlos en estado.
     val precioSocio = 5
     val precioNoSocio = 22
 
@@ -403,7 +398,6 @@ fun NuevoEventoSheet(
 
     val scope = rememberCoroutineScope()
 
-    // Botón activo solo cuando todo está completo
     val botonActivo = nombre.isNotBlank() && tipo != null && fechaInicio != null && fechaFin != null
 
     Column(
@@ -498,7 +492,7 @@ fun NuevoEventoSheet(
 }
 
 /* ============================================================
-   💰 Sección de precios (solo visual)
+   Sección de precios (solo visual)
    ============================================================ */
 @Composable
 fun PreciosSection(
@@ -550,7 +544,7 @@ fun PreciosSection(
 }
 
 /* ============================================================
-   🕓 Selector de fecha y hora (Date + Time picker)
+    Selector de fecha y hora (Date + Time picker)
    ============================================================ */
 @Composable
 fun DateTimePickerFieldEvento(
@@ -625,7 +619,7 @@ fun DateTimePickerFieldEvento(
 }
 
 /* ============================================================
-   🎯 Selector de tipo de torneo
+   Selector de tipo de torneo
    ============================================================ */
 @Composable
 fun SelectFieldEvento(

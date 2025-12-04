@@ -22,7 +22,7 @@ class AlertasViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
 
     // ============================================================
-    // 🔧 Constantes (colecciones / campos)
+    //  Constantes (colecciones / campos)
     // ============================================================
     private companion object {
         const val COL_AMIGO = "amigo"           // Colección de solicitudes de amistad
@@ -49,7 +49,7 @@ class AlertasViewModel : ViewModel() {
     private var listener: ListenerRegistration? = null
 
     // ============================================================
-    // 👂 Observación de invitaciones de amistad en tiempo real
+    //  Observación de invitaciones de amistad en tiempo real
     // ============================================================
 
     /**
@@ -87,7 +87,7 @@ class AlertasViewModel : ViewModel() {
     }
 
     // ============================================================
-    // ✅ Aceptar amistad
+    // Aceptar amistad
     // ============================================================
 
     /**
@@ -108,12 +108,12 @@ class AlertasViewModel : ViewModel() {
         val currentUid = auth.currentUser?.uid ?: return@launch
 
         try {
-            // 1️⃣ Actualizamos el estado de la solicitud
+            //  Actualizamos el estado de la solicitud
             db.collection(COL_AMIGO).document(alertaId)
                 .update(FIELD_ESTADO, "aceptada")
                 .await()
 
-            // 2️⃣ Obtenemos el nombre del usuario actual para almacenarlo en el otro
+            //  Obtenemos el nombre del usuario actual para almacenarlo en el otro
             val currentSnap = db.collection(COL_JUGADORES)
                 .document(currentUid)
                 .get()
@@ -121,7 +121,7 @@ class AlertasViewModel : ViewModel() {
 
             val miNombre = currentSnap.getString(FIELD_NOMBRE_JUGADOR) ?: "Jugador"
 
-            // 3️⃣ Añadimos ambos como amigos (subcolecciones /jugadores/{uid}/amigos/{otroUid})
+            // Añadimos ambos como amigos (subcolecciones /jugadores/{uid}/amigos/{otroUid})
             db.collection(COL_JUGADORES).document(currentUid)
                 .collection("amigos")
                 .document(deUid)
@@ -134,7 +134,7 @@ class AlertasViewModel : ViewModel() {
                 .set(mapOf("nombre" to miNombre))
                 .await()
 
-            // 4️⃣ Borramos la notificación de la colección "amigo"
+            //  Borramos la notificación de la colección "amigo"
             db.collection(COL_AMIGO).document(alertaId)
                 .delete()
                 .await()
@@ -145,7 +145,7 @@ class AlertasViewModel : ViewModel() {
     }
 
     // ============================================================
-    // ❌ Rechazar amistad
+    //  Rechazar amistad
     // ============================================================
 
     /**
@@ -168,7 +168,7 @@ class AlertasViewModel : ViewModel() {
     }
 
     // ============================================================
-    // 🧹 Limpieza
+    //  Limpieza
     // ============================================================
 
     /**

@@ -33,7 +33,6 @@ import androidx.navigation.NavController
 import com.maraloedev.golfmaster.R
 import kotlinx.coroutines.launch
 
-// Paleta de colores de la pantalla de perfil
 private val Fondo = Color(0xFF0B3D2E)
 private val Verde = Color(0xFF00FF77)
 private val VerdeOscuro = Color(0xFF173E34)
@@ -98,7 +97,7 @@ fun PerfilScreen(
         ) {
 
             // ============================================================
-            // 🧑 Foto / avatar de perfil (futura ampliación con subida)
+            //  Foto / avatar de perfil (futura ampliación)
             // ============================================================
             Box(
                 modifier = Modifier
@@ -161,7 +160,7 @@ fun PerfilScreen(
             )
 
             // ============================================================
-            // 🎫 Tarjeta de licencia federativa
+            // Tarjeta de licencia federativa
             // ============================================================
             Spacer(Modifier.height(16.dp))
             Card(
@@ -194,7 +193,7 @@ fun PerfilScreen(
             Spacer(Modifier.height(28.dp))
 
             // ============================================================
-            // 🟢 Botón principal: alterna entre modo Edición y Guardar
+            //  Botón principal: alterna entre modo Edición y Guardar
             // ============================================================
             Button(
                 onClick = {
@@ -247,7 +246,7 @@ fun PerfilScreen(
             Spacer(Modifier.height(26.dp))
 
             // ============================================================
-            // 📋 Campos editables del perfil
+            //  Campos editables del perfil
             // ============================================================
             PerfilCampo("Nombre", nombre, modoEdicion) { nombre = it }
             PerfilCampo("Teléfono", telefono, modoEdicion) { telefono = it }
@@ -259,7 +258,7 @@ fun PerfilScreen(
             Spacer(Modifier.height(32.dp))
 
             // ============================================================
-            // 🗑️ Botón de eliminar cuenta
+            // Botón de eliminar cuenta
             // ============================================================
             Row(
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -286,7 +285,7 @@ fun PerfilScreen(
             }
 
             // ============================================================
-            // ⚠️ Diálogo de confirmación de eliminación de cuenta
+            //  Diálogo de confirmación de eliminación de cuenta
             // ============================================================
             if (mostrarDialogo) {
                 AlertDialog(

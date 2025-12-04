@@ -60,7 +60,7 @@ class EventosViewModel(
         }
     }
 
-    // ================== 🔹 Crear nuevo evento ==================
+    // ==================  Crear nuevo evento ==================
     /**
      * Crea un nuevo evento en Firebase.
      *
